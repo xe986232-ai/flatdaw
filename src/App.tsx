@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { toPng } from 'html-to-image'
 import { RulerBar } from './components/RulerBar'
 import { TrackRow } from './components/TrackRow'
@@ -6,7 +6,7 @@ import { AutomationLane } from './components/AutomationLane'
 import { Playhead } from './components/Playhead'
 import { PianoRoll } from './components/PianoRoll'
 import type { ClipMenuAction } from './components/ClipMenu'
-import { tracks, TIMELINE_START, TIMELINE_END, type Clip, type Note } from './tracks'
+import { tracks, TIMELINE_START, getTimelineEnd, type Clip, type Note } from './tracks'
 import { generateNotesForClip } from './notes'
 import { randomFlatColor, type FlatColor } from './colors'
 import { parseFlmFile } from './flmParser'
@@ -16,7 +16,6 @@ const BASE_BAR_WIDTH = 96
 const BASE_ROW_HEIGHT = 56
 const BASE_AUTOMATION_HEIGHT = 44
 const LABEL_WIDTH = 72
-const TOTAL_BARS = TIMELINE_END - TIMELINE_START
 
 // Zoom bounds — horizontal stretches clip/bar width, vertical widens track row height.
 const H_ZOOM_MIN = 0.4
@@ -32,6 +31,13 @@ export default function App() {
   const [playheadBar, setPlayheadBar] = useState(207)
   const [trackList, setTrackList] = useState(tracks)
   const [trackColors, setTrackColors] = useState<Record<string, FlatColor>>({})
+
+  // Arrangement length now follows the actual content instead of a fixed
+  // window — recomputed whenever trackList changes (e.g. right after an .flm
+  // import), so a short project doesn't leave the grid mostly empty and a
+  // long one doesn't get its clips squeezed together at a hard edge.
+  const timelineEnd = useMemo(() => getTimelineEnd(trackList), [trackList])
+  const totalBars = timelineEnd - TIMELINE_START
 
   // Import project .flm (FL Studio Mobile): parsing chunk EVN2 -> Track/Clip/Note flatdaw.
   const flmInputRef = useRef<HTMLInputElement>(null)
@@ -95,7 +101,7 @@ export default function App() {
     const rect = container.getBoundingClientRect()
     const localX = clientX - rect.left + container.scrollLeft - LABEL_WIDTH
     const bar = TIMELINE_START + localX / barWidth
-    const clamped = Math.min(TIMELINE_END, Math.max(TIMELINE_START, bar))
+    const clamped = Math.min(timelineEnd, Math.max(TIMELINE_START, bar))
     setPlayheadBar(Math.round(clamped * 4) / 4)
   }
 
@@ -152,7 +158,7 @@ export default function App() {
       return
     }
     if (action === 'snap') {
-      const maxStart = TIMELINE_END - clip.lengthBars
+      const maxStart = timelineEnd - clip.lengthBars
       const wholeBar = Math.min(maxStart, Math.max(TIMELINE_START, Math.round(clip.startBar)))
       handleClipMove(trackId, clipId, wholeBar)
       return
@@ -169,7 +175,7 @@ export default function App() {
       return
     }
     if (action === 'duplicate') {
-      const maxStart = TIMELINE_END - clip.lengthBars
+      const maxStart = timelineEnd - clip.lengthBars
       const startBar = Math.min(maxStart, clip.startBar + clip.lengthBars)
       const newClip: Clip = { ...clip, id: `${clip.id}-copy-${Date.now()}`, startBar }
       setTrackList((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: [...t.clips, newClip] })))
@@ -180,7 +186,7 @@ export default function App() {
   const handleBackgroundClick = (trackId: string, bar: number) => {
     setOpenMenu(null)
     if (!clipboard) return
-    const maxStart = TIMELINE_END - clipboard.lengthBars
+    const maxStart = timelineEnd - clipboard.lengthBars
     const snapped = Math.min(maxStart, Math.max(TIMELINE_START, Math.round(bar / 0.25) * 0.25))
     const newClip: Clip = { ...clipboard, id: `${clipboard.id}-paste-${Date.now()}`, startBar: snapped }
     setTrackList((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: [...t.clips, newClip] })))
@@ -392,7 +398,7 @@ export default function App() {
       {/* Landscape canvas — fixed 2292x1080, holds the whole playlist/arrangement view */}
       <div ref={canvasBoxRef} className="relative flex aspect-[2292/1080] w-full max-w-[2292px] flex-col overflow-hidden rounded-lg border border-black/40 bg-surface-base text-track-melodic-ink">
         <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
-          <RulerBar startBar={TIMELINE_START} endBar={TIMELINE_END} barWidth={barWidth} labelWidth={LABEL_WIDTH} />
+          <RulerBar startBar={TIMELINE_START} endBar={timelineEnd} barWidth={barWidth} labelWidth={LABEL_WIDTH} />
 
           <div className="relative">
             {trackList.map((track, index) => (
@@ -401,9 +407,9 @@ export default function App() {
                 track={track}
                 barWidth={barWidth}
                 labelWidth={LABEL_WIDTH}
-                totalBars={TOTAL_BARS}
+                totalBars={totalBars}
                 timelineStart={TIMELINE_START}
-                timelineEnd={TIMELINE_END}
+                timelineEnd={timelineEnd}
                 height={rowHeight}
                 color={trackColors[track.id]}
                 showDivider={showDividers}
@@ -419,10 +425,10 @@ export default function App() {
               />
             ))}
 
-            <AutomationLane label="Level" totalBars={TOTAL_BARS} barWidth={barWidth} labelWidth={LABEL_WIDTH} height={automationHeight} />
+            <AutomationLane label="Level" totalBars={totalBars} barWidth={barWidth} labelWidth={LABEL_WIDTH} height={automationHeight} />
             <AutomationLane
               label="Frequency : FX Filter"
-              totalBars={TOTAL_BARS}
+              totalBars={totalBars}
               barWidth={barWidth}
               labelWidth={LABEL_WIDTH}
               height={automationHeight}
@@ -441,6 +447,7 @@ export default function App() {
             trackName={pianoRollTrack.name}
             trackKind={pianoRollTrack.kind}
             color={trackColors[pianoRollTrack.id]}
+            timelineEnd={timelineEnd}
             onClose={() => setPianoRoll(null)}
             onNotesChange={(notes) => handleNotesChange(pianoRollTrack.id, pianoRollClip.id, notes)}
             onImportMidi={(notes, lengthBars) => handleImportMidi(pianoRollTrack.id, pianoRollClip.id, notes, lengthBars)}

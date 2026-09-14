@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ChangeEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { Midi } from '@tonejs/midi'
-import { BEATS_PER_BAR, TIMELINE_END, type Clip, type Note, type Track } from '../tracks'
+import { BEATS_PER_BAR, type Clip, type Note, type Track } from '../tracks'
 import type { FlatColor } from '../colors'
 import { PIANO_MIN_PITCH, PIANO_MAX_PITCH, isBlackKey, midiToName } from '../notes'
 
@@ -37,6 +37,7 @@ export function PianoRoll({
   trackName,
   trackKind,
   color,
+  timelineEnd,
   onClose,
   onNotesChange,
   onImportMidi,
@@ -45,6 +46,7 @@ export function PianoRoll({
   trackName: string
   trackKind: Track['kind']
   color?: FlatColor
+  timelineEnd: number
   onClose: () => void
   onNotesChange: (notes: Note[]) => void
   onImportMidi: (notes: Note[], lengthBars: number) => void
@@ -102,7 +104,7 @@ export function PianoRoll({
 
       const maxTicks = Math.max(...allNotes.map((n) => n.ticks + n.durationTicks))
       const neededBars = Math.max(1, Math.ceil(maxTicks / ppq / BEATS_PER_BAR))
-      const availableBars = Math.max(1, TIMELINE_END - clip.startBar)
+      const availableBars = Math.max(1, timelineEnd - clip.startBar)
       const lengthBars = Math.min(neededBars, availableBars)
       const capBeats = lengthBars * BEATS_PER_BAR
 

@@ -19,7 +19,10 @@ export function RulerBar({
   labelWidth: number
   badgeEvery?: number
 }) {
-  const bars = Array.from({ length: endBar - startBar + 1 }, (_, i) => startBar + i)
+  // endBar is the timeline's end boundary, not the start of one more bar —
+  // using +1 here made the ruler exactly one barWidth wider than the track
+  // rows below it (which size themselves off `endBar - startBar` bars).
+  const bars = Array.from({ length: endBar - startBar }, (_, i) => startBar + i)
 
   return (
     <div className="sticky top-0 z-20 box-border flex h-12 items-center border-b-2 border-row-divider bg-surface-base">

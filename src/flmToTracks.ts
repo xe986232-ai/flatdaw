@@ -1,4 +1,4 @@
-import { BEATS_PER_BAR, TIMELINE_START, TIMELINE_END, type Track, type Clip, type Note, type TrackKind } from './tracks'
+import { BEATS_PER_BAR, TIMELINE_START, type Track, type Clip, type Note, type TrackKind } from './tracks'
 import type { EVN2ChunkResult, ParsedFlm } from './flmParser'
 
 // Panjang "penempatan" clip di playlist (CLHd) cuma nunjukin seberapa lebar
@@ -40,8 +40,11 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
     const placementBars = Math.max(0.25, cl.lenBeats / BEATS_PER_BAR)
     const lengthBars = Math.max(placementBars, patternSpanBars(chunk), 1)
 
+    // No upper clamp here anymore — the arrangement's total length (used to
+    // size the grid/ruler) is now derived FROM these positions in App.tsx via
+    // getTimelineEnd(), instead of clips being squeezed to fit a fixed window.
     const rawStartBar = TIMELINE_START + cl.posBeats / BEATS_PER_BAR
-    const startBar = Math.min(TIMELINE_END - lengthBars, Math.max(TIMELINE_START, rawStartBar))
+    const startBar = Math.max(TIMELINE_START, rawStartBar)
 
     const notes: Note[] = (chunk?.notes ?? []).map((n, ni) => ({
       id: `flm-${key}-c${i}-n${ni}`,
