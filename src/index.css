@@ -30,6 +30,15 @@ body {
   background: var(--color-surface-base);
 }
 
+/* Block native pinch-to-zoom on the whole page (it was hijacking gestures meant
+   for the app's own Zoom H / Zoom V controls) while still allowing normal
+   single-finger scrolling/panning inside the canvas. */
+html,
+body,
+#root {
+  touch-action: manipulation;
+}
+
 /* Force-landscape: on narrow portrait screens (phones held upright),
    rotate the whole app 90deg so the canvas renders wide without
    needing the user to physically turn the device. */
