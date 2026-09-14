@@ -51,10 +51,20 @@ export function TrackRow({
         {Array.from({ length: totalBars + 1 }).map((_, i) => (
           <div
             key={i}
-            className="absolute top-0 bottom-0 border-l border-surface-grid/25"
+            className="absolute top-0 bottom-0 border-l border-surface-grid/40"
             style={{ left: i * barWidth }}
           />
         ))}
+        {/* beat subdivisions — denser grid inside each bar */}
+        {Array.from({ length: totalBars }).map((_, i) =>
+          [0.25, 0.5, 0.75].map((frac) => (
+            <div
+              key={`${i}-${frac}`}
+              className="absolute top-0 bottom-0 border-l border-surface-grid/15"
+              style={{ left: i * barWidth + barWidth * frac }}
+            />
+          )),
+        )}
         {track.clips.map((clip) => (
           <ClipBlock key={clip.id} clip={clip} kind={track.kind} barWidth={barWidth} />
         ))}

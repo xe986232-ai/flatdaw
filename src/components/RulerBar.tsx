@@ -37,13 +37,21 @@ export function RulerBar({
         {bars.map((bar, i) => {
           const isBadge = i % badgeEvery === 0
           return (
-            <div key={bar} className="relative shrink-0 border-l border-surface-grid/30" style={{ width: barWidth }}>
+            <div key={bar} className="relative shrink-0 border-l border-surface-grid/40" style={{ width: barWidth }}>
+              {/* beat subdivisions for a denser grid feel */}
+              {[0.25, 0.5, 0.75].map((frac) => (
+                <span
+                  key={frac}
+                  className="absolute top-1/2 h-2 w-px -translate-y-1/2 bg-surface-grid/30"
+                  style={{ left: barWidth * frac }}
+                />
+              ))}
               {isBadge ? (
                 <span className="absolute left-1/2 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-track-melodic-ink font-mono-daw text-[10px] font-medium text-surface-base">
                   {bar}
                 </span>
               ) : (
-                <span className="absolute left-1/2 top-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-surface-grid/60" />
+                <span className="absolute left-1/2 top-1/2 h-3 w-px -translate-x-1/2 -translate-y-1/2 bg-surface-grid/70" />
               )}
             </div>
           )
