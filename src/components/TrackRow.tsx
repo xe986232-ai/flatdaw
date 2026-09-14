@@ -25,13 +25,19 @@ export function TrackRow({
   barWidth,
   labelWidth,
   totalBars,
+  timelineStart,
+  timelineEnd,
   height = 56,
+  onClipMove,
 }: {
   track: Track
   barWidth: number
   labelWidth: number
   totalBars: number
+  timelineStart: number
+  timelineEnd: number
   height?: number
+  onClipMove?: (clipId: string, newStartBar: number) => void
 }) {
   return (
     <div className="box-border flex border-b-2 border-row-divider">
@@ -66,7 +72,15 @@ export function TrackRow({
           )),
         )}
         {track.clips.map((clip) => (
-          <ClipBlock key={clip.id} clip={clip} kind={track.kind} barWidth={barWidth} />
+          <ClipBlock
+            key={clip.id}
+            clip={clip}
+            kind={track.kind}
+            barWidth={barWidth}
+            timelineStart={timelineStart}
+            timelineEnd={timelineEnd}
+            onStartBarChange={onClipMove}
+          />
         ))}
       </div>
     </div>

@@ -12,6 +12,7 @@ const TOTAL_BARS = TIMELINE_END - TIMELINE_START
 export default function App() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [playheadBar, setPlayheadBar] = useState(207)
+  const [trackList, setTrackList] = useState(tracks)
 
   const playheadX = (playheadBar - TIMELINE_START) * BAR_WIDTH
 
@@ -25,6 +26,16 @@ export default function App() {
     setPlayheadBar(Math.round(clamped * 4) / 4)
   }
 
+  const handleClipMove = (trackId: string, clipId: string, newStartBar: number) => {
+    setTrackList((prev) =>
+      prev.map((t) =>
+        t.id !== trackId
+          ? t
+          : { ...t, clips: t.clips.map((c) => (c.id === clipId ? { ...c, startBar: newStartBar } : c)) },
+      ),
+    )
+  }
+
   return (
     <div className="force-landscape flex min-h-dvh items-center justify-center bg-[#1a1a1d] p-4">
       {/* Landscape canvas — fixed 16:9, holds the whole playlist/arrangement view */}
@@ -33,13 +44,16 @@ export default function App() {
           <RulerBar startBar={TIMELINE_START} endBar={TIMELINE_END} barWidth={BAR_WIDTH} labelWidth={LABEL_WIDTH} />
 
           <div className="relative">
-            {tracks.map((track) => (
+            {trackList.map((track) => (
               <TrackRow
                 key={track.id}
                 track={track}
                 barWidth={BAR_WIDTH}
                 labelWidth={LABEL_WIDTH}
                 totalBars={TOTAL_BARS}
+                timelineStart={TIMELINE_START}
+                timelineEnd={TIMELINE_END}
+                onClipMove={(clipId, newStartBar) => handleClipMove(track.id, clipId, newStartBar)}
               />
             ))}
 

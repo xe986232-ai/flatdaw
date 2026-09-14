@@ -1,3 +1,5 @@
+import { useRef, useState } from 'react'
+import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { Clip, TrackKind } from '../tracks'
 
 const fillByKind: Record<TrackKind, string> = {
@@ -94,15 +96,73 @@ function Pattern({ pattern, seed = 0 }: { pattern: Clip['pattern']; seed?: numbe
   return null
 }
 
-export function ClipBlock({ clip, kind, barWidth }: { clip: Clip; kind: TrackKind; barWidth: number }) {
-  const left = (clip.startBar - 205) * barWidth
+const SNAP_BARS = 0.25 // snap to the beat subdivisions already drawn on the grid
+
+export function ClipBlock({
+  clip,
+  kind,
+  barWidth,
+  timelineStart,
+  timelineEnd,
+  onStartBarChange,
+}: {
+  clip: Clip
+  kind: TrackKind
+  barWidth: number
+  timelineStart: number
+  timelineEnd: number
+  onStartBarChange?: (clipId: string, newStartBar: number) => void
+}) {
+  const [dragStartBar, setDragStartBar] = useState<number | null>(null)
+  const dragInfo = useRef<{ originClientX: number; originStartBar: number } | null>(null)
+
+  const effectiveStartBar = dragStartBar ?? clip.startBar
+  const left = (effectiveStartBar - timelineStart) * barWidth
   const width = clip.lengthBars * barWidth
   const seed = clip.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
 
+  const minStart = timelineStart
+  const maxStart = timelineEnd - clip.lengthBars
+
+  function snap(bar: number) {
+    const snapped = Math.round(bar / SNAP_BARS) * SNAP_BARS
+    return Math.min(maxStart, Math.max(minStart, snapped))
+  }
+
+  function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture(e.pointerId)
+    dragInfo.current = { originClientX: e.clientX, originStartBar: clip.startBar }
+    setDragStartBar(clip.startBar)
+  }
+
+  function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!dragInfo.current) return
+    const { originClientX, originStartBar } = dragInfo.current
+    const deltaBars = (e.clientX - originClientX) / barWidth
+    setDragStartBar(snap(originStartBar + deltaBars))
+  }
+
+  function endDrag(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!dragInfo.current) return
+    e.currentTarget.releasePointerCapture(e.pointerId)
+    dragInfo.current = null
+    setDragStartBar((finalBar) => {
+      if (finalBar != null) onStartBarChange?.(clip.id, finalBar)
+      return null
+    })
+  }
+
   return (
     <div
-      className={`absolute top-0 bottom-0 flex flex-col overflow-hidden px-2 py-1 ${fillByKind[kind]} ${inkByKind[kind]}`}
+      className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-hidden px-2 py-1 ${fillByKind[kind]} ${inkByKind[kind]} ${
+        dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : 'cursor-grab'
+      }`}
       style={{ left, width }}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
     >
       {clip.label && (
         <span className="block shrink-0 truncate text-[11px] font-medium leading-none mb-1">{clip.label}</span>
