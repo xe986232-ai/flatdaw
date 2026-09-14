@@ -85,6 +85,12 @@ export default function App() {
       )
       return
     }
+    if (action === 'snap') {
+      const maxStart = TIMELINE_END - clip.lengthBars
+      const wholeBar = Math.min(maxStart, Math.max(TIMELINE_START, Math.round(clip.startBar)))
+      handleClipMove(trackId, clipId, wholeBar)
+      return
+    }
     if (action === 'copy') {
       setClipboard(clip)
       return
