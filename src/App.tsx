@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { toPng } from 'html-to-image'
 import { RulerBar } from './components/RulerBar'
 import { TrackRow } from './components/TrackRow'
 import { AutomationLane } from './components/AutomationLane'
@@ -22,6 +23,8 @@ const ZOOM_STEP = 0.2
 
 export default function App() {
   const scrollRef = useRef<HTMLDivElement>(null)
+  const canvasBoxRef = useRef<HTMLDivElement>(null)
+  const [isExporting, setIsExporting] = useState(false)
   const [playheadBar, setPlayheadBar] = useState(207)
   const [trackList, setTrackList] = useState(tracks)
   const [trackColors, setTrackColors] = useState<Record<string, FlatColor>>({})
@@ -159,6 +162,27 @@ export default function App() {
     })
   }
 
+  // Export the visible canvas box as a PNG. Note: WebCodecs (VideoEncoder/
+  // AudioEncoder) only deals with video/audio frames — there's no browser
+  // ImageEncoder for still PNG/JPEG export, so rasterizing the DOM to a
+  // bitmap (via html-to-image, which draws into a <canvas> under the hood)
+  // and downloading that is the standard/correct approach for a still image.
+  const handleExportImage = async () => {
+    if (!canvasBoxRef.current || isExporting) return
+    setIsExporting(true)
+    try {
+      const dataUrl = await toPng(canvasBoxRef.current, { pixelRatio: 2, cacheBust: true })
+      const link = document.createElement('a')
+      link.download = `flatdaw-export-${Date.now()}.png`
+      link.href = dataUrl
+      link.click()
+    } catch (err) {
+      console.error('Export gambar gagal:', err)
+    } finally {
+      setIsExporting(false)
+    }
+  }
+
   const handleZoomH = (delta: number) => {
     setHZoom((v) => Math.min(H_ZOOM_MAX, Math.max(H_ZOOM_MIN, Math.round((v + delta) * 100) / 100)))
   }
@@ -270,7 +294,7 @@ export default function App() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#1a1a1d] p-4">
       {/* Landscape canvas — fixed 2292x1080, holds the whole playlist/arrangement view */}
-      <div className="flex aspect-[2292/1080] w-full max-w-[2292px] flex-col overflow-hidden rounded-lg border border-black/40 bg-surface-base text-track-melodic-ink">
+      <div ref={canvasBoxRef} className="flex aspect-[2292/1080] w-full max-w-[2292px] flex-col overflow-hidden rounded-lg border border-black/40 bg-surface-base text-track-melodic-ink">
         <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
           <RulerBar startBar={TIMELINE_START} endBar={TIMELINE_END} barWidth={barWidth} labelWidth={LABEL_WIDTH} />
 
@@ -385,6 +409,15 @@ export default function App() {
             </button>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={handleExportImage}
+          disabled={isExporting}
+          className="bg-track-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {isExporting ? 'Mengekspor…' : 'Export Gambar (PNG)'}
+        </button>
       </div>
     </div>
   )
