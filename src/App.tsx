@@ -55,7 +55,12 @@ export default function App() {
   // Zoom: horizontal stretches bar width (clips get wider), vertical widens track row height.
   const [hZoom, setHZoom] = useState(1)
   const [vZoom, setVZoom] = useState(1)
-  const barWidth = BASE_BAR_WIDTH * hZoom
+  // Rounded to a whole pixel: this width feeds a tiled CSS background-image
+  // (grid lines) repeated ~80x across the row. A fractional tile width there
+  // accumulates subpixel drift over that many repeats until the lines thin
+  // out and vanish well before the right edge — rounding once here keeps
+  // every tile (and every clip/ruler position that uses barWidth) pixel-exact.
+  const barWidth = Math.round(BASE_BAR_WIDTH * hZoom)
   const rowHeight = BASE_ROW_HEIGHT * vZoom
   const automationHeight = BASE_AUTOMATION_HEIGHT * vZoom
 
