@@ -101,7 +101,7 @@ export function ClipBlock({ clip, kind, barWidth }: { clip: Clip; kind: TrackKin
 
   return (
     <div
-      className={`absolute top-1 bottom-1 flex flex-col overflow-hidden rounded-sm px-2 py-1 ${fillByKind[kind]} ${inkByKind[kind]} shadow-sm`}
+      className={`absolute top-0 bottom-0 flex flex-col overflow-hidden px-2 py-1 ${fillByKind[kind]} ${inkByKind[kind]}`}
       style={{ left, width }}
     >
       {clip.label && (

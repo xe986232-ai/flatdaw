@@ -27,7 +27,7 @@ export function RulerBar({
         <button
           type="button"
           aria-label="Play"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-track-melodic-ink text-surface-base shadow-sm"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-track-melodic-ink text-surface-base"
         >
           <PlayIcon />
         </button>
