@@ -25,15 +25,15 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#0d0d0f] text-white">
-      <header className="flex items-center justify-between border-b border-white/10 px-5 py-3">
+    <div className="min-h-screen bg-surface-base text-track-melodic-ink">
+      <header className="flex items-center justify-between border-b border-surface-grid/50 bg-surface-base px-5 py-3">
         <div className="flex items-center gap-3">
           <span className="text-sm font-semibold tracking-tight">Arrangement</span>
-          <span className="rounded-full bg-white/5 px-2.5 py-0.5 font-mono-daw text-[11px] text-white/50">
+          <span className="rounded-full bg-black/5 px-2.5 py-0.5 font-mono-daw text-[11px] text-track-melodic-ink/60">
             mockup · non-functional
           </span>
         </div>
-        <div className="font-mono-daw text-[12px] text-white/40">bar {playheadBar.toFixed(2)}</div>
+        <div className="font-mono-daw text-[12px] text-track-melodic-ink/50">bar {playheadBar.toFixed(2)}</div>
       </header>
 
       <div ref={scrollRef} className="relative overflow-x-auto">
@@ -56,7 +56,7 @@ export default function App() {
         </div>
       </div>
 
-      <footer className="border-t border-white/10 px-5 py-2 font-mono-daw text-[11px] text-white/30">
+      <footer className="border-t border-surface-grid/50 bg-surface-base px-5 py-2 font-mono-daw text-[11px] text-track-melodic-ink/40">
         drag the playhead to scrub · clip content is static placeholder data
       </footer>
     </div>

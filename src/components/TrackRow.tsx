@@ -2,12 +2,12 @@ import type { Track } from '../tracks'
 import { ClipBlock } from './ClipBlock'
 
 const railByKind: Record<Track['kind'], string> = {
-  marker: 'bg-track-marker/15',
-  melodic: 'bg-track-melodic/15',
-  lead: 'bg-track-lead/15',
-  drum: 'bg-track-drum/15',
-  perc: 'bg-track-perc/15',
-  accent: 'bg-track-accent/15',
+  marker: 'bg-track-marker/20',
+  melodic: 'bg-track-melodic/20',
+  lead: 'bg-track-lead/25',
+  drum: 'bg-track-drum/25',
+  perc: 'bg-track-perc/20',
+  accent: 'bg-track-accent/20',
 }
 
 export function TrackRow({
@@ -24,12 +24,12 @@ export function TrackRow({
   height?: number
 }) {
   return (
-    <div className="flex border-b border-white/5">
+    <div className="flex border-b border-surface-grid/30">
       <div
-        className="sticky left-0 z-10 flex shrink-0 items-center border-r border-white/5 bg-[#151318] px-3"
+        className="sticky left-0 z-10 flex shrink-0 items-center border-r border-surface-grid/40 bg-surface-base px-3"
         style={{ width: labelWidth, height }}
       >
-        <span className="truncate text-[12px] font-medium text-white/70">{track.name}</span>
+        <span className="truncate text-[12px] font-medium text-track-melodic-ink/80">{track.name}</span>
       </div>
       <div
         className={`relative ${railByKind[track.kind]}`}
@@ -39,7 +39,7 @@ export function TrackRow({
         {Array.from({ length: totalBars + 1 }).map((_, i) => (
           <div
             key={i}
-            className="absolute top-0 bottom-0 border-l border-white/[0.06]"
+            className="absolute top-0 bottom-0 border-l border-surface-grid/25"
             style={{ left: i * barWidth }}
           />
         ))}
