@@ -1,5 +1,6 @@
 import type { Track } from '../tracks'
 import { ClipBlock } from './ClipBlock'
+import { TrackIcon } from './TrackIcon'
 
 const railByKind: Record<Track['kind'], string> = {
   marker: 'bg-track-marker/20',
@@ -8,6 +9,15 @@ const railByKind: Record<Track['kind'], string> = {
   drum: 'bg-track-drum/25',
   perc: 'bg-track-perc/20',
   accent: 'bg-track-accent/20',
+}
+
+const iconInkByKind: Record<Track['kind'], string> = {
+  marker: 'text-track-marker',
+  melodic: 'text-track-melodic',
+  lead: 'text-track-drum',
+  drum: 'text-track-drum',
+  perc: 'text-track-perc',
+  accent: 'text-track-accent',
 }
 
 export function TrackRow({
@@ -26,10 +36,12 @@ export function TrackRow({
   return (
     <div className="flex border-b border-surface-grid/30">
       <div
-        className="sticky left-0 z-10 flex shrink-0 items-center border-r border-surface-grid/40 bg-surface-base px-3"
+        className="sticky left-0 z-10 flex shrink-0 items-center justify-center border-r border-surface-grid/40 bg-surface-base"
         style={{ width: labelWidth, height }}
       >
-        <span className="truncate text-[12px] font-medium text-track-melodic-ink/80">{track.name}</span>
+        <span className={iconInkByKind[track.kind]}>
+          <TrackIcon kind={track.kind} />
+        </span>
       </div>
       <div
         className={`relative ${railByKind[track.kind]}`}
