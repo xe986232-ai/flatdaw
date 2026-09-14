@@ -49,7 +49,7 @@ export function ClipMenu({
   return (
     <div
       data-clip-interactive="true"
-      className={`pointer-events-auto absolute left-1/2 z-40 flex -translate-x-1/2 -space-x-1 ${
+      className={`pointer-events-auto absolute left-1/2 z-40 flex -translate-x-1/2 gap-1.5 ${
         flipDown ? 'top-full mt-2' : 'bottom-full mb-2'
       }`}
       onPointerDown={(e) => e.stopPropagation()}
