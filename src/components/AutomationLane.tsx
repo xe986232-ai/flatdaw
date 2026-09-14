@@ -23,9 +23,9 @@ export function AutomationLane({
   }).join(' ')
 
   return (
-    <div className="box-border flex border-b-2 border-row-divider">
+    <div className="box-border flex">
       <div
-        className="sticky left-0 z-10 box-border flex shrink-0 items-center border-r border-surface-grid/40 bg-surface-base px-3"
+        className="sticky left-0 z-10 box-border flex shrink-0 items-center bg-surface-base px-3"
         style={{ width: labelWidth, height }}
       >
         <span className="truncate text-[11px] font-medium text-track-accent">{label}</span>

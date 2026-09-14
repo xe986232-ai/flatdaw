@@ -54,10 +54,6 @@ export default function App() {
   // view with an in-place note editor for that clip until closed.
   const [pianoRoll, setPianoRoll] = useState<{ trackId: string; clipId: string } | null>(null)
 
-  // Playlist-wide display toggles — apply to every track row, not just one.
-  const [showDividers, setShowDividers] = useState(true)
-  const [showHighlight, setShowHighlight] = useState(true)
-
   // Zoom: horizontal stretches bar width (clips get wider), vertical widens track row height.
   const [hZoom, setHZoom] = useState(1)
   const [vZoom, setVZoom] = useState(1)
@@ -412,8 +408,6 @@ export default function App() {
                 timelineEnd={timelineEnd}
                 height={rowHeight}
                 color={trackColors[track.id]}
-                showDivider={showDividers}
-                showHighlight={showHighlight}
                 onClipMove={(clipId, newStartBar) => handleClipMove(track.id, clipId, newStartBar)}
                 openMenuClipId={openMenu?.trackId === track.id ? openMenu.clipId : null}
                 editingClipId={editingClip?.trackId === track.id ? editingClip.clipId : null}
@@ -476,25 +470,6 @@ export default function App() {
         >
           Random Color
         </button>
-
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setShowDividers((v) => !v)}
-            className="flex-1 px-4 py-2 text-sm font-medium text-white"
-            style={{ backgroundColor: showDividers ? '#3B6FA0' : '#6B5A63' }}
-          >
-            Garis Pembatas: {showDividers ? 'On' : 'Off'}
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowHighlight((v) => !v)}
-            className="flex-1 px-4 py-2 text-sm font-medium text-white"
-            style={{ backgroundColor: showHighlight ? '#3B6FA0' : '#6B5A63' }}
-          >
-            Highlight: {showHighlight ? 'On' : 'Off'}
-          </button>
-        </div>
 
         <div className="flex gap-2">
           <div className="flex flex-1 items-center gap-2 bg-[#2a2a2e] px-3 py-2">
