@@ -1,0 +1,30 @@
+@import "tailwindcss";
+
+@theme {
+  /* Track category palette — extracted from DAW reference */
+  --color-track-melodic: #E8788A;
+  --color-track-melodic-line: #D65F73;
+  --color-track-melodic-ink: #4A2530;
+
+  --color-track-marker: #A8DDE6;
+  --color-track-marker-ink: #1A1A1A;
+
+  --color-track-lead: #F0E23C;
+  --color-track-drum: #C9BE3A;
+  --color-track-drum-block: #0D0D0D;
+
+  --color-track-perc: #EEA24E;
+  --color-track-perc-step: #2B1B0A;
+
+  --color-track-accent: #3B6FA0;
+
+  --color-surface-base: #F3D9E6;
+  --color-surface-grid: #C9A8BC;
+
+  --font-mono-daw: "JetBrains Mono", ui-monospace, monospace;
+}
+
+body {
+  margin: 0;
+  background: #0d0d0f;
+}
