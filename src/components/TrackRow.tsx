@@ -64,11 +64,19 @@ export function TrackRow({
 }) {
   // Bar lines + beat subdivisions used to be ~4 absolute-positioned divs per bar
   // (x totalBars, x every track row) — hundreds of DOM nodes per row that all
-  // had to be diffed/repainted on every zoom tick. A background-image pattern
-  // draws the exact same grid with zero extra DOM and one style recalculation.
+  // had to be diffed/repainted on every zoom tick. A background pattern draws
+  // the exact same grid with zero extra DOM.
+  //
+  // IMPORTANT: this is a plain (non-repeating) linear-gradient describing just
+  // ONE bar's worth of pattern, tiled via backgroundSize/backgroundRepeat —
+  // not `repeating-linear-gradient` stretched across the whole row. A row can
+  // be tens of thousands of px wide at high zoom × 80 bars, and browsers lose
+  // floating-point precision computing one giant repeating gradient over that
+  // distance, which is what made lines vanish partway across. Tiling a single
+  // bar-sized tile keeps every repeat identically precise.
   const gridBackground = [
     // beat subdivisions at 25/50/75% of each bar, faint
-    `repeating-linear-gradient(to right,
+    `linear-gradient(to right,
       transparent 0, transparent ${barWidth * 0.25 - 0.5}px,
       rgba(201, 168, 188, 0.15) ${barWidth * 0.25 - 0.5}px, rgba(201, 168, 188, 0.15) ${barWidth * 0.25 + 0.5}px,
       transparent ${barWidth * 0.25 + 0.5}px, transparent ${barWidth * 0.5 - 0.5}px,
@@ -77,7 +85,7 @@ export function TrackRow({
       rgba(201, 168, 188, 0.15) ${barWidth * 0.75 - 0.5}px, rgba(201, 168, 188, 0.15) ${barWidth * 0.75 + 0.5}px,
       transparent ${barWidth * 0.75 + 0.5}px, transparent ${barWidth}px)`,
     // main bar boundary line
-    `repeating-linear-gradient(to right, rgba(201, 168, 188, 0.4) 0, rgba(201, 168, 188, 0.4) 1px, transparent 1px, transparent ${barWidth}px)`,
+    `linear-gradient(to right, rgba(201, 168, 188, 0.4) 0, rgba(201, 168, 188, 0.4) 1px, transparent 1px, transparent ${barWidth}px)`,
   ].join(', ')
 
   return (
@@ -97,6 +105,8 @@ export function TrackRow({
           height,
           backgroundColor: showHighlight && color ? hexToRgba(color.fill, 0.2) : undefined,
           backgroundImage: gridBackground,
+          backgroundSize: `${barWidth}px 100%`,
+          backgroundRepeat: 'repeat',
         }}
         onClick={(e) => {
           if (!onBackgroundClick) return
