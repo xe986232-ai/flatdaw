@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import type { Clip, TrackKind } from '../tracks'
+import { BEATS_PER_BAR, type Clip, type Note, type TrackKind } from '../tracks'
 import type { FlatColor } from '../colors'
 import { ClipMenu, type ClipMenuAction } from './ClipMenu'
 
@@ -25,6 +25,42 @@ const inkByKind: Record<TrackKind, string> = {
 function seeded(i: number, salt: number) {
   const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453
   return x - Math.floor(x)
+}
+
+// Mini piano-roll beneran dari clip.notes asli — dipakai begitu clip udah
+// punya note (mis. hasil parsing .flm). Rentang pitch auto-fit ke not yang
+// ada (mirip PITCH_MIN/PITCH_MAX dinamis di tool HTML), bukan rentang tetap,
+// biar pola melodinya kebaca meski cuma dalam kotak kecil.
+function NotePreview({ notes, totalBeats }: { notes: Note[]; totalBeats: number }) {
+  if (notes.length === 0) return null
+  const pitches = notes.map((n) => n.pitch)
+  const minPitch = Math.min(...pitches)
+  const maxPitch = Math.max(...pitches)
+  const pitchSpan = Math.max(1, maxPitch - minPitch)
+  const safeTotalBeats = Math.max(totalBeats, 1)
+
+  return (
+    <div className="relative h-full w-full opacity-90">
+      {notes.map((n) => {
+        const left = Math.min(98, Math.max(0, (n.startBeat / safeTotalBeats) * 100))
+        const width = Math.max((n.lengthBeats / safeTotalBeats) * 100, 0.8)
+        const top = pitchSpan === 0 ? 45 : 8 + ((maxPitch - n.pitch) / pitchSpan) * 78
+        return (
+          <span
+            key={n.id}
+            className="absolute rounded-[1px]"
+            style={{
+              left: `${left}%`,
+              top: `${top}%`,
+              width: `${width}%`,
+              height: '2px',
+              backgroundColor: 'currentColor',
+            }}
+          />
+        )
+      })}
+    </div>
+  )
 }
 
 function Pattern({ pattern, seed = 0 }: { pattern: Clip['pattern']; seed?: number }) {
@@ -227,7 +263,11 @@ export function ClipBlock({
         )
       )}
       <div className="min-h-0 flex-1">
-        <Pattern pattern={clip.pattern} seed={seed} />
+        {clip.notes && clip.notes.length > 0 ? (
+          <NotePreview notes={clip.notes} totalBeats={clip.lengthBars * BEATS_PER_BAR} />
+        ) : (
+          <Pattern pattern={clip.pattern} seed={seed} />
+        )}
       </div>
 
       {isMenuOpen && <ClipMenu flipDown={flipMenuDown} onAction={(action) => onMenuAction?.(clip.id, action)} />}
