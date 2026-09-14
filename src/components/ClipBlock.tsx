@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { Clip, TrackKind } from '../tracks'
+import type { FlatColor } from '../colors'
 
 const fillByKind: Record<TrackKind, string> = {
   marker: 'bg-track-marker',
@@ -104,6 +105,7 @@ export function ClipBlock({
   barWidth,
   timelineStart,
   timelineEnd,
+  color,
   onStartBarChange,
 }: {
   clip: Clip
@@ -111,6 +113,7 @@ export function ClipBlock({
   barWidth: number
   timelineStart: number
   timelineEnd: number
+  color?: FlatColor
   onStartBarChange?: (clipId: string, newStartBar: number) => void
 }) {
   const [dragStartBar, setDragStartBar] = useState<number | null>(null)
@@ -155,10 +158,10 @@ export function ClipBlock({
 
   return (
     <div
-      className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-hidden px-2 py-1 ${fillByKind[kind]} ${inkByKind[kind]} ${
-        dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : 'cursor-grab'
-      }`}
-      style={{ left, width }}
+      className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-hidden px-2 py-1 ${
+        color ? '' : `${fillByKind[kind]} ${inkByKind[kind]}`
+      } ${dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : 'cursor-grab'}`}
+      style={{ left, width, backgroundColor: color?.fill, color: color?.ink }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={endDrag}

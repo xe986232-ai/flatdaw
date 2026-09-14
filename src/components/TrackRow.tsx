@@ -1,4 +1,6 @@
 import type { Track } from '../tracks'
+import type { FlatColor } from '../colors'
+import { hexToRgba } from '../colors'
 import { ClipBlock } from './ClipBlock'
 import { TrackIcon } from './TrackIcon'
 
@@ -28,6 +30,7 @@ export function TrackRow({
   timelineStart,
   timelineEnd,
   height = 56,
+  color,
   onClipMove,
 }: {
   track: Track
@@ -37,6 +40,7 @@ export function TrackRow({
   timelineStart: number
   timelineEnd: number
   height?: number
+  color?: FlatColor
   onClipMove?: (clipId: string, newStartBar: number) => void
 }) {
   return (
@@ -45,13 +49,13 @@ export function TrackRow({
         className="sticky left-0 z-10 box-border flex shrink-0 items-center justify-center border-r border-surface-grid/40 bg-surface-base"
         style={{ width: labelWidth, height }}
       >
-        <span className={iconInkByKind[track.kind]}>
+        <span className={color ? '' : iconInkByKind[track.kind]} style={{ color: color?.fill }}>
           <TrackIcon kind={track.kind} />
         </span>
       </div>
       <div
-        className={`relative box-border ${railByKind[track.kind]}`}
-        style={{ width: totalBars * barWidth, height }}
+        className={`relative box-border ${color ? '' : railByKind[track.kind]}`}
+        style={{ width: totalBars * barWidth, height, backgroundColor: color ? hexToRgba(color.fill, 0.2) : undefined }}
       >
         {/* bar grid lines */}
         {Array.from({ length: totalBars + 1 }).map((_, i) => (
@@ -79,6 +83,7 @@ export function TrackRow({
             barWidth={barWidth}
             timelineStart={timelineStart}
             timelineEnd={timelineEnd}
+            color={color}
             onStartBarChange={onClipMove}
           />
         ))}

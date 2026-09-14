@@ -4,6 +4,7 @@ import { TrackRow } from './components/TrackRow'
 import { AutomationLane } from './components/AutomationLane'
 import { Playhead } from './components/Playhead'
 import { tracks, TIMELINE_START, TIMELINE_END } from './tracks'
+import { randomFlatColor, type FlatColor } from './colors'
 
 const BAR_WIDTH = 96
 const LABEL_WIDTH = 72
@@ -13,6 +14,7 @@ export default function App() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const [playheadBar, setPlayheadBar] = useState(207)
   const [trackList, setTrackList] = useState(tracks)
+  const [trackColors, setTrackColors] = useState<Record<string, FlatColor>>({})
 
   const playheadX = (playheadBar - TIMELINE_START) * BAR_WIDTH
 
@@ -36,8 +38,18 @@ export default function App() {
     )
   }
 
+  const handleRandomColors = () => {
+    setTrackColors((prev) => {
+      const next: Record<string, FlatColor> = {}
+      for (const track of trackList) {
+        next[track.id] = randomFlatColor(prev[track.id]?.fill)
+      }
+      return next
+    })
+  }
+
   return (
-    <div className="force-landscape flex min-h-dvh items-center justify-center bg-[#1a1a1d] p-4">
+    <div className="force-landscape flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#1a1a1d] p-4">
       {/* Landscape canvas — fixed 16:9, holds the whole playlist/arrangement view */}
       <div className="flex aspect-video w-full max-w-[1280px] flex-col overflow-hidden rounded-lg border border-black/40 bg-surface-base text-track-melodic-ink">
         <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
@@ -53,6 +65,7 @@ export default function App() {
                 totalBars={TOTAL_BARS}
                 timelineStart={TIMELINE_START}
                 timelineEnd={TIMELINE_END}
+                color={trackColors[track.id]}
                 onClipMove={(clipId, newStartBar) => handleClipMove(track.id, clipId, newStartBar)}
               />
             ))}
@@ -72,6 +85,14 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      <button
+        type="button"
+        onClick={handleRandomColors}
+        className="w-full max-w-[1280px] shrink-0 bg-track-accent px-4 py-2 text-sm font-medium text-white"
+      >
+        Random Color
+      </button>
     </div>
   )
 }
