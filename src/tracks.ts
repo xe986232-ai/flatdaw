@@ -15,11 +15,12 @@ export interface Track {
   clips: Clip[]
 }
 
-// Timeline window mirrors the reference: bars 205–213
+// Timeline window — kept long on purpose so the arrangement never dead-ends
+// on the right when scrolling; original reference content sits at 205–213.
 export const TIMELINE_START = 205
-export const TIMELINE_END = 213
+export const TIMELINE_END = 285
 
-export const tracks: Track[] = [
+const baseTracks: Track[] = [
   {
     id: 'note-a',
     name: '',
@@ -87,3 +88,36 @@ export const tracks: Track[] = [
     clips: [{ id: 'jc-kick-1', label: 'jc kick', startBar: 205, lengthBars: 8, pattern: 'steps' }],
   },
 ]
+
+// A bunch of extra tracks so the arrangement feels like a real full project —
+// content is arbitrary, just spread evenly across the whole extended timeline.
+const EXTRA_TRACK_KINDS: TrackKind[] = ['marker', 'melodic', 'lead', 'drum', 'perc', 'accent']
+const EXTRA_TRACK_NAMES = [
+  'pad', 'sub bass', 'pluck', 'riser', 'vox chop', 'arp', 'perc 2', 'fx sweep', 'strings 2', 'outro synth',
+  'hats', 'perc fill',
+]
+const EXTRA_PATTERNS: Array<Clip['pattern']> = ['notes', 'steps', 'dense', 'scribble']
+
+function buildExtraTracks(): Track[] {
+  const totalBars = TIMELINE_END - TIMELINE_START
+  return EXTRA_TRACK_NAMES.map((name, i) => {
+    const kind = EXTRA_TRACK_KINDS[i % EXTRA_TRACK_KINDS.length]
+    const clipCount = 3 + (i % 3) // 3–5 clips per track
+    const spacing = Math.floor(totalBars / clipCount)
+    const clips: Clip[] = Array.from({ length: clipCount }, (_, c) => {
+      const lengthBars = [2, 4, 6, 8][(i + c) % 4]
+      const rawStart = TIMELINE_START + c * spacing
+      const startBar = Math.min(TIMELINE_END - lengthBars, rawStart)
+      return {
+        id: `extra-${i}-${c}`,
+        label: name,
+        startBar,
+        lengthBars,
+        pattern: EXTRA_PATTERNS[(i + c) % EXTRA_PATTERNS.length],
+      }
+    })
+    return { id: `extra-${i}`, name, kind, clips }
+  })
+}
+
+export const tracks: Track[] = [...baseTracks, ...buildExtraTracks()]
