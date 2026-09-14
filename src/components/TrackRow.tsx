@@ -74,18 +74,25 @@ export function TrackRow({
   // floating-point precision computing one giant repeating gradient over that
   // distance, which is what made lines vanish partway across. Tiling a single
   // bar-sized tile keeps every repeat identically precise.
+  // Line color is a darkened/more-opaque version of --color-surface-grid
+  // (#C9A8BC). At the old 15%/40% alpha the line sat almost exactly on top
+  // of --color-surface-base (#F3D9E6) in lightness — same pastel-pink family,
+  // so the "grid" was only ever visibly readable where a clip's own solid
+  // fill happened to sit behind it. Boosting alpha (and darkening the rgb a
+  // touch) keeps the same hue but gives it enough contrast to read on plain
+  // row background too, not just inside clips.
   const gridBackground = [
-    // beat subdivisions at 25/50/75% of each bar, faint
+    // beat subdivisions at 25/50/75% of each bar
     `linear-gradient(to right,
       transparent 0, transparent ${barWidth * 0.25 - 0.5}px,
-      rgba(201, 168, 188, 0.15) ${barWidth * 0.25 - 0.5}px, rgba(201, 168, 188, 0.15) ${barWidth * 0.25 + 0.5}px,
+      rgba(150, 100, 130, 0.4) ${barWidth * 0.25 - 0.5}px, rgba(150, 100, 130, 0.4) ${barWidth * 0.25 + 0.5}px,
       transparent ${barWidth * 0.25 + 0.5}px, transparent ${barWidth * 0.5 - 0.5}px,
-      rgba(201, 168, 188, 0.15) ${barWidth * 0.5 - 0.5}px, rgba(201, 168, 188, 0.15) ${barWidth * 0.5 + 0.5}px,
+      rgba(150, 100, 130, 0.4) ${barWidth * 0.5 - 0.5}px, rgba(150, 100, 130, 0.4) ${barWidth * 0.5 + 0.5}px,
       transparent ${barWidth * 0.5 + 0.5}px, transparent ${barWidth * 0.75 - 0.5}px,
-      rgba(201, 168, 188, 0.15) ${barWidth * 0.75 - 0.5}px, rgba(201, 168, 188, 0.15) ${barWidth * 0.75 + 0.5}px,
+      rgba(150, 100, 130, 0.4) ${barWidth * 0.75 - 0.5}px, rgba(150, 100, 130, 0.4) ${barWidth * 0.75 + 0.5}px,
       transparent ${barWidth * 0.75 + 0.5}px, transparent ${barWidth}px)`,
     // main bar boundary line
-    `linear-gradient(to right, rgba(201, 168, 188, 0.4) 0, rgba(201, 168, 188, 0.4) 1px, transparent 1px, transparent ${barWidth}px)`,
+    `linear-gradient(to right, rgba(150, 100, 130, 0.85) 0, rgba(150, 100, 130, 0.85) 1px, transparent 1px, transparent ${barWidth}px)`,
   ].join(', ')
 
   return (
