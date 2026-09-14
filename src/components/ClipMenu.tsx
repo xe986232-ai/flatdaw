@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-export type ClipMenuAction = 'copy' | 'delete' | 'snap' | 'edit' | 'cut' | 'duplicate'
+export type ClipMenuAction = 'copy' | 'delete' | 'snap' | 'edit' | 'cut' | 'duplicate' | 'rename'
 
 const PRIMARY: { action: ClipMenuAction | 'more'; label: string }[] = [
   { action: 'copy', label: 'Copy' },
@@ -13,6 +13,7 @@ const PRIMARY: { action: ClipMenuAction | 'more'; label: string }[] = [
 const SECONDARY: { action: ClipMenuAction; label: string }[] = [
   { action: 'cut', label: 'Cut' },
   { action: 'duplicate', label: 'Duplicate' },
+  { action: 'rename', label: 'Rename' },
 ]
 
 function Bubble({ label, onClick }: { label: string; onClick: () => void }) {

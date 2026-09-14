@@ -4,8 +4,10 @@ import { RulerBar } from './components/RulerBar'
 import { TrackRow } from './components/TrackRow'
 import { AutomationLane } from './components/AutomationLane'
 import { Playhead } from './components/Playhead'
+import { PianoRoll } from './components/PianoRoll'
 import type { ClipMenuAction } from './components/ClipMenu'
-import { tracks, TIMELINE_START, TIMELINE_END, type Clip } from './tracks'
+import { tracks, TIMELINE_START, TIMELINE_END, type Clip, type Note } from './tracks'
+import { generateNotesForClip } from './notes'
 import { randomFlatColor, type FlatColor } from './colors'
 
 const BASE_BAR_WIDTH = 96
@@ -34,6 +36,10 @@ export default function App() {
   const [editingClip, setEditingClip] = useState<{ trackId: string; clipId: string } | null>(null)
   const [clipboard, setClipboard] = useState<Clip | null>(null)
 
+  // Which clip's piano roll is currently open — replaces the whole arrangement
+  // view with an in-place note editor for that clip until closed.
+  const [pianoRoll, setPianoRoll] = useState<{ trackId: string; clipId: string } | null>(null)
+
   // Playlist-wide display toggles — apply to every track row, not just one.
   const [showDividers, setShowDividers] = useState(true)
   const [showHighlight, setShowHighlight] = useState(true)
@@ -55,6 +61,9 @@ export default function App() {
   }, [hZoom, vZoom])
 
   const playheadX = (playheadBar - TIMELINE_START) * barWidth
+
+  const pianoRollTrack = pianoRoll ? trackList.find((t) => t.id === pianoRoll.trackId) : undefined
+  const pianoRollClip = pianoRollTrack?.clips.find((c) => c.id === pianoRoll?.clipId)
 
   // Close the floating menu on any pointer interaction outside a clip/menu.
   useEffect(() => {
@@ -108,6 +117,18 @@ export default function App() {
     if (!clip) return
 
     if (action === 'edit') {
+      // Make sure the clip has note data before entering the piano roll —
+      // clips authored without notes get a generated melody on first visit.
+      const notes = clip.notes ?? generateNotesForClip(clip)
+      setTrackList((prev) =>
+        prev.map((t) =>
+          t.id !== trackId ? t : { ...t, clips: t.clips.map((c) => (c.id === clipId ? { ...c, notes } : c)) },
+        ),
+      )
+      setPianoRoll({ trackId, clipId })
+      return
+    }
+    if (action === 'rename') {
       setEditingClip({ trackId, clipId })
       return
     }
@@ -150,6 +171,14 @@ export default function App() {
     const snapped = Math.min(maxStart, Math.max(TIMELINE_START, Math.round(bar / 0.25) * 0.25))
     const newClip: Clip = { ...clipboard, id: `${clipboard.id}-paste-${Date.now()}`, startBar: snapped }
     setTrackList((prev) => prev.map((t) => (t.id !== trackId ? t : { ...t, clips: [...t.clips, newClip] })))
+  }
+
+  const handleNotesChange = (trackId: string, clipId: string, notes: Note[]) => {
+    setTrackList((prev) =>
+      prev.map((t) =>
+        t.id !== trackId ? t : { ...t, clips: t.clips.map((c) => (c.id === clipId ? { ...c, notes } : c)) },
+      ),
+    )
   }
 
   const handleRandomColors = () => {
@@ -294,7 +323,7 @@ export default function App() {
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#1a1a1d] p-4">
       {/* Landscape canvas — fixed 2292x1080, holds the whole playlist/arrangement view */}
-      <div ref={canvasBoxRef} className="flex aspect-[2292/1080] w-full max-w-[2292px] flex-col overflow-hidden rounded-lg border border-black/40 bg-surface-base text-track-melodic-ink">
+      <div ref={canvasBoxRef} className="relative flex aspect-[2292/1080] w-full max-w-[2292px] flex-col overflow-hidden rounded-lg border border-black/40 bg-surface-base text-track-melodic-ink">
         <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
           <RulerBar startBar={TIMELINE_START} endBar={TIMELINE_END} barWidth={barWidth} labelWidth={LABEL_WIDTH} />
 
@@ -338,6 +367,17 @@ export default function App() {
             </div>
           </div>
         </div>
+
+        {pianoRoll && pianoRollTrack && pianoRollClip && (
+          <PianoRoll
+            clip={pianoRollClip}
+            trackName={pianoRollTrack.name}
+            trackKind={pianoRollTrack.kind}
+            color={trackColors[pianoRollTrack.id]}
+            onClose={() => setPianoRoll(null)}
+            onNotesChange={(notes) => handleNotesChange(pianoRollTrack.id, pianoRollClip.id, notes)}
+          />
+        )}
       </div>
 
 
