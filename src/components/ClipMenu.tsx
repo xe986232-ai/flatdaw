@@ -20,7 +20,7 @@ function Bubble({ label, onClick }: { label: string; onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-[11px] font-medium whitespace-nowrap"
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[9px] font-medium whitespace-nowrap"
       style={{ backgroundColor: 'rgba(255,255,255,0.95)', color: '#141414' }}
     >
       {label}
@@ -49,7 +49,7 @@ export function ClipMenu({
   return (
     <div
       data-clip-interactive="true"
-      className={`pointer-events-auto absolute left-1/2 z-40 flex -translate-x-1/2 -space-x-2 ${
+      className={`pointer-events-auto absolute left-1/2 z-40 flex -translate-x-1/2 -space-x-1 ${
         flipDown ? 'top-full mt-2' : 'bottom-full mb-2'
       }`}
       onPointerDown={(e) => e.stopPropagation()}
