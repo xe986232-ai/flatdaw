@@ -1,5 +1,17 @@
 import { BEATS_PER_BAR, TIMELINE_START, TIMELINE_END, type Track, type Clip, type Note, type TrackKind } from './tracks'
-import type { ParsedFlm } from './flmParser'
+import type { EVN2ChunkResult, ParsedFlm } from './flmParser'
+
+// Panjang "penempatan" clip di playlist (CLHd) cuma nunjukin seberapa lebar
+// clip itu digambar di timeline — bisa lebih pendek dari rentang note asli di
+// dalam pattern-nya. Tool HTML lama selalu nampilin pattern APA ADANYA (lihat
+// resizeAndDraw(): totalBeats dihitung dari note terjauh, bukan dari data
+// placement). Fungsi ini niru itu, biar piano roll di flatdaw gak kesempitan
+// dan notenya gak numpuk/overflow keluar baris.
+function patternSpanBars(chunk: EVN2ChunkResult | undefined): number {
+  if (!chunk || chunk.notes.length === 0) return 0
+  const maxBeat = Math.max(...chunk.notes.map((n) => n.pos_beats + n.dur_beats))
+  return Math.ceil(maxBeat / BEATS_PER_BAR)
+}
 
 // Susun ulang timelineClips (hasil parsing) jadi baris-per-track, urut
 // kemunculan pertama — persis pola grouping yang dipakai buildTimeline() di
@@ -23,7 +35,11 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
     const chunk = chunkResults[cl.chunkIdx]
     const label = chunk?.displayName || `Pattern #${cl.chunkIdx + 1}`
 
-    const lengthBars = Math.max(0.25, cl.lenBeats / BEATS_PER_BAR)
+    // Lebar clip = maksimum antara panjang penempatan di playlist DAN panjang
+    // pattern note-nya sendiri, jadi gak ada note yang kepotong/overflow.
+    const placementBars = Math.max(0.25, cl.lenBeats / BEATS_PER_BAR)
+    const lengthBars = Math.max(placementBars, patternSpanBars(chunk), 1)
+
     const rawStartBar = TIMELINE_START + cl.posBeats / BEATS_PER_BAR
     const startBar = Math.min(TIMELINE_END - lengthBars, Math.max(TIMELINE_START, rawStartBar))
 

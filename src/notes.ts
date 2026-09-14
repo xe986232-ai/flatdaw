@@ -1,7 +1,7 @@
 import { BEATS_PER_BAR, type Clip, type Note } from './tracks'
 
-export const PIANO_MIN_PITCH = 36 // C2
-export const PIANO_MAX_PITCH = 96 // C7
+export const PIANO_MIN_PITCH = 21 // A0
+export const PIANO_MAX_PITCH = 108 // C8
 
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
 const BLACK_KEY_CLASSES = new Set([1, 3, 6, 8, 10])
