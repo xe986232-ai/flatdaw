@@ -9,6 +9,8 @@ import type { ClipMenuAction } from './components/ClipMenu'
 import { tracks, TIMELINE_START, TIMELINE_END, type Clip, type Note } from './tracks'
 import { generateNotesForClip } from './notes'
 import { randomFlatColor, type FlatColor } from './colors'
+import { parseFlmFile } from './flmParser'
+import { flmToTracks } from './flmToTracks'
 
 const BASE_BAR_WIDTH = 96
 const BASE_ROW_HEIGHT = 56
@@ -30,6 +32,12 @@ export default function App() {
   const [playheadBar, setPlayheadBar] = useState(207)
   const [trackList, setTrackList] = useState(tracks)
   const [trackColors, setTrackColors] = useState<Record<string, FlatColor>>({})
+
+  // Import project .flm (FL Studio Mobile): parsing chunk EVN2 -> Track/Clip/Note flatdaw.
+  const flmInputRef = useRef<HTMLInputElement>(null)
+  const [flmStatus, setFlmStatus] = useState<string | null>(null)
+  const [flmError, setFlmError] = useState<string | null>(null)
+  const [isImportingFlm, setIsImportingFlm] = useState(false)
 
   // Clip context menu: which clip's menu/edit state is open, plus a one-slot clipboard for cut/copy → paste.
   const [openMenu, setOpenMenu] = useState<{ trackId: string; clipId: string } | null>(null)
@@ -222,6 +230,50 @@ export default function App() {
     }
   }
 
+  // Baca file .flm -> parseFlmFile (logic EVN2 parser gak diubah sama sekali)
+  // -> flmToTracks -> ganti isi playlist dengan hasil parsing.
+  const handleImportFlm = async (file: File) => {
+    setIsImportingFlm(true)
+    setFlmError(null)
+    setFlmStatus(null)
+    try {
+      const buffer = await file.arrayBuffer()
+      const bytes = new Uint8Array(buffer)
+      const result = parseFlmFile(bytes, file.name)
+      if (!result.ok) {
+        setFlmError(result.error)
+        return
+      }
+      const { chunkResults, timelineClips, skippedAudioCount, namedCount } = result.data
+      const mappedTracks = flmToTracks(result.data)
+
+      setTrackList(mappedTracks)
+      setTrackColors({})
+      setOpenMenu(null)
+      setEditingClip(null)
+      setPianoRoll(null)
+      setClipboard(null)
+
+      setFlmStatus(
+        `${file.name} · ${chunkResults.length} pattern` +
+          (namedCount ? ` · ${namedCount} instrumen dikenali` : '') +
+          (skippedAudioCount ? ` · ${skippedAudioCount} track audio disaring` : '') +
+          ` · ${timelineClips.length} clip masuk playlist`,
+      )
+    } catch (err) {
+      console.error('Gagal membaca file .flm:', err)
+      setFlmError('File .flm gak bisa dibaca. Pastikan formatnya sesuai (FL Studio Mobile project).')
+    } finally {
+      setIsImportingFlm(false)
+    }
+  }
+
+  const handleFlmInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    e.target.value = '' // biar bisa pilih file yang sama lagi
+    if (file) handleImportFlm(file)
+  }
+
   const handleZoomH = (delta: number) => {
     setHZoom((v) => Math.min(H_ZOOM_MAX, Math.max(H_ZOOM_MIN, Math.round((v + delta) * 100) / 100)))
   }
@@ -393,6 +445,18 @@ export default function App() {
 
 
       <div className="flex w-full max-w-[1280px] shrink-0 flex-col gap-2">
+        <button
+          type="button"
+          onClick={() => flmInputRef.current?.click()}
+          disabled={isImportingFlm}
+          className="bg-[#3B6FA0] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {isImportingFlm ? 'Mem-parsing .flm…' : 'Import Project .flm'}
+        </button>
+        <input ref={flmInputRef} type="file" accept=".flm" className="hidden" onChange={handleFlmInputChange} />
+        {flmStatus && <div className="bg-[#1d3a2a] px-3 py-1.5 text-[12px] text-white/85">{flmStatus}</div>}
+        {flmError && <div className="bg-[#5A2A2A] px-3 py-1.5 text-[12px] text-white/90">{flmError}</div>}
+
         <button
           type="button"
           onClick={handleRandomColors}
