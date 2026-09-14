@@ -22,6 +22,10 @@ export default function App() {
   const [editingClip, setEditingClip] = useState<{ trackId: string; clipId: string } | null>(null)
   const [clipboard, setClipboard] = useState<Clip | null>(null)
 
+  // Playlist-wide display toggles — apply to every track row, not just one.
+  const [showDividers, setShowDividers] = useState(true)
+  const [showHighlight, setShowHighlight] = useState(true)
+
   const playheadX = (playheadBar - TIMELINE_START) * BAR_WIDTH
 
   // Close the floating menu on any pointer interaction outside a clip/menu.
@@ -148,6 +152,8 @@ export default function App() {
                 timelineStart={TIMELINE_START}
                 timelineEnd={TIMELINE_END}
                 color={trackColors[track.id]}
+                showDivider={showDividers}
+                showHighlight={showHighlight}
                 onClipMove={(clipId, newStartBar) => handleClipMove(track.id, clipId, newStartBar)}
                 openMenuClipId={openMenu?.trackId === track.id ? openMenu.clipId : null}
                 editingClipId={editingClip?.trackId === track.id ? editingClip.clipId : null}
@@ -175,13 +181,34 @@ export default function App() {
         </div>
       </div>
 
-      <button
-        type="button"
-        onClick={handleRandomColors}
-        className="w-full max-w-[1280px] shrink-0 bg-track-accent px-4 py-2 text-sm font-medium text-white"
-      >
-        Random Color
-      </button>
+      <div className="flex w-full max-w-[1280px] shrink-0 flex-col gap-2">
+        <button
+          type="button"
+          onClick={handleRandomColors}
+          className="bg-track-accent px-4 py-2 text-sm font-medium text-white"
+        >
+          Random Color
+        </button>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setShowDividers((v) => !v)}
+            className="flex-1 px-4 py-2 text-sm font-medium text-white"
+            style={{ backgroundColor: showDividers ? '#3B6FA0' : '#6B5A63' }}
+          >
+            Garis Pembatas: {showDividers ? 'On' : 'Off'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowHighlight((v) => !v)}
+            className="flex-1 px-4 py-2 text-sm font-medium text-white"
+            style={{ backgroundColor: showHighlight ? '#3B6FA0' : '#6B5A63' }}
+          >
+            Highlight: {showHighlight ? 'On' : 'Off'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }

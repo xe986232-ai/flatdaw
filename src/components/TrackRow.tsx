@@ -32,6 +32,8 @@ export function TrackRow({
   timelineEnd,
   height = 56,
   color,
+  showDivider = true,
+  showHighlight = true,
   onClipMove,
   openMenuClipId = null,
   editingClipId = null,
@@ -49,6 +51,8 @@ export function TrackRow({
   timelineEnd: number
   height?: number
   color?: FlatColor
+  showDivider?: boolean
+  showHighlight?: boolean
   onClipMove?: (clipId: string, newStartBar: number) => void
   openMenuClipId?: string | null
   editingClipId?: string | null
@@ -59,7 +63,7 @@ export function TrackRow({
   onBackgroundClick?: (bar: number) => void
 }) {
   return (
-    <div className="box-border flex border-b-2 border-row-divider">
+    <div className={`box-border flex border-b-2 ${showDivider ? 'border-row-divider' : 'border-transparent'}`}>
       <div
         className="sticky left-0 z-10 box-border flex shrink-0 items-center justify-center border-r border-surface-grid/40 bg-surface-base"
         style={{ width: labelWidth, height }}
@@ -69,8 +73,12 @@ export function TrackRow({
         </span>
       </div>
       <div
-        className={`relative box-border ${color ? '' : railByKind[track.kind]}`}
-        style={{ width: totalBars * barWidth, height, backgroundColor: color ? hexToRgba(color.fill, 0.2) : undefined }}
+        className={`relative box-border ${showHighlight && !color ? railByKind[track.kind] : ''}`}
+        style={{
+          width: totalBars * barWidth,
+          height,
+          backgroundColor: showHighlight && color ? hexToRgba(color.fill, 0.2) : undefined,
+        }}
         onClick={(e) => {
           if (!onBackgroundClick) return
           const rect = e.currentTarget.getBoundingClientRect()
