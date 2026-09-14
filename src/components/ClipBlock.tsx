@@ -1,7 +1,8 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import type { Clip, TrackKind } from '../tracks'
 import type { FlatColor } from '../colors'
+import { ClipMenu, type ClipMenuAction } from './ClipMenu'
 
 const fillByKind: Record<TrackKind, string> = {
   marker: 'bg-track-marker',
@@ -98,6 +99,7 @@ function Pattern({ pattern, seed = 0 }: { pattern: Clip['pattern']; seed?: numbe
 }
 
 const SNAP_BARS = 0.25 // snap to the beat subdivisions already drawn on the grid
+const CLICK_THRESHOLD_PX = 4 // pointer movement below this counts as a tap, not a drag
 
 export function ClipBlock({
   clip,
@@ -106,7 +108,13 @@ export function ClipBlock({
   timelineStart,
   timelineEnd,
   color,
+  isMenuOpen = false,
+  isEditing = false,
+  flipMenuDown = false,
   onStartBarChange,
+  onClipClick,
+  onMenuAction,
+  onRenameCommit,
 }: {
   clip: Clip
   kind: TrackKind
@@ -114,10 +122,29 @@ export function ClipBlock({
   timelineStart: number
   timelineEnd: number
   color?: FlatColor
+  isMenuOpen?: boolean
+  isEditing?: boolean
+  flipMenuDown?: boolean
   onStartBarChange?: (clipId: string, newStartBar: number) => void
+  onClipClick?: (clipId: string) => void
+  onMenuAction?: (clipId: string, action: ClipMenuAction) => void
+  onRenameCommit?: (clipId: string, label: string) => void
 }) {
   const [dragStartBar, setDragStartBar] = useState<number | null>(null)
-  const dragInfo = useRef<{ originClientX: number; originStartBar: number } | null>(null)
+  const dragInfo = useRef<{ originClientX: number; originStartBar: number; moved: boolean } | null>(null)
+
+  const [labelDraft, setLabelDraft] = useState(clip.label)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (!isEditing) return
+    setLabelDraft(clip.label)
+    const id = requestAnimationFrame(() => {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [isEditing, clip.label])
 
   const effectiveStartBar = dragStartBar ?? clip.startBar
   const left = (effectiveStartBar - timelineStart) * barWidth
@@ -133,46 +160,77 @@ export function ClipBlock({
   }
 
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    if (isEditing) return
     e.stopPropagation()
     e.currentTarget.setPointerCapture(e.pointerId)
-    dragInfo.current = { originClientX: e.clientX, originStartBar: clip.startBar }
+    dragInfo.current = { originClientX: e.clientX, originStartBar: clip.startBar, moved: false }
     setDragStartBar(clip.startBar)
   }
 
   function handlePointerMove(e: ReactPointerEvent<HTMLDivElement>) {
     if (!dragInfo.current) return
     const { originClientX, originStartBar } = dragInfo.current
-    const deltaBars = (e.clientX - originClientX) / barWidth
+    const deltaPx = e.clientX - originClientX
+    if (Math.abs(deltaPx) > CLICK_THRESHOLD_PX) dragInfo.current.moved = true
+    const deltaBars = deltaPx / barWidth
     setDragStartBar(snap(originStartBar + deltaBars))
   }
 
   function endDrag(e: ReactPointerEvent<HTMLDivElement>) {
     if (!dragInfo.current) return
     e.currentTarget.releasePointerCapture(e.pointerId)
+    const { moved } = dragInfo.current
     dragInfo.current = null
     setDragStartBar((finalBar) => {
-      if (finalBar != null) onStartBarChange?.(clip.id, finalBar)
+      if (moved && finalBar != null) onStartBarChange?.(clip.id, finalBar)
       return null
     })
+    if (!moved) onClipClick?.(clip.id)
+  }
+
+  function commitRename() {
+    const trimmed = labelDraft.trim()
+    onRenameCommit?.(clip.id, trimmed || clip.label)
   }
 
   return (
     <div
-      className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-hidden px-2 py-1 ${
+      data-clip-interactive="true"
+      className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-visible px-2 py-1 ${
         color ? '' : `${fillByKind[kind]} ${inkByKind[kind]}`
-      } ${dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : 'cursor-grab'}`}
+      } ${dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : 'cursor-grab'} ${isMenuOpen ? 'z-30' : ''}`}
       style={{ left, width, backgroundColor: color?.fill, color: color?.ink }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
+      onClick={(e) => e.stopPropagation()}
     >
-      {clip.label && (
-        <span className="block shrink-0 truncate text-[11px] font-medium leading-none mb-1">{clip.label}</span>
+      {isEditing ? (
+        <input
+          ref={inputRef}
+          value={labelDraft}
+          onChange={(e) => setLabelDraft(e.target.value)}
+          onBlur={commitRename}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur()
+            if (e.key === 'Escape') {
+              setLabelDraft(clip.label)
+              e.currentTarget.blur()
+            }
+          }}
+          className="relative z-30 mb-1 w-full min-w-0 shrink-0 rounded-sm border border-black/30 bg-white/95 px-1 text-[11px] font-medium leading-tight text-black outline-none"
+        />
+      ) : (
+        clip.label && (
+          <span className="block shrink-0 truncate text-[11px] font-medium leading-none mb-1">{clip.label}</span>
+        )
       )}
       <div className="min-h-0 flex-1">
         <Pattern pattern={clip.pattern} seed={seed} />
       </div>
+
+      {isMenuOpen && <ClipMenu flipDown={flipMenuDown} onAction={(action) => onMenuAction?.(clip.id, action)} />}
     </div>
   )
 }

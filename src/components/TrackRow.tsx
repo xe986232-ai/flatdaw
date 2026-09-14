@@ -3,6 +3,7 @@ import type { FlatColor } from '../colors'
 import { hexToRgba } from '../colors'
 import { ClipBlock } from './ClipBlock'
 import { TrackIcon } from './TrackIcon'
+import type { ClipMenuAction } from './ClipMenu'
 
 const railByKind: Record<Track['kind'], string> = {
   marker: 'bg-track-marker/20',
@@ -32,6 +33,13 @@ export function TrackRow({
   height = 56,
   color,
   onClipMove,
+  openMenuClipId = null,
+  editingClipId = null,
+  flipMenuDown = false,
+  onClipClick,
+  onMenuAction,
+  onRenameCommit,
+  onBackgroundClick,
 }: {
   track: Track
   barWidth: number
@@ -42,6 +50,13 @@ export function TrackRow({
   height?: number
   color?: FlatColor
   onClipMove?: (clipId: string, newStartBar: number) => void
+  openMenuClipId?: string | null
+  editingClipId?: string | null
+  flipMenuDown?: boolean
+  onClipClick?: (clipId: string) => void
+  onMenuAction?: (clipId: string, action: ClipMenuAction) => void
+  onRenameCommit?: (clipId: string, label: string) => void
+  onBackgroundClick?: (bar: number) => void
 }) {
   return (
     <div className="box-border flex border-b-2 border-row-divider">
@@ -56,6 +71,12 @@ export function TrackRow({
       <div
         className={`relative box-border ${color ? '' : railByKind[track.kind]}`}
         style={{ width: totalBars * barWidth, height, backgroundColor: color ? hexToRgba(color.fill, 0.2) : undefined }}
+        onClick={(e) => {
+          if (!onBackgroundClick) return
+          const rect = e.currentTarget.getBoundingClientRect()
+          const localX = e.clientX - rect.left
+          onBackgroundClick(timelineStart + localX / barWidth)
+        }}
       >
         {/* bar grid lines */}
         {Array.from({ length: totalBars + 1 }).map((_, i) => (
@@ -85,6 +106,12 @@ export function TrackRow({
             timelineEnd={timelineEnd}
             color={color}
             onStartBarChange={onClipMove}
+            isMenuOpen={openMenuClipId === clip.id}
+            isEditing={editingClipId === clip.id}
+            flipMenuDown={flipMenuDown}
+            onClipClick={onClipClick}
+            onMenuAction={onMenuAction}
+            onRenameCommit={onRenameCommit}
           />
         ))}
       </div>
