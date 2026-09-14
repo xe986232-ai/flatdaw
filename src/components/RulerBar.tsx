@@ -22,7 +22,7 @@ export function RulerBar({
   const bars = Array.from({ length: endBar - startBar + 1 }, (_, i) => startBar + i)
 
   return (
-    <div className="sticky top-0 z-20 flex h-12 items-center border-b border-surface-grid/50 bg-surface-base">
+    <div className="sticky top-0 z-20 box-border flex h-12 items-center border-b-2 border-row-divider bg-surface-base">
       <div className="flex h-full shrink-0 items-center justify-center border-r border-surface-grid/40" style={{ width: labelWidth }}>
         <button
           type="button"

@@ -23,14 +23,14 @@ export function AutomationLane({
   }).join(' ')
 
   return (
-    <div className="flex border-b border-surface-grid/30">
+    <div className="box-border flex border-b-2 border-row-divider">
       <div
-        className="sticky left-0 z-10 flex shrink-0 items-center border-r border-surface-grid/40 bg-surface-base px-3"
+        className="sticky left-0 z-10 box-border flex shrink-0 items-center border-r border-surface-grid/40 bg-surface-base px-3"
         style={{ width: labelWidth, height }}
       >
         <span className="truncate text-[11px] font-medium text-track-accent">{label}</span>
       </div>
-      <div className="relative bg-track-accent/10" style={{ width, height }}>
+      <div className="relative box-border bg-track-accent/10" style={{ width, height }}>
         <svg viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 h-full w-full text-track-accent" preserveAspectRatio="none">
           <polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.75" />
         </svg>

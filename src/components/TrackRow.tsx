@@ -34,9 +34,9 @@ export function TrackRow({
   height?: number
 }) {
   return (
-    <div className="flex border-b border-surface-grid/30">
+    <div className="box-border flex border-b-2 border-row-divider">
       <div
-        className="sticky left-0 z-10 flex shrink-0 items-center justify-center border-r border-surface-grid/40 bg-surface-base"
+        className="sticky left-0 z-10 box-border flex shrink-0 items-center justify-center border-r border-surface-grid/40 bg-surface-base"
         style={{ width: labelWidth, height }}
       >
         <span className={iconInkByKind[track.kind]}>
@@ -44,7 +44,7 @@ export function TrackRow({
         </span>
       </div>
       <div
-        className={`relative ${railByKind[track.kind]}`}
+        className={`relative box-border ${railByKind[track.kind]}`}
         style={{ width: totalBars * barWidth, height }}
       >
         {/* bar grid lines */}
