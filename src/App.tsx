@@ -42,6 +42,15 @@ export default function App() {
   const rowHeight = BASE_ROW_HEIGHT * vZoom
   const automationHeight = BASE_AUTOMATION_HEIGHT * vZoom
 
+  // Kept in sync via effect below so the pinch/wheel listeners (attached once)
+  // always read the latest zoom values instead of a stale closure.
+  const hZoomRef = useRef(hZoom)
+  const vZoomRef = useRef(vZoom)
+  useEffect(() => {
+    hZoomRef.current = hZoom
+    vZoomRef.current = vZoom
+  }, [hZoom, vZoom])
+
   const playheadX = (playheadBar - TIMELINE_START) * barWidth
 
   // Close the floating menu on any pointer interaction outside a clip/menu.
@@ -157,6 +166,71 @@ export default function App() {
   const handleZoomV = (delta: number) => {
     setVZoom((v) => Math.min(V_ZOOM_MAX, Math.max(V_ZOOM_MIN, Math.round((v + delta) * 100) / 100)))
   }
+
+  // Pinch-to-zoom directly on the canvas: two-finger touch (mobile/tablet) or
+  // Ctrl+scroll (trackpad "pinch" gesture on desktop). Both are intercepted with
+  // { passive: false } + preventDefault so the *browser page* never zooms —
+  // only the canvas's own hZoom/vZoom state changes.
+  useEffect(() => {
+    const el = scrollRef.current
+    if (!el) return
+
+    const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v))
+
+    // --- Touch pinch (mobile/tablet) ---
+    let pinchStartDist: number | null = null
+    let pinchStartHZoom = 1
+    let pinchStartVZoom = 1
+
+    const touchDist = (t: TouchList) => {
+      const dx = t[0].clientX - t[1].clientX
+      const dy = t[0].clientY - t[1].clientY
+      return Math.hypot(dx, dy)
+    }
+
+    const onTouchStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        e.preventDefault()
+        pinchStartDist = touchDist(e.touches)
+        pinchStartHZoom = hZoomRef.current
+        pinchStartVZoom = vZoomRef.current
+      }
+    }
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 2 && pinchStartDist) {
+        e.preventDefault()
+        const scale = touchDist(e.touches) / pinchStartDist
+        setHZoom(Math.round(clamp(pinchStartHZoom * scale, H_ZOOM_MIN, H_ZOOM_MAX) * 100) / 100)
+        setVZoom(Math.round(clamp(pinchStartVZoom * scale, V_ZOOM_MIN, V_ZOOM_MAX) * 100) / 100)
+      }
+    }
+
+    const onTouchEnd = (e: TouchEvent) => {
+      if (e.touches.length < 2) pinchStartDist = null
+    }
+
+    // --- Trackpad pinch / Ctrl+scroll (desktop) ---
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey) return // plain scroll — let the container scroll normally
+      e.preventDefault()
+      const scale = 1 - e.deltaY * 0.01
+      setHZoom(Math.round(clamp(hZoomRef.current * scale, H_ZOOM_MIN, H_ZOOM_MAX) * 100) / 100)
+      setVZoom(Math.round(clamp(vZoomRef.current * scale, V_ZOOM_MIN, V_ZOOM_MAX) * 100) / 100)
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: false })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', onTouchEnd, { passive: false })
+    el.addEventListener('wheel', onWheel, { passive: false })
+
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('wheel', onWheel)
+    }
+  }, [])
 
   return (
     <div className="force-landscape flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#1a1a1d] p-4">

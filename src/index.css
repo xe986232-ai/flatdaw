@@ -32,11 +32,14 @@ body {
 
 /* Block native pinch-to-zoom on the whole page (it was hijacking gestures meant
    for the app's own Zoom H / Zoom V controls) while still allowing normal
-   single-finger scrolling/panning inside the canvas. */
+   single-finger scrolling/panning inside the canvas.
+   NOTE: `manipulation` is actually shorthand for "pan-x pan-y pinch-zoom" — it
+   still lets the browser handle pinch-zoom! `pan-x pan-y` (without pinch-zoom)
+   is what actually disables native pinch-zoom while keeping panning/scrolling. */
 html,
 body,
 #root {
-  touch-action: manipulation;
+  touch-action: pan-x pan-y;
 }
 
 /* Force-landscape: on narrow portrait screens (phones held upright),
