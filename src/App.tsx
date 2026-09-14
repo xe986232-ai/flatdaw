@@ -181,6 +181,16 @@ export default function App() {
     )
   }
 
+  const handleImportMidi = (trackId: string, clipId: string, notes: Note[], lengthBars: number) => {
+    setTrackList((prev) =>
+      prev.map((t) =>
+        t.id !== trackId
+          ? t
+          : { ...t, clips: t.clips.map((c) => (c.id === clipId ? { ...c, notes, lengthBars } : c)) },
+      ),
+    )
+  }
+
   const handleRandomColors = () => {
     setTrackColors((prev) => {
       const next: Record<string, FlatColor> = {}
@@ -376,6 +386,7 @@ export default function App() {
             color={trackColors[pianoRollTrack.id]}
             onClose={() => setPianoRoll(null)}
             onNotesChange={(notes) => handleNotesChange(pianoRollTrack.id, pianoRollClip.id, notes)}
+            onImportMidi={(notes, lengthBars) => handleImportMidi(pianoRollTrack.id, pianoRollClip.id, notes, lengthBars)}
           />
         )}
       </div>
