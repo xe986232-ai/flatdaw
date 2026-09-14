@@ -7,9 +7,18 @@ import type { ClipMenuAction } from './components/ClipMenu'
 import { tracks, TIMELINE_START, TIMELINE_END, type Clip } from './tracks'
 import { randomFlatColor, type FlatColor } from './colors'
 
-const BAR_WIDTH = 96
+const BASE_BAR_WIDTH = 96
+const BASE_ROW_HEIGHT = 56
+const BASE_AUTOMATION_HEIGHT = 44
 const LABEL_WIDTH = 72
 const TOTAL_BARS = TIMELINE_END - TIMELINE_START
+
+// Zoom bounds — horizontal stretches clip/bar width, vertical widens track row height.
+const H_ZOOM_MIN = 0.4
+const H_ZOOM_MAX = 3
+const V_ZOOM_MIN = 0.6
+const V_ZOOM_MAX = 2.5
+const ZOOM_STEP = 0.2
 
 export default function App() {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -26,7 +35,14 @@ export default function App() {
   const [showDividers, setShowDividers] = useState(true)
   const [showHighlight, setShowHighlight] = useState(true)
 
-  const playheadX = (playheadBar - TIMELINE_START) * BAR_WIDTH
+  // Zoom: horizontal stretches bar width (clips get wider), vertical widens track row height.
+  const [hZoom, setHZoom] = useState(1)
+  const [vZoom, setVZoom] = useState(1)
+  const barWidth = BASE_BAR_WIDTH * hZoom
+  const rowHeight = BASE_ROW_HEIGHT * vZoom
+  const automationHeight = BASE_AUTOMATION_HEIGHT * vZoom
+
+  const playheadX = (playheadBar - TIMELINE_START) * barWidth
 
   // Close the floating menu on any pointer interaction outside a clip/menu.
   useEffect(() => {
@@ -44,7 +60,7 @@ export default function App() {
     if (!container) return
     const rect = container.getBoundingClientRect()
     const localX = clientX - rect.left + container.scrollLeft - LABEL_WIDTH
-    const bar = TIMELINE_START + localX / BAR_WIDTH
+    const bar = TIMELINE_START + localX / barWidth
     const clamped = Math.min(TIMELINE_END, Math.max(TIMELINE_START, bar))
     setPlayheadBar(Math.round(clamped * 4) / 4)
   }
@@ -134,6 +150,14 @@ export default function App() {
     })
   }
 
+  const handleZoomH = (delta: number) => {
+    setHZoom((v) => Math.min(H_ZOOM_MAX, Math.max(H_ZOOM_MIN, Math.round((v + delta) * 100) / 100)))
+  }
+
+  const handleZoomV = (delta: number) => {
+    setVZoom((v) => Math.min(V_ZOOM_MAX, Math.max(V_ZOOM_MIN, Math.round((v + delta) * 100) / 100)))
+  }
+
   return (
     <div className="force-landscape flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#1a1a1d] p-4">
       {/* Portrait canvas — fixed 1080x2292 frame, but the playlist inside is rotated 90deg
@@ -145,47 +169,49 @@ export default function App() {
             style={{ width: '100cqh', height: '100cqw' }}
           >
             <div ref={scrollRef} className="relative h-full w-full overflow-auto">
-              <RulerBar startBar={TIMELINE_START} endBar={TIMELINE_END} barWidth={BAR_WIDTH} labelWidth={LABEL_WIDTH} />
+              <RulerBar startBar={TIMELINE_START} endBar={TIMELINE_END} barWidth={barWidth} labelWidth={LABEL_WIDTH} />
 
-          <div className="relative">
-            {trackList.map((track, index) => (
-              <TrackRow
-                key={track.id}
-                track={track}
-                barWidth={BAR_WIDTH}
-                labelWidth={LABEL_WIDTH}
-                totalBars={TOTAL_BARS}
-                timelineStart={TIMELINE_START}
-                timelineEnd={TIMELINE_END}
-                color={trackColors[track.id]}
-                showDivider={showDividers}
-                showHighlight={showHighlight}
-                onClipMove={(clipId, newStartBar) => handleClipMove(track.id, clipId, newStartBar)}
-                openMenuClipId={openMenu?.trackId === track.id ? openMenu.clipId : null}
-                editingClipId={editingClip?.trackId === track.id ? editingClip.clipId : null}
-                flipMenuDown={index === 0}
-                onClipClick={(clipId) => handleClipClick(track.id, clipId)}
-                onMenuAction={(clipId, action) => handleMenuAction(track.id, clipId, action)}
-                onRenameCommit={(clipId, label) => handleRenameCommit(track.id, clipId, label)}
-                onBackgroundClick={(bar) => handleBackgroundClick(track.id, bar)}
-              />
-            ))}
+              <div className="relative">
+                {trackList.map((track, index) => (
+                  <TrackRow
+                    key={track.id}
+                    track={track}
+                    barWidth={barWidth}
+                    labelWidth={LABEL_WIDTH}
+                    totalBars={TOTAL_BARS}
+                    timelineStart={TIMELINE_START}
+                    timelineEnd={TIMELINE_END}
+                    height={rowHeight}
+                    color={trackColors[track.id]}
+                    showDivider={showDividers}
+                    showHighlight={showHighlight}
+                    onClipMove={(clipId, newStartBar) => handleClipMove(track.id, clipId, newStartBar)}
+                    openMenuClipId={openMenu?.trackId === track.id ? openMenu.clipId : null}
+                    editingClipId={editingClip?.trackId === track.id ? editingClip.clipId : null}
+                    flipMenuDown={index === 0}
+                    onClipClick={(clipId) => handleClipClick(track.id, clipId)}
+                    onMenuAction={(clipId, action) => handleMenuAction(track.id, clipId, action)}
+                    onRenameCommit={(clipId, label) => handleRenameCommit(track.id, clipId, label)}
+                    onBackgroundClick={(bar) => handleBackgroundClick(track.id, bar)}
+                  />
+                ))}
 
-            <AutomationLane label="Level" totalBars={TOTAL_BARS} barWidth={BAR_WIDTH} labelWidth={LABEL_WIDTH} />
-            <AutomationLane
-              label="Frequency : FX Filter"
-              totalBars={TOTAL_BARS}
-              barWidth={BAR_WIDTH}
-              labelWidth={LABEL_WIDTH}
-              teeth={70}
-            />
+                <AutomationLane label="Level" totalBars={TOTAL_BARS} barWidth={barWidth} labelWidth={LABEL_WIDTH} height={automationHeight} />
+                <AutomationLane
+                  label="Frequency : FX Filter"
+                  totalBars={TOTAL_BARS}
+                  barWidth={barWidth}
+                  labelWidth={LABEL_WIDTH}
+                  height={automationHeight}
+                  teeth={70}
+                />
 
-              <div className="pointer-events-none absolute inset-0" style={{ left: LABEL_WIDTH }}>
-                <Playhead x={playheadX} onDrag={handleDrag} />
+                <div className="pointer-events-none absolute inset-0" style={{ left: LABEL_WIDTH }}>
+                  <Playhead x={playheadX} onDrag={handleDrag} />
+                </div>
               </div>
             </div>
           </div>
-        </div>
         </div>
       </div>
 
@@ -215,6 +241,47 @@ export default function App() {
           >
             Highlight: {showHighlight ? 'On' : 'Off'}
           </button>
+        </div>
+
+        <div className="flex gap-2">
+          <div className="flex flex-1 items-center gap-2 bg-[#2a2a2e] px-3 py-2">
+            <span className="flex-1 text-sm font-medium text-white">Zoom H: {Math.round(hZoom * 100)}%</span>
+            <button
+              type="button"
+              onClick={() => handleZoomH(-ZOOM_STEP)}
+              disabled={hZoom <= H_ZOOM_MIN}
+              className="h-7 w-7 bg-track-accent text-sm font-bold text-white disabled:opacity-40"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={() => handleZoomH(ZOOM_STEP)}
+              disabled={hZoom >= H_ZOOM_MAX}
+              className="h-7 w-7 bg-track-accent text-sm font-bold text-white disabled:opacity-40"
+            >
+              +
+            </button>
+          </div>
+          <div className="flex flex-1 items-center gap-2 bg-[#2a2a2e] px-3 py-2">
+            <span className="flex-1 text-sm font-medium text-white">Zoom V: {Math.round(vZoom * 100)}%</span>
+            <button
+              type="button"
+              onClick={() => handleZoomV(-ZOOM_STEP)}
+              disabled={vZoom <= V_ZOOM_MIN}
+              className="h-7 w-7 bg-track-accent text-sm font-bold text-white disabled:opacity-40"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              onClick={() => handleZoomV(ZOOM_STEP)}
+              disabled={vZoom >= V_ZOOM_MAX}
+              className="h-7 w-7 bg-track-accent text-sm font-bold text-white disabled:opacity-40"
+            >
+              +
+            </button>
+          </div>
         </div>
       </div>
     </div>
