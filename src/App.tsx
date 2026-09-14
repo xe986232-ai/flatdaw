@@ -136,8 +136,8 @@ export default function App() {
 
   return (
     <div className="force-landscape flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#1a1a1d] p-4">
-      {/* Landscape canvas — fixed 16:9, holds the whole playlist/arrangement view */}
-      <div className="flex aspect-video w-full max-w-[1280px] flex-col overflow-hidden rounded-lg border border-black/40 bg-surface-base text-track-melodic-ink">
+      {/* Landscape canvas — fixed 2292x1080, holds the whole playlist/arrangement view */}
+      <div className="flex aspect-[2292/1080] w-full max-w-[2292px] flex-col overflow-hidden rounded-lg border border-black/40 bg-surface-base text-track-melodic-ink">
         <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
           <RulerBar startBar={TIMELINE_START} endBar={TIMELINE_END} barWidth={BAR_WIDTH} labelWidth={LABEL_WIDTH} />
 
