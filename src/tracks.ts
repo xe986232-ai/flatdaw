@@ -5,7 +5,7 @@ export interface Clip {
   label: string
   startBar: number // in bars, relative to timeline start
   lengthBars: number
-  pattern?: 'wave' | 'steps' | 'scribble' | 'dense'
+  pattern?: 'notes' | 'steps' | 'scribble' | 'dense'
 }
 
 export interface Track {
@@ -37,30 +37,30 @@ export const tracks: Track[] = [
     name: 'fireflies',
     kind: 'melodic',
     clips: [
-      { id: 'fireflies-1', label: 'fireflies', startBar: 205, lengthBars: 4, pattern: 'wave' },
-      { id: 'fireflies-2', label: 'fireflies', startBar: 209, lengthBars: 4, pattern: 'wave' },
+      { id: 'fireflies-1', label: 'fireflies', startBar: 205, lengthBars: 4, pattern: 'notes' },
+      { id: 'fireflies-2', label: 'fireflies', startBar: 209, lengthBars: 4, pattern: 'notes' },
     ],
   },
   {
     id: 'lenno',
     name: 'lenno',
     kind: 'melodic',
-    clips: [{ id: 'lenno-1', label: 'lenno', startBar: 209, lengthBars: 4, pattern: 'wave' }],
+    clips: [{ id: 'lenno-1', label: 'lenno', startBar: 209, lengthBars: 4, pattern: 'notes' }],
   },
   {
     id: 'starbean',
     name: 'starbean',
     kind: 'melodic',
     clips: [
-      { id: 'starbean-1', label: 'starbean', startBar: 205, lengthBars: 4, pattern: 'wave' },
-      { id: 'starbean-2', label: 'starbean', startBar: 209, lengthBars: 4, pattern: 'wave' },
+      { id: 'starbean-1', label: 'starbean', startBar: 205, lengthBars: 4, pattern: 'notes' },
+      { id: 'starbean-2', label: 'starbean', startBar: 209, lengthBars: 4, pattern: 'notes' },
     ],
   },
   {
     id: 'organ',
     name: 'organ',
     kind: 'accent',
-    clips: [{ id: 'organ-1', label: 'organ', startBar: 209, lengthBars: 4, pattern: 'wave' }],
+    clips: [{ id: 'organ-1', label: 'organ', startBar: 209, lengthBars: 4, pattern: 'notes' }],
   },
   {
     id: 'top',

@@ -18,17 +18,34 @@ const inkByKind: Record<TrackKind, string> = {
   accent: 'text-white',
 }
 
-function Pattern({ pattern }: { pattern: Clip['pattern'] }) {
-  if (pattern === 'wave') {
+function seeded(i: number, salt: number) {
+  const x = Math.sin(i * 12.9898 + salt * 78.233) * 43758.5453
+  return x - Math.floor(x)
+}
+
+function Pattern({ pattern, seed = 0 }: { pattern: Clip['pattern']; seed?: number }) {
+  if (pattern === 'notes') {
+    const count = 22
     return (
-      <svg viewBox="0 0 200 24" preserveAspectRatio="none" className="h-4 w-full opacity-70">
-        <path
-          d="M0 12 Q10 2 20 12 T40 12 T60 12 T80 12 T100 12 T120 12 T140 12 T160 12 T180 12 T200 12"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        />
-      </svg>
+      <div className="relative h-full w-full opacity-90">
+        {Array.from({ length: count }).map((_, i) => {
+          const top = 10 + seeded(i, seed) * 75
+          const w = 4 + seeded(i, seed + 1) * 5
+          return (
+            <span
+              key={i}
+              className="absolute rounded-[1px]"
+              style={{
+                left: `${(i / count) * 100}%`,
+                top: `${top}%`,
+                width: `${w}px`,
+                height: '2px',
+                backgroundColor: 'currentColor',
+              }}
+            />
+          )
+        })}
+      </div>
     )
   }
   if (pattern === 'steps') {
@@ -80,16 +97,19 @@ function Pattern({ pattern }: { pattern: Clip['pattern'] }) {
 export function ClipBlock({ clip, kind, barWidth }: { clip: Clip; kind: TrackKind; barWidth: number }) {
   const left = (clip.startBar - 205) * barWidth
   const width = clip.lengthBars * barWidth
+  const seed = clip.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
 
   return (
     <div
-      className={`absolute top-1 bottom-1 rounded-sm px-2 py-1 ${fillByKind[kind]} ${inkByKind[kind]} shadow-sm`}
+      className={`absolute top-1 bottom-1 flex flex-col overflow-hidden rounded-sm px-2 py-1 ${fillByKind[kind]} ${inkByKind[kind]} shadow-sm`}
       style={{ left, width }}
     >
       {clip.label && (
-        <span className="block truncate text-[11px] font-medium leading-none mb-1">{clip.label}</span>
+        <span className="block shrink-0 truncate text-[11px] font-medium leading-none mb-1">{clip.label}</span>
       )}
-      <Pattern pattern={clip.pattern} />
+      <div className="min-h-0 flex-1">
+        <Pattern pattern={clip.pattern} seed={seed} />
+      </div>
     </div>
   )
 }
