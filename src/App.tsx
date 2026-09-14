@@ -171,52 +171,86 @@ export default function App() {
   // Ctrl+scroll (trackpad "pinch" gesture on desktop). Both are intercepted with
   // { passive: false } + preventDefault so the *browser page* never zooms —
   // only the canvas's own hZoom/vZoom state changes.
+  //
+  // Axes are independent: how far the two fingers move apart *horizontally*
+  // only drives hZoom, and how far apart *vertically* only drives vZoom —
+  // pulling straight up/down no longer touches hZoom, and vice versa.
+  // Updates are batched to one per animation frame so dragging doesn't spam
+  // React with a state update (and full re-render) on every raw touch event.
   useEffect(() => {
     const el = scrollRef.current
     if (!el) return
 
     const clamp = (v: number, min: number, max: number) => Math.min(max, Math.max(min, v))
+    const round2 = (v: number) => Math.round(v * 100) / 100
+
+    let rafId: number | null = null
+    let pendingHZoom: number | null = null
+    let pendingVZoom: number | null = null
+
+    const flush = () => {
+      rafId = null
+      if (pendingHZoom !== null) setHZoom(pendingHZoom)
+      if (pendingVZoom !== null) setVZoom(pendingVZoom)
+      pendingHZoom = null
+      pendingVZoom = null
+    }
+
+    const schedule = (nextH: number | null, nextV: number | null) => {
+      if (nextH !== null) pendingHZoom = nextH
+      if (nextV !== null) pendingVZoom = nextV
+      if (rafId === null) rafId = requestAnimationFrame(flush)
+    }
 
     // --- Touch pinch (mobile/tablet) ---
-    let pinchStartDist: number | null = null
+    let pinchStartDX: number | null = null
+    let pinchStartDY: number | null = null
     let pinchStartHZoom = 1
     let pinchStartVZoom = 1
-
-    const touchDist = (t: TouchList) => {
-      const dx = t[0].clientX - t[1].clientX
-      const dy = t[0].clientY - t[1].clientY
-      return Math.hypot(dx, dy)
-    }
 
     const onTouchStart = (e: TouchEvent) => {
       if (e.touches.length === 2) {
         e.preventDefault()
-        pinchStartDist = touchDist(e.touches)
+        pinchStartDX = Math.abs(e.touches[0].clientX - e.touches[1].clientX)
+        pinchStartDY = Math.abs(e.touches[0].clientY - e.touches[1].clientY)
         pinchStartHZoom = hZoomRef.current
         pinchStartVZoom = vZoomRef.current
       }
     }
 
     const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2 && pinchStartDist) {
+      if (e.touches.length === 2 && pinchStartDX !== null && pinchStartDY !== null) {
         e.preventDefault()
-        const scale = touchDist(e.touches) / pinchStartDist
-        setHZoom(Math.round(clamp(pinchStartHZoom * scale, H_ZOOM_MIN, H_ZOOM_MAX) * 100) / 100)
-        setVZoom(Math.round(clamp(pinchStartVZoom * scale, V_ZOOM_MIN, V_ZOOM_MAX) * 100) / 100)
+        const dx = Math.abs(e.touches[0].clientX - e.touches[1].clientX)
+        const dy = Math.abs(e.touches[0].clientY - e.touches[1].clientY)
+        // Ignore an axis that barely had any spread to begin with — dividing by
+        // a near-zero start distance would make that axis wildly oversensitive.
+        const nextH = pinchStartDX > 20 ? round2(clamp(pinchStartHZoom * (dx / pinchStartDX), H_ZOOM_MIN, H_ZOOM_MAX)) : null
+        const nextV = pinchStartDY > 20 ? round2(clamp(pinchStartVZoom * (dy / pinchStartDY), V_ZOOM_MIN, V_ZOOM_MAX)) : null
+        schedule(nextH, nextV)
       }
     }
 
     const onTouchEnd = (e: TouchEvent) => {
-      if (e.touches.length < 2) pinchStartDist = null
+      if (e.touches.length < 2) {
+        pinchStartDX = null
+        pinchStartDY = null
+      }
     }
 
     // --- Trackpad pinch / Ctrl+scroll (desktop) ---
+    // A wheel gesture only reports one axis of intensity (deltaY), so there's no
+    // dx/dy to split the way touch has. Hold Shift to target vertical zoom
+    // instead of horizontal — same idea as Shift+scroll conventions elsewhere.
     const onWheel = (e: WheelEvent) => {
       if (!e.ctrlKey) return // plain scroll — let the container scroll normally
       e.preventDefault()
       const scale = 1 - e.deltaY * 0.01
-      setHZoom(Math.round(clamp(hZoomRef.current * scale, H_ZOOM_MIN, H_ZOOM_MAX) * 100) / 100)
-      setVZoom(Math.round(clamp(vZoomRef.current * scale, V_ZOOM_MIN, V_ZOOM_MAX) * 100) / 100)
+      if (e.shiftKey) {
+        schedule(null, round2(clamp(vZoomRef.current * scale, V_ZOOM_MIN, V_ZOOM_MAX)))
+      } else {
+        schedule(round2(clamp(hZoomRef.current * scale, H_ZOOM_MIN, H_ZOOM_MAX)), null)
+      }
     }
 
     el.addEventListener('touchstart', onTouchStart, { passive: false })
@@ -225,6 +259,7 @@ export default function App() {
     el.addEventListener('wheel', onWheel, { passive: false })
 
     return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId)
       el.removeEventListener('touchstart', onTouchStart)
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)

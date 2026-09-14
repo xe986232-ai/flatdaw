@@ -62,6 +62,24 @@ export function TrackRow({
   onRenameCommit?: (clipId: string, label: string) => void
   onBackgroundClick?: (bar: number) => void
 }) {
+  // Bar lines + beat subdivisions used to be ~4 absolute-positioned divs per bar
+  // (x totalBars, x every track row) — hundreds of DOM nodes per row that all
+  // had to be diffed/repainted on every zoom tick. A background-image pattern
+  // draws the exact same grid with zero extra DOM and one style recalculation.
+  const gridBackground = [
+    // beat subdivisions at 25/50/75% of each bar, faint
+    `repeating-linear-gradient(to right,
+      transparent 0, transparent ${barWidth * 0.25 - 0.5}px,
+      rgba(201, 168, 188, 0.15) ${barWidth * 0.25 - 0.5}px, rgba(201, 168, 188, 0.15) ${barWidth * 0.25 + 0.5}px,
+      transparent ${barWidth * 0.25 + 0.5}px, transparent ${barWidth * 0.5 - 0.5}px,
+      rgba(201, 168, 188, 0.15) ${barWidth * 0.5 - 0.5}px, rgba(201, 168, 188, 0.15) ${barWidth * 0.5 + 0.5}px,
+      transparent ${barWidth * 0.5 + 0.5}px, transparent ${barWidth * 0.75 - 0.5}px,
+      rgba(201, 168, 188, 0.15) ${barWidth * 0.75 - 0.5}px, rgba(201, 168, 188, 0.15) ${barWidth * 0.75 + 0.5}px,
+      transparent ${barWidth * 0.75 + 0.5}px, transparent ${barWidth}px)`,
+    // main bar boundary line
+    `repeating-linear-gradient(to right, rgba(201, 168, 188, 0.4) 0, rgba(201, 168, 188, 0.4) 1px, transparent 1px, transparent ${barWidth}px)`,
+  ].join(', ')
+
   return (
     <div className={`box-border flex border-b-2 ${showDivider ? 'border-row-divider' : 'border-transparent'}`}>
       <div
@@ -78,6 +96,7 @@ export function TrackRow({
           width: totalBars * barWidth,
           height,
           backgroundColor: showHighlight && color ? hexToRgba(color.fill, 0.2) : undefined,
+          backgroundImage: gridBackground,
         }}
         onClick={(e) => {
           if (!onBackgroundClick) return
@@ -86,24 +105,6 @@ export function TrackRow({
           onBackgroundClick(timelineStart + localX / barWidth)
         }}
       >
-        {/* bar grid lines */}
-        {Array.from({ length: totalBars + 1 }).map((_, i) => (
-          <div
-            key={i}
-            className="absolute top-0 bottom-0 border-l border-surface-grid/40"
-            style={{ left: i * barWidth }}
-          />
-        ))}
-        {/* beat subdivisions — denser grid inside each bar */}
-        {Array.from({ length: totalBars }).map((_, i) =>
-          [0.25, 0.5, 0.75].map((frac) => (
-            <div
-              key={`${i}-${frac}`}
-              className="absolute top-0 bottom-0 border-l border-surface-grid/15"
-              style={{ left: i * barWidth + barWidth * frac }}
-            />
-          )),
-        )}
         {track.clips.map((clip) => (
           <ClipBlock
             key={clip.id}
