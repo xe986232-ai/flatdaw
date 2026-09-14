@@ -268,63 +268,56 @@ export default function App() {
   }, [])
 
   return (
-    <div className="force-landscape flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#1a1a1d] p-4">
-      {/* Portrait canvas — fixed 1080x2292 frame, but the playlist inside is rotated 90deg
-          so it still plays like a wide landscape view, just wrapped into a tall canvas. */}
-      <div className="flex aspect-[1080/2292] w-full max-w-[1080px] flex-col overflow-hidden rounded-lg border border-black/40 bg-surface-base text-track-melodic-ink">
-        <div className="relative h-full w-full" style={{ containerType: 'size' }}>
-          <div
-            className="absolute left-1/2 top-1/2 origin-center -translate-x-1/2 -translate-y-1/2 rotate-90"
-            style={{ width: '100cqh', height: '100cqw' }}
-          >
-            <div ref={scrollRef} className="relative h-full w-full overflow-auto">
-              <RulerBar startBar={TIMELINE_START} endBar={TIMELINE_END} barWidth={barWidth} labelWidth={LABEL_WIDTH} />
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#1a1a1d] p-4">
+      {/* Landscape canvas — fixed 2292x1080, holds the whole playlist/arrangement view */}
+      <div className="flex aspect-[2292/1080] w-full max-w-[2292px] flex-col overflow-hidden rounded-lg border border-black/40 bg-surface-base text-track-melodic-ink">
+        <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
+          <RulerBar startBar={TIMELINE_START} endBar={TIMELINE_END} barWidth={barWidth} labelWidth={LABEL_WIDTH} />
 
-              <div className="relative">
-                {trackList.map((track, index) => (
-                  <TrackRow
-                    key={track.id}
-                    track={track}
-                    barWidth={barWidth}
-                    labelWidth={LABEL_WIDTH}
-                    totalBars={TOTAL_BARS}
-                    timelineStart={TIMELINE_START}
-                    timelineEnd={TIMELINE_END}
-                    height={rowHeight}
-                    color={trackColors[track.id]}
-                    showDivider={showDividers}
-                    showHighlight={showHighlight}
-                    onClipMove={(clipId, newStartBar) => handleClipMove(track.id, clipId, newStartBar)}
-                    openMenuClipId={openMenu?.trackId === track.id ? openMenu.clipId : null}
-                    editingClipId={editingClip?.trackId === track.id ? editingClip.clipId : null}
-                    flipMenuDown={index === 0}
-                    onClipClick={(clipId) => handleClipClick(track.id, clipId)}
-                    onMenuAction={(clipId, action) => handleMenuAction(track.id, clipId, action)}
-                    onRenameCommit={(clipId, label) => handleRenameCommit(track.id, clipId, label)}
-                    onBackgroundClick={(bar) => handleBackgroundClick(track.id, bar)}
-                  />
-                ))}
+          <div className="relative">
+            {trackList.map((track, index) => (
+              <TrackRow
+                key={track.id}
+                track={track}
+                barWidth={barWidth}
+                labelWidth={LABEL_WIDTH}
+                totalBars={TOTAL_BARS}
+                timelineStart={TIMELINE_START}
+                timelineEnd={TIMELINE_END}
+                height={rowHeight}
+                color={trackColors[track.id]}
+                showDivider={showDividers}
+                showHighlight={showHighlight}
+                onClipMove={(clipId, newStartBar) => handleClipMove(track.id, clipId, newStartBar)}
+                openMenuClipId={openMenu?.trackId === track.id ? openMenu.clipId : null}
+                editingClipId={editingClip?.trackId === track.id ? editingClip.clipId : null}
+                flipMenuDown={index === 0}
+                onClipClick={(clipId) => handleClipClick(track.id, clipId)}
+                onMenuAction={(clipId, action) => handleMenuAction(track.id, clipId, action)}
+                onRenameCommit={(clipId, label) => handleRenameCommit(track.id, clipId, label)}
+                onBackgroundClick={(bar) => handleBackgroundClick(track.id, bar)}
+              />
+            ))}
 
-                <AutomationLane label="Level" totalBars={TOTAL_BARS} barWidth={barWidth} labelWidth={LABEL_WIDTH} height={automationHeight} />
-                <AutomationLane
-                  label="Frequency : FX Filter"
-                  totalBars={TOTAL_BARS}
-                  barWidth={barWidth}
-                  labelWidth={LABEL_WIDTH}
-                  height={automationHeight}
-                  teeth={70}
-                />
+            <AutomationLane label="Level" totalBars={TOTAL_BARS} barWidth={barWidth} labelWidth={LABEL_WIDTH} height={automationHeight} />
+            <AutomationLane
+              label="Frequency : FX Filter"
+              totalBars={TOTAL_BARS}
+              barWidth={barWidth}
+              labelWidth={LABEL_WIDTH}
+              height={automationHeight}
+              teeth={70}
+            />
 
-                <div className="pointer-events-none absolute inset-0" style={{ left: LABEL_WIDTH }}>
-                  <Playhead x={playheadX} onDrag={handleDrag} />
-                </div>
-              </div>
+            <div className="pointer-events-none absolute inset-0" style={{ left: LABEL_WIDTH }}>
+              <Playhead x={playheadX} onDrag={handleDrag} />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="flex w-full max-w-[1080px] shrink-0 flex-col gap-2">
+
+      <div className="flex w-full max-w-[1280px] shrink-0 flex-col gap-2">
         <button
           type="button"
           onClick={handleRandomColors}
