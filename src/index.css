@@ -28,3 +28,26 @@ body {
   margin: 0;
   background: var(--color-surface-base);
 }
+
+/* Force-landscape: on narrow portrait screens (phones held upright),
+   rotate the whole app 90deg so the canvas renders wide without
+   needing the user to physically turn the device. */
+@media (max-width: 900px) and (orientation: portrait) {
+  html, body, #root {
+    overflow: hidden;
+  }
+
+  #root {
+    position: fixed;
+    inset: 0;
+  }
+
+  .force-landscape {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100vh;
+    height: 100vw;
+    transform: translate(-50%, -50%) rotate(90deg);
+  }
+}

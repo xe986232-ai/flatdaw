@@ -25,7 +25,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#1a1a1d] p-4">
+    <div className="force-landscape flex min-h-screen items-center justify-center bg-[#1a1a1d] p-4">
       {/* Landscape canvas — fixed 16:9, holds the whole playlist/arrangement view */}
       <div className="flex aspect-video w-full max-w-[1280px] flex-col overflow-hidden rounded-lg border border-black/40 bg-surface-base text-track-melodic-ink shadow-2xl">
         <header className="flex shrink-0 items-center justify-between border-b border-surface-grid/50 bg-surface-base px-5 py-3">
