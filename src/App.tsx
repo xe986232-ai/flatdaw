@@ -414,24 +414,11 @@ export default function App() {
           // FL Studio Mobile ngulang/nge-loop sample itu, BUKAN nyetrecth
           // satu kopi jadi panjang banget (itu yang bikin waveform-nya
           // keliatan "mentah dari directory" / gak sesuai BPM project).
-          // nativeSpanBars = durasi SATU kali putaran, dikonversi ke satuan
-          // bar di BPM project — dipakai buat mendeteksi ini loop atau
-          // bukan, sama kayak nativeSpanBars/shouldLoop buat instrument
-          // pattern di flmToTracks.ts.
-          //
-          // audioBuffer.duration doang GAK CUKUP di sini: itu durasi file
-          // WAV mentah, sebelum time-stretch. Kalau klip ini di-stretch
-          // (mis. user slow-in tempo-nya di FL Studio Mobile — lihat
-          // extractStretchRatio() di flmParser.ts), durasi yang BENERAN
-          // kedengeran di project itu audioBuffer.duration * stretchRatio.
-          // Tanpa dikali rasio ini, klip yang di-stretch jadi salah
-          // kedeteksi sebagai "loop" (nativeSpanBars kehitung lebih pendek
-          // dari placementBars padahal itu satu putaran stretch, bukan
-          // beberapa putaran diulang) — waveform-nya ke-tiling gak sesuai
-          // durasi asli di project. stretchRatio default 1 (kecepatan
-          // alami) kalau klipnya gak punya data STRC.
-          const stretchRatio = clip.stretchRatio ?? 1
-          const nativeSpanBars = (audioBuffer.duration * stretchRatio * (bpm / 60)) / BEATS_PER_BAR
+          // nativeSpanBars = durasi asli sample dikonversi ke satuan bar di
+          // BPM project — dipakai buat mendeteksi ini loop atau bukan, sama
+          // kayak nativeSpanBars/shouldLoop buat instrument pattern di
+          // flmToTracks.ts.
+          const nativeSpanBars = (audioBuffer.duration * (bpm / 60)) / BEATS_PER_BAR
           const placementBars = clip.lengthBars
           const shouldLoop = nativeSpanBars > 0.001 && placementBars > nativeSpanBars + 0.001
 
