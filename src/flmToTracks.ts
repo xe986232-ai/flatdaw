@@ -24,8 +24,19 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
   const rowLabel = new Map<string, string>()
   const rowClips = new Map<string, Clip[]>()
 
+  // Row identity = trkhOffset (the actual TRKH chunk this clip's CLIP is
+  // nested inside), NEVER trackName. FL Studio Mobile writes a generic
+  // default name ("Audio 11", "Audio 33", ...) into the DESc of any track
+  // the user never renamed, and it's normal for MULTIPLE distinct real
+  // tracks in the same project to end up with that exact same literal
+  // string. Grouping by name (as before) silently merged those unrelated
+  // tracks into a single playlist row — clips from totally different real
+  // tracks landing in the same column, which is exactly the "numpuk"/
+  // misplaced-pattern symptom. trkhOffset is unique per real TRKH chunk in
+  // the binary, so it's the only safe grouping key; the name is used for
+  // the label only, and disambiguated below when it collides.
   timelineClips.forEach((cl, i) => {
-    const key = cl.trackName || `trkh:${cl.trkhOffset}`
+    const key = `trkh:${cl.trkhOffset}`
     if (!rowClips.has(key)) {
       rowClips.set(key, [])
       rowLabel.set(key, cl.trackName || `Track ${order.length + 1}`)
@@ -114,6 +125,24 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
     }
 
     rowClips.get(key)!.push(clip)
+  })
+
+  // Two different real tracks (different trkhOffset, so already separate
+  // rows above) can still carry the exact same default label text — number
+  // them so the rows are visibly distinguishable, same idea as
+  // assignDisplayNames() for pattern names.
+  const labelTotals: Record<string, number> = {}
+  order.forEach((key) => {
+    const label = rowLabel.get(key)!
+    labelTotals[label] = (labelTotals[label] || 0) + 1
+  })
+  const labelSeen: Record<string, number> = {}
+  order.forEach((key) => {
+    const label = rowLabel.get(key)!
+    if (labelTotals[label] > 1) {
+      labelSeen[label] = (labelSeen[label] || 0) + 1
+      rowLabel.set(key, `${label} (${labelSeen[label]})`)
+    }
   })
 
   const kind: TrackKind = 'melodic'

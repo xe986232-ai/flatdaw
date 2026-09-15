@@ -168,7 +168,7 @@ const KNOWN_CHUNK_TAGS = new Set([
   'EVN2', 'CLIP', 'TRKH', 'ZOOM', 'DESC', 'DES', 'CHHD', 'MASTER', 'FLHD', 'FLDT', 'MIXR', 'INSV', 'PATT', 'PLAY', 'TMPO',
 ])
 function isChunkTagNoise(text: string): boolean {
-  const cleaned = text.replace(/^[^A-Za-z0-9]+/, '').toUpperCase()
+  const cleaned = text.replace(/^[^A-Za-z0-9]+/, '').replace(/[^A-Za-z0-9]+$/, '').toUpperCase()
   return KNOWN_CHUNK_TAGS.has(cleaned)
 }
 
@@ -183,9 +183,13 @@ function trackNameFromRange(bytes: Uint8Array, trkh: number, clip: number): stri
   const descIdx = raw.findIndex((r) => /^DESc?\s*$/i.test(r.text))
   if (descIdx !== -1 && descIdx + 1 < raw.length) {
     const cand = raw[descIdx + 1]
-    if (!IGNORE_LABELS.test(cand.text) && !isChunkTagNoise(cand.text)) return cand.text
+    const trimmed = cand.text.trim()
+    if (!IGNORE_LABELS.test(trimmed) && !isChunkTagNoise(trimmed)) return cand.text
   }
-  const filtered = raw.filter((r) => !IGNORE_LABELS.test(r.text) && !isChunkTagNoise(r.text))
+  const filtered = raw.filter((r) => {
+    const trimmed = r.text.trim()
+    return !IGNORE_LABELS.test(trimmed) && !isChunkTagNoise(trimmed)
+  })
   return filtered.length ? filtered[filtered.length - 1].text : null
 }
 
