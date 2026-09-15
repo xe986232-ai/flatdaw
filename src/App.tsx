@@ -8,7 +8,7 @@ import { PianoRoll } from './components/PianoRoll'
 import type { ClipMenuAction } from './components/ClipMenu'
 import { tracks, TIMELINE_START, getTimelineEnd, type Clip, type Note } from './tracks'
 import { generateNotesForClip } from './notes'
-import { randomFlatColor, type FlatColor } from './colors'
+import { randomFlatColor, FLAT_PALETTE, type FlatColor } from './colors'
 import { parseFlmFile } from './flmParser'
 import { flmToTracks } from './flmToTracks'
 import { loadZipProject, matchSampleFile } from './zipProject'
@@ -41,6 +41,7 @@ export default function App() {
   const [snapEnabled, setSnapEnabled] = useState(true)
   const [trackList, setTrackList] = useState(tracks)
   const [trackColors, setTrackColors] = useState<Record<string, FlatColor>>({})
+  const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
 
   // Arrangement length now follows the actual content instead of a fixed
   // window — recomputed whenever trackList changes (e.g. right after an .flm
@@ -224,6 +225,20 @@ export default function App() {
       }
       return next
     })
+  }
+
+  // Set SATU warna yang sama ke semua track sekaligus (beda dari Random
+  // Color yang ngacak per-track) — dipilih manual dari FLAT_PALETTE yang
+  // sama biar tetep konsisten sama warna yang dipakai Random Color.
+  const handlePickSingleColor = (picked: FlatColor) => {
+    setTrackColors(() => {
+      const next: Record<string, FlatColor> = {}
+      for (const track of trackList) {
+        next[track.id] = picked
+      }
+      return next
+    })
+    setIsColorPickerOpen(false)
   }
 
   // Export the visible canvas box as a PNG. Note: WebCodecs (VideoEncoder/
@@ -591,6 +606,33 @@ export default function App() {
         >
           Random Color
         </button>
+
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsColorPickerOpen((v) => !v)}
+            className="bg-track-accent px-4 py-2 text-sm font-medium text-white"
+          >
+            Pilih Warna
+          </button>
+          {isColorPickerOpen && (
+            // Popover kecil isinya swatch dari FLAT_PALETTE yang sama persis
+            // dipake Random Color — klik salah satu buat nge-set SEMUA track
+            // ke satu warna itu sekaligus.
+            <div className="absolute bottom-full left-0 z-40 mb-1 flex w-max max-w-[220px] flex-wrap gap-1.5 rounded-sm bg-[#2a2a2e] p-2 shadow-lg">
+              {FLAT_PALETTE.map((c) => (
+                <button
+                  key={c.fill}
+                  type="button"
+                  title={c.fill}
+                  onClick={() => handlePickSingleColor(c)}
+                  className="h-7 w-7 rounded-full border border-black/30"
+                  style={{ backgroundColor: c.fill }}
+                />
+              ))}
+            </div>
+          )}
+        </div>
 
         <div className="flex gap-2">
           <div className="flex flex-1 items-center gap-2 bg-[#2a2a2e] px-3 py-2">
