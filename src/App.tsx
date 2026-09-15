@@ -376,10 +376,18 @@ export default function App() {
   // kenapa prosesnya lama banget — bisa ngerender kanvas yang jauh lebih
   // gede dari yang sebenernya butuh keliatan.
   //
-  // Fix: geser konten scrollRef pake transform (posisi persis sama kaya
-  // scrollLeft/scrollTop saat ini), terus kunci ukuran scrollRef ke
-  // clientWidth/clientHeight-nya (ukuran viewport, bukan total konten)
-  // sebelum di-capture. Abis itu ukuran & posisi asli dikembaliin lagi.
+  // Fix: geser SELURUH konten scrollRef pake transform (persis sebesar
+  // scrollLeft/scrollTop saat ini), lalu matiin overflow-clipping punya
+  // scrollRef sendiri (jadi overflow: visible) biar kontennya nggak
+  // ke-crop dua kali. Yang ngerjain pemotongan ke area viewport itu tetep
+  // canvasBoxRef (parent) — dia udah overflow-hidden & ukurannya fixed
+  // sesuai box yang keliatan di layar, jadi abis kontennya digeser,
+  // bagian yang nongol pas persis sama kaya yang lagi kita liat.
+  //
+  // (Percobaan pertama kemarin salah: scrollRef-nya ikut dikecilin ke
+  // ukuran viewport SEBELUM digeser transform-nya — jadinya box yang udah
+  // kepotong kecil itu malah ikut ke-translate keluar dari canvasBoxRef,
+  // hasil export jadi kosong/blank.)
   const handleExportImage = async () => {
     const box = canvasBoxRef.current
     const scrollEl = scrollRef.current
@@ -390,19 +398,15 @@ export default function App() {
     setExportStage('Menyiapkan tampilan yang lagi keliatan…')
 
     const prevTransform = scrollEl.style.transform
-    const prevWidth = scrollEl.style.width
-    const prevHeight = scrollEl.style.height
     const prevOverflow = scrollEl.style.overflow
 
-    const { scrollLeft, scrollTop, clientWidth, clientHeight } = scrollEl
+    const { scrollLeft, scrollTop } = scrollEl
 
     let progressTimer: ReturnType<typeof setInterval> | null = null
 
     try {
       scrollEl.style.transform = `translate(${-scrollLeft}px, ${-scrollTop}px)`
-      scrollEl.style.width = `${clientWidth}px`
-      scrollEl.style.height = `${clientHeight}px`
-      scrollEl.style.overflow = 'hidden'
+      scrollEl.style.overflow = 'visible'
 
       // html-to-image nggak nyediain callback progress asli buat toPng,
       // jadi progress bar-nya di-animasiin manual pelan-pelan sampe ~90%
@@ -440,8 +444,6 @@ export default function App() {
     } finally {
       if (progressTimer) clearInterval(progressTimer)
       scrollEl.style.transform = prevTransform
-      scrollEl.style.width = prevWidth
-      scrollEl.style.height = prevHeight
       scrollEl.style.overflow = prevOverflow
       setTimeout(() => {
         setIsExporting(false)
