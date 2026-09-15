@@ -255,28 +255,29 @@ export function ClipBlock({
   const regionLabel = clip.label || 'Untitled'
   const ariaLabel = trackName ? `${regionLabel} region on track ${trackName}` : `${regionLabel} region`
 
-  // Klip audio asli (punya sampleName) selalu ungu indigo tetap — gak ikut
-  // warna track yang di-random lewat tombol "Random Color", biar konsisten
-  // kebeda dari clip pattern/MIDI seperti region audio asli di Soundtrap.
+  // Klip audio asli (punya sampleName) dulu selalu dipaksa ungu indigo tetap,
+  // gak ikut warna track yang di-random lewat tombol "Random Color". Sekarang
+  // audio clip juga ikutan kena random color kayak clip instrument — indigo
+  // (AUDIO_REGION_COLOR) cuma jadi fallback kalau track-nya belum pernah
+  // di-random-in warnanya sama sekali (color masih undefined).
   const isAudioClip = !!clip.sampleName
-  // Clip instrument/pattern sekarang ikutan dikasih sedikit transparan juga
-  // (kayak region audio), biar ga solid pekat — cuma transparansinya lebih
-  // tipis (0.88) dibanding audio (0.55) soalnya isinya masih perlu kebaca
-  // jelas (note preview, step, dll).
-  const effectiveColor = isAudioClip
-    ? AUDIO_REGION_COLOR
-    : color
-      ? { fill: hexToRgba(color.fill, 0.88), ink: color.ink }
+  // Transparansinya beda dikit: audio 0.55 (lebih transparan, niru region
+  // audio di Ableton/Soundtrap), instrument 0.88 (lebih solid soalnya isinya
+  // masih perlu kebaca jelas — note preview, step, dll).
+  const effectiveColor = color
+    ? { fill: hexToRgba(color.fill, isAudioClip ? 0.55 : 0.88), ink: color.ink }
+    : isAudioClip
+      ? AUDIO_REGION_COLOR
       : color
 
   // Warna header (strip judul) — solid 100% opacity, lebih terang dari fill
   // body (yang semi-transparan). Niru tampilan Soundtrap: strip judul di atas
   // clip kepisah jelas dari badan clip karena kepucetan warnanya, bukan
   // karena garis. Base hex-nya diambil dari warna aslinya sebelum di-alpha.
-  const headerFill = isAudioClip
-    ? lighten(AUDIO_REGION_BASE_HEX, 0.28)
-    : color
-      ? lighten(color.fill, 0.28)
+  const headerFill = color
+    ? lighten(color.fill, 0.28)
+    : isAudioClip
+      ? lighten(AUDIO_REGION_BASE_HEX, 0.28)
       : undefined
   const headerInk = effectiveColor?.ink
 
