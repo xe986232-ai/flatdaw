@@ -331,7 +331,7 @@ export function ClipBlock({
         {clip.waveformPeaks ? (
           // Sample-nya ketemu di dalam zip project & sudah didekode — gambar
           // waveform beneran, bukan pola dekoratif. Cuma render, gak diputer.
-          <WaveformCanvas peaks={clip.waveformPeaks} />
+          <WaveformCanvas peaks={clip.waveformPeaks} multiRes={clip.waveformMultiRes} />
         ) : clip.notes && clip.notes.length > 0 ? (
           <NotePreview notes={clip.notes} totalBeats={clip.lengthBars * BEATS_PER_BAR} />
         ) : (

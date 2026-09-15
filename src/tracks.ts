@@ -1,3 +1,5 @@
+import type { MultiResPeaks } from './waveformPeaksMultiRes'
+
 export type TrackKind = 'marker' | 'melodic' | 'lead' | 'drum' | 'perc' | 'accent'
 
 // A single note inside a clip's piano roll.
@@ -34,6 +36,11 @@ export interface Clip {
   // dalam zip project yang di-import — dipakai ClipBlock buat gambar waveform
   // asli di kanvas, gantiin pattern 'dense' yang cuma dekorasi.
   waveformPeaks?: WaveformPeaksData
+  // Peak multi-resolusi (dari waveformPeaksMultiRes.ts): dipakai WaveformCanvas
+  // kalau ada, biar waveform otomatis nambah detail pas di-zoom in daripada
+  // stuck di resolusi bucket tetap dari waveformPeaks. waveformPeaks tetap
+  // disimpan sebagai fallback (mis. kalau field ini kosong di data lama).
+  waveformMultiRes?: MultiResPeaks
   waveformStatus?: 'pending' | 'found' | 'missing'
 }
 

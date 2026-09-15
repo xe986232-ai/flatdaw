@@ -204,6 +204,56 @@ export const renderMultiResWaveform = (
 }
 
 /**
+ * Like renderMultiResWaveform, but returns the per-pixel-column min/max
+ * values instead of drawing rects directly — lets the caller build its own
+ * shape (e.g. a single filled polygon) from zoom-appropriate resolution
+ * data instead of being locked into one-rect-per-column bars.
+ */
+export const sampleWaveformColumns = (
+  peaks: MultiResPeaks,
+  channelIndex: number,
+  {x0, x1, u0, u1}: Pick<WaveformLayout, 'x0' | 'x1' | 'u0' | 'u1'>
+): {mins: Float32Array; maxs: Float32Array} => {
+  const numCols = Math.max(0, Math.floor(x1) - Math.floor(x0))
+  const mins = new Float32Array(numCols)
+  const maxs = new Float32Array(numCols)
+
+  const unitsEachPixel = (u1 - u0) / (x1 - x0)
+  const stage = peaks.nearest(unitsEachPixel)
+  if (stage === null || numCols === 0) return {mins, maxs}
+
+  const unitsEachPeak = stage.unitsEachPeak()
+  const pixelOverflow = x0 - Math.floor(x0)
+  const peaksEachPixel = unitsEachPixel / unitsEachPeak
+  const data = peaks.data[channelIndex]
+
+  let from = (u0 - pixelOverflow * unitsEachPixel) / unitsEachPixel * peaksEachPixel
+  let indexFrom = Math.floor(from)
+  let min = 0.0
+  let max = 0.0
+
+  for (let col = 0; col < numCols; col++) {
+    const to = from + peaksEachPixel
+    const indexTo = Math.floor(to)
+    let touched = false
+    while (indexFrom < indexTo) {
+      const peakIdx = stage.dataOffset + indexFrom++
+      const peakMin = data[peakIdx * 2]
+      const peakMax = data[peakIdx * 2 + 1]
+      if (peakMin < min) min = peakMin
+      if (peakMax > max) max = peakMax
+      touched = true
+    }
+    mins[col] = min
+    maxs[col] = max
+    if (touched) { const t = max; max = min; min = t }
+    from = to
+    indexFrom = indexTo
+  }
+  return {mins, maxs}
+}
+
+/**
  * Convenience: build peaks straight from a Web Audio AudioBuffer.
  */
 export const generateMultiResPeaksFromAudioBuffer = (buffer: AudioBuffer, width: number = 1200): MultiResPeaks => {
