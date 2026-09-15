@@ -265,23 +265,6 @@ export default function App() {
   // ringkas jadi peaks, terus tempelin ke clip itu biar ClipBlock gambar
   // waveform aslinya. Kalau sample-nya gak ketemu di zip, klip itu tetep
   // jatuh ke pattern 'dense' dekoratif seperti sebelumnya.
-  // Rata-ratakan semua channel AudioBuffer jadi satu Float32Array mono, buat
-  // input generateMultiResPeaks (yang nyimpen peak per-channel terpisah,
-  // padahal di sini kita cuma mau satu bentuk waveform gabungan per klip).
-  const mixDownToMono = (buffer: AudioBuffer): Float32Array => {
-    const { numberOfChannels, length } = buffer
-    if (numberOfChannels === 1) return buffer.getChannelData(0)
-    const mono = new Float32Array(length)
-    const channels: Float32Array[] = []
-    for (let c = 0; c < numberOfChannels; c++) channels.push(buffer.getChannelData(c))
-    for (let i = 0; i < length; i++) {
-      let sum = 0
-      for (let c = 0; c < numberOfChannels; c++) sum += channels[c][i]
-      mono[i] = sum / numberOfChannels
-    }
-    return mono
-  }
-
   const resolveWaveforms = async (mappedTracks: typeof tracks, audioFiles: Map<string, import('jszip').JSZipObject>) => {
     const audioClips = mappedTracks.flatMap((t) => t.clips).filter((c) => c.pattern === 'dense' && c.sampleName)
 
@@ -309,11 +292,12 @@ export default function App() {
           // maksimum (H_ZOOM_MAX), biar stage paling detail-nya cukup buat
           // seluruh rentang zoom yang tersedia di UI.
           const targetWidth = Math.max(300, Math.round(clip.lengthBars * BASE_BAR_WIDTH * H_ZOOM_MAX))
-          // Mix-down ke mono dulu (rata-rata semua channel per sample), sama
-          // kayak computePeaks di atas — biar hasilnya tetap satu bentuk
-          // waveform per klip, bukan satu bentuk terpisah tiap channel.
-          const mono = mixDownToMono(audioBuffer)
-          const multiRes = generateMultiResPeaks([mono], audioBuffer.length, targetWidth)
+          // Peak per channel dipisah (gak di-mixdown ke mono kayak sebelumnya)
+          // — biar file stereo bisa digambar sebagai dua lane kiri/kanan
+          // (lihat WaveformCanvas). File mono otomatis tetap 1 channel aja.
+          const channels: Float32Array[] = []
+          for (let c = 0; c < audioBuffer.numberOfChannels; c++) channels.push(audioBuffer.getChannelData(c))
+          const multiRes = generateMultiResPeaks(channels, audioBuffer.length, targetWidth)
           found++
           patchClip(clip.id, {
             waveformPeaks: { min: Array.from(peaks.min), max: Array.from(peaks.max) },

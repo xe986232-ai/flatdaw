@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { WaveformPeaksData } from '../tracks'
 import { sampleWaveformColumns, type MultiResPeaks } from '../waveformPeaksMultiRes'
 
-// Gambar waveform audio asli ke <canvas> sebagai satu polygon solid (mirror
+// Gambar waveform audio asli ke <canvas> sebagai polygon solid (mirror
 // atas/bawah dari garis tengah, jalur atas pakai nilai max lalu jalur bawah
 // pakai nilai min, ditutup jadi satu shape lalu di-fill sekali) — niru
 // tampilan region audio Soundtrap. Ini murni render visual — gak ada elemen
@@ -14,12 +14,57 @@ import { sampleWaveformColumns, type MultiResPeaks } from '../waveformPeaksMulti
 // jadi waveform tetep detail pas Zoom H dinaikin, bukan stuck di resolusi
 // bucket tetap dari waktu import (itu fallback `peaks` di bawah, dipakai
 // kalau multiRes belum/gak ada).
+//
+// Kalau sample-nya stereo (multiRes.numChannels >= 2), digambar sebagai dua
+// lane: channel kiri di setengah atas, channel kanan di setengah bawah,
+// masing-masing mirror di sekitar garis tengahnya sendiri — niru tampilan
+// waveform stereo di DAW pada umumnya. Sample mono tetap satu bentuk penuh
+// setinggi klip seperti sebelumnya.
 export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; multiRes?: MultiResPeaks }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
+
+    // Satu polygon kontinu (bukan rectangle terpisah per kolom): jalur atas
+    // dari kiri ke kanan pakai nilai max, lalu jalur bawah dari kanan ke
+    // kiri pakai nilai min, ditutup jadi satu shape lalu di-fill sekali.
+    // Ini yang bikin hasilnya keliatan "padet"/solid kayak Soundtrap, gak
+    // blocky/grainy kayak fillRect per-kolom. Dipanggil sekali per lane
+    // (satu lane penuh buat mono, dua lane atas/bawah buat stereo).
+    const drawLane = (
+      ctx: CanvasRenderingContext2D,
+      maxs: ArrayLike<number>,
+      mins: ArrayLike<number>,
+      slotW: number,
+      laneMidY: number,
+      laneAmp: number,
+      laneW: number
+    ) => {
+      const n = maxs.length
+      if (n === 0) return
+      const floor = 0.02 // tinggi minimum biar bagian senyap tetep kebaca sebagai garis tipis, bukan kosong total
+      ctx.beginPath()
+      for (let i = 0; i < n; i++) {
+        const x = i * slotW
+        const y = laneMidY - Math.max(maxs[i], floor) * laneAmp
+        if (i === 0) ctx.moveTo(x, y)
+        else ctx.lineTo(x, y)
+      }
+      for (let i = n - 1; i >= 0; i--) {
+        const x = i * slotW
+        const y = laneMidY + Math.max(Math.abs(mins[i]), floor) * laneAmp
+        ctx.lineTo(x, y)
+      }
+      ctx.closePath()
+      ctx.fillStyle = 'currentColor'
+      ctx.globalAlpha = 0.9
+      ctx.fill()
+      ctx.globalAlpha = 0.35
+      ctx.fillRect(0, laneMidY - 0.5, laneW, 1)
+      ctx.globalAlpha = 1
+    }
 
     const draw = () => {
       const parent = canvas.parentElement
@@ -37,9 +82,27 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, cssW, cssH)
 
+      const isStereo = !!multiRes && multiRes.stages.length > 0 && multiRes.numChannels >= 2
+
+      if (isStereo && multiRes) {
+        // Dua lane sama tinggi, masing-masing mirror di sekitar garis
+        // tengahnya sendiri (bukan satu garis tengah buat seluruh klip).
+        const laneH = cssH / 2
+        const laneAmp = (laneH / 2) * 0.92
+        const left = sampleWaveformColumns(multiRes, 0, {x0: 0, x1: cssW, u0: 0, u1: multiRes.numFrames})
+        const right = sampleWaveformColumns(multiRes, 1, {x0: 0, x1: cssW, u0: 0, u1: multiRes.numFrames})
+        drawLane(ctx, left.maxs, left.mins, 1, laneH / 2, laneAmp, cssW)
+        drawLane(ctx, right.maxs, right.mins, 1, laneH + laneH / 2, laneAmp, cssW)
+        // Garis pemisah tipis antar dua lane, biar keliatan jelas ini dua
+        // channel terpisah, bukan satu waveform yang kebetulan bercelah.
+        ctx.globalAlpha = 0.25
+        ctx.fillRect(0, laneH - 0.5, cssW, 1)
+        ctx.globalAlpha = 1
+        return
+      }
+
       const midY = cssH / 2
       const amp = midY * 0.92 // dikit padding atas/bawah biar puncaknya gak mepet tepi
-      const floor = 0.02 // tinggi minimum biar bagian senyap tetep kebaca sebagai garis tipis, bukan kosong total
 
       // Dua sumber data yang mungkin dipakai, disamakan jadi satu bentuk
       // umum: array nilai max per-kolom + array nilai min per-kolom, lebar
@@ -60,38 +123,7 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
         slotW = cssW / Math.max(1, peaks.max.length)
       }
 
-      const n = maxs.length
-      if (n === 0) return
-
-      // Satu polygon kontinu (bukan rectangle terpisah per kolom): jalur atas
-      // dari kiri ke kanan pakai nilai max, lalu jalur bawah dari kanan ke
-      // kiri pakai nilai min, ditutup jadi satu shape lalu di-fill sekali.
-      // Ini yang bikin hasilnya keliatan "padet"/solid kayak Soundtrap,
-      // gak blocky/grainy kayak fillRect per-kolom — nggak ada celah subpixel
-      // atau rounding antar-kolom yang bikin noise garis-garis tipis.
-      ctx.beginPath()
-      for (let i = 0; i < n; i++) {
-        const x = i * slotW
-        const y = midY - Math.max(maxs[i], floor) * amp
-        if (i === 0) ctx.moveTo(x, y)
-        else ctx.lineTo(x, y)
-      }
-      for (let i = n - 1; i >= 0; i--) {
-        const x = i * slotW
-        const y = midY + Math.max(Math.abs(mins[i]), floor) * amp
-        ctx.lineTo(x, y)
-      }
-      ctx.closePath()
-
-      ctx.fillStyle = 'currentColor'
-      ctx.globalAlpha = 0.9
-      ctx.fill()
-
-      // Garis tengah tipis (nol amplitudo) biar bagian yang senyap/pelan tetep
-      // kebaca sebagai garis, bukan kosong total.
-      ctx.globalAlpha = 0.35
-      ctx.fillRect(0, midY - 0.5, cssW, 1)
-      ctx.globalAlpha = 1
+      drawLane(ctx, maxs, mins, slotW, midY, amp, cssW)
     }
 
     draw()
