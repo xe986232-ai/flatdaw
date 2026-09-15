@@ -6,20 +6,20 @@ export interface FlatColor {
 }
 
 export const FLAT_PALETTE: FlatColor[] = [
-  { fill: '#E8788A', ink: '#4A2530' }, // rose
-  { fill: '#F0E23C', ink: '#0D0D0D' }, // yellow
-  { fill: '#EEA24E', ink: '#2B1B0A' }, // orange
-  { fill: '#3B6FA0', ink: '#FFFFFF' }, // steel blue
-  { fill: '#A8DDE6', ink: '#1A1A1A' }, // cyan
-  { fill: '#7FC8A9', ink: '#123524' }, // mint
-  { fill: '#B98CCB', ink: '#2E1A38' }, // purple
-  { fill: '#F4A261', ink: '#3A1F0A' }, // coral
-  { fill: '#E76F51', ink: '#FFFFFF' }, // red-orange
-  { fill: '#8DB6D6', ink: '#12293D' }, // sky
-  { fill: '#D9C46A', ink: '#3A2E0A' }, // mustard
-  { fill: '#C97BAE', ink: '#3A1830' }, // magenta
-  { fill: '#6FBF8B', ink: '#0F2A1A' }, // green
-  { fill: '#E68A9E', ink: '#3A1420' }, // pink
+  { fill: '#FF3EA5', ink: '#1A0410' }, // hot magenta
+  { fill: '#FFE600', ink: '#0D0D00' }, // pure yellow
+  { fill: '#FF7A00', ink: '#1F0F00' }, // vivid orange
+  { fill: '#0091FF', ink: '#00121F' }, // electric blue
+  { fill: '#00E0D0', ink: '#00201D' }, // bright teal/cyan
+  { fill: '#22FF6E', ink: '#00230E' }, // acid green
+  { fill: '#B026FF', ink: '#1B0429' }, // vivid purple
+  { fill: '#FF2E2E', ink: '#210000' }, // pure red
+  { fill: '#00B3FF', ink: '#001A24' }, // sky blue
+  { fill: '#FFC800', ink: '#1F1700' }, // gold
+  { fill: '#FF00C8', ink: '#210019' }, // magenta-pink
+  { fill: '#39FF14', ink: '#062400' }, // neon green
+  { fill: '#00FFA3', ink: '#00241A' }, // spring green
+  { fill: '#FF5CB3', ink: '#26051A' }, // bubblegum pink
 ]
 
 export function randomFlatColor(exclude?: string): FlatColor {
