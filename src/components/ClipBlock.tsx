@@ -151,12 +151,20 @@ function Pattern({ pattern, seed = 0 }: { pattern: Clip['pattern']; seed?: numbe
 const SNAP_BARS = 0.25 // snap to the beat subdivisions already drawn on the grid
 const CLICK_THRESHOLD_PX = 4 // pointer movement below this counts as a tap, not a drag
 
+/** Format posisi (dalam bar, relatif ke timelineStart) jadi "bilah X ketukan Y". */
+function formatBarBeat(bar: number): string {
+  const wholeBar = Math.floor(bar)
+  const beat = Math.round((bar - wholeBar) * BEATS_PER_BAR)
+  return `bilah ${wholeBar + 1} ketukan ${beat + 1}`
+}
+
 export function ClipBlock({
   clip,
   kind,
   barWidth,
   timelineStart,
   timelineEnd,
+  trackName,
   color,
   isMenuOpen = false,
   isEditing = false,
@@ -171,6 +179,7 @@ export function ClipBlock({
   barWidth: number
   timelineStart: number
   timelineEnd: number
+  trackName?: string
   color?: FlatColor
   isMenuOpen?: boolean
   isEditing?: boolean
@@ -243,9 +252,19 @@ export function ClipBlock({
     onRenameCommit?.(clip.id, trimmed || clip.label)
   }
 
+  const regionLabel = clip.label || 'Untitled'
+  const ariaLabel = trackName ? `${regionLabel} region on track ${trackName}` : `${regionLabel} region`
+
   return (
     <div
       data-clip-interactive="true"
+      role="slider"
+      tabIndex={0}
+      aria-label={ariaLabel}
+      aria-valuemin={0}
+      aria-valuemax={999}
+      aria-valuenow={Math.round(effectiveStartBar - timelineStart)}
+      aria-valuetext={`Area dimulai pada ${formatBarBeat(effectiveStartBar - timelineStart)} dan berakhir pada ${formatBarBeat(effectiveStartBar - timelineStart + clip.lengthBars)}`}
       className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-visible px-2 py-1 ${
         color ? '' : `${fillByKind[kind]} ${inkByKind[kind]}`
       } ${dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : 'cursor-grab'} ${isMenuOpen ? 'z-30' : ''}`}
@@ -290,11 +309,16 @@ export function ClipBlock({
               e.currentTarget.blur()
             }
           }}
-          className="relative z-30 mb-1 w-full min-w-0 shrink-0 rounded-sm border border-black/30 bg-white/95 px-1 text-[11px] font-medium leading-tight text-black outline-none"
+          className="sticky left-2 z-30 mb-1 w-[calc(100%-1rem)] min-w-0 max-w-full shrink-0 rounded-sm border border-black/30 bg-white/95 px-1 text-[11px] font-medium leading-tight text-black outline-none"
         />
       ) : (
         clip.label && (
-          <span className="block shrink-0 truncate text-[11px] font-medium leading-none mb-1">{clip.label}</span>
+          // sticky (bukan cuma left-aligned): nama region tetap kebaca di tepi kiri
+          // yang lagi keliatan pas ditrack di-scroll horizontal, tapi gak pernah
+          // keluar dari batas region-nya sendiri (browser yang clamp otomatis).
+          <span className="sticky left-0 z-10 block max-w-full shrink-0 truncate text-[11px] font-medium leading-none mb-1">
+            {clip.label}
+          </span>
         )
       )}
       <div className="min-h-0 flex-1">

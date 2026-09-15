@@ -80,6 +80,7 @@ export function TrackRow({
             barWidth={barWidth}
             timelineStart={timelineStart}
             timelineEnd={timelineEnd}
+            trackName={track.name}
             color={color}
             onStartBarChange={onClipMove}
             isMenuOpen={openMenuClipId === clip.id}
