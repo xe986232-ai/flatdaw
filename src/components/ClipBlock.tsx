@@ -359,11 +359,13 @@ export function ClipBlock({
       <div className={`min-h-0 flex-1 pt-1 pb-1 ${clip.waveformPeaks ? 'pl-0 pr-2' : 'px-2'}`}>
         {clip.waveformPeaks ? (
           // Sample-nya ketemu di dalam zip project & sudah didekode — gambar
-          // waveform beneran, bukan pola dekoratif. Cuma render, gak diputer.
-          // lengthBars & waveformNativeSpanBars dikirim biar WaveformCanvas
-          // bisa nge-loop (ulang) waveform-nya kalau penempatan clip lebih
-          // panjang dari satu putaran penuh sample aslinya, bukan nyetrecth
-          // satu kopi jadi panjang gak natural (lihat App.tsx resolveWaveforms).
+          // waveform beneran, bukan pola dekoratif. lengthBars &
+          // waveformNativeSpanBars dikirim biar WaveformCanvas tau lebar
+          // satu putaran sample vs lebar penempatan clip-nya, dan `loop`
+          // (dari clip.loopPoints, lihat flmToTracks.ts — diisi berdasar
+          // sub-chunk LINk di .flm, lihat flmParser.ts) nentuin apa
+          // putaran itu di-tile berulang buat ngisi penuh lebar clip atau
+          // cuma main sekali terus dibiarin senyap (one-shot asli).
           //
           // Padding kiri sengaja DIHILANGKAN (pl-0) khusus buat waveform —
           // beda dari NotePreview/Pattern yang tetep px-2 di kedua sisi.
@@ -378,6 +380,7 @@ export function ClipBlock({
             multiRes={clip.waveformMultiRes}
             lengthBars={clip.lengthBars}
             nativeSpanBars={clip.waveformNativeSpanBars}
+            loop={!!clip.loopPoints && clip.loopPoints.length > 0}
           />
         ) : clip.notes && clip.notes.length > 0 ? (
           <NotePreview notes={clip.notes} totalBeats={clip.lengthBars * BEATS_PER_BAR} />
