@@ -10,6 +10,14 @@ function PlayIcon() {
   )
 }
 
+function PauseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4 w-4">
+      <path d="M6 4h4v16H6V4Zm8 0h4v16h-4V4Z" fill="currentColor" />
+    </svg>
+  )
+}
+
 function SnapIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-3.5 w-3.5">
@@ -255,6 +263,7 @@ export function TimelineControlsHeader({
   onToggleLoop,
   onToggleSnap,
   onPlayClick,
+  isPlaying = false,
 }: {
   startBar: number
   endBar: number
@@ -268,6 +277,7 @@ export function TimelineControlsHeader({
   onToggleLoop: () => void
   onToggleSnap: () => void
   onPlayClick?: () => void
+  isPlaying?: boolean
 }) {
   return (
     <div className="sticky top-0 z-20 box-border flex h-12 items-stretch border-b border-surface-grid/60 bg-surface-panel">
@@ -277,11 +287,12 @@ export function TimelineControlsHeader({
       >
         <button
           type="button"
-          aria-label="Play"
+          aria-label={isPlaying ? 'Pause' : 'Play'}
+          aria-pressed={isPlaying}
           onClick={onPlayClick}
           className="flex h-8 w-8 items-center justify-center rounded-full bg-track-accent text-white"
         >
-          <PlayIcon />
+          {isPlaying ? <PauseIcon /> : <PlayIcon />}
         </button>
       </div>
 

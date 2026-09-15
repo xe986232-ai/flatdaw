@@ -6,7 +6,7 @@ import { AutomationLane } from './components/AutomationLane'
 import { Playhead } from './components/Playhead'
 import { PianoRoll } from './components/PianoRoll'
 import type { ClipMenuAction } from './components/ClipMenu'
-import { tracks, TIMELINE_START, getTimelineEnd, type Clip, type Note } from './tracks'
+import { tracks, TIMELINE_START, getTimelineEnd, BEATS_PER_BAR, type Clip, type Note } from './tracks'
 import { generateNotesForClip } from './notes'
 import { randomFlatColor, FLAT_PALETTE, type FlatColor } from './colors'
 import { parseFlmFile } from './flmParser'
@@ -27,11 +27,18 @@ const V_ZOOM_MIN = 0.6
 const V_ZOOM_MAX = 2.5
 const ZOOM_STEP = 0.2
 
+// Belum ada konsep tempo di data project (.flm gak nyimpen BPM di sini), jadi
+// playback pakai tempo tetap — cukup buat bikin playhead "jalan" di timeline
+// sesuai permintaan (gak perlu akurat ke project asli karena gak ada audio).
+const PLAYBACK_BPM = 120
+
 export default function App() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const canvasBoxRef = useRef<HTMLDivElement>(null)
   const [isExporting, setIsExporting] = useState(false)
   const [playheadBar, setPlayheadBar] = useState(207)
+  const [isPlaying, setIsPlaying] = useState(false)
+  const lastFrameTimeRef = useRef<number | null>(null)
 
   // Cycle/loop marker — area loop dalam satuan bar, plus toggle aktif/nonaktif
   // dan toggle snap-to-grid yang dipakai bareng sama drag playhead di bawah.
@@ -101,6 +108,86 @@ export default function App() {
     document.addEventListener('pointerdown', handlePointerDown)
     return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [openMenu])
+
+  // Play/Pause: mulai dari posisi playhead sekarang. Kalau mode loop aktif
+  // dan posisi sekarang di luar area loop, lompat ke awal loop dulu. Kalau
+  // gak loop dan playhead udah di ujung timeline, balik ke awal.
+  const handlePlayClick = () => {
+    setIsPlaying((wasPlaying) => {
+      const next = !wasPlaying
+      if (next) {
+        lastFrameTimeRef.current = null
+        setPlayheadBar((bar) => {
+          if (loopEnabled) {
+            if (bar < loopStartBar || bar >= loopEndBar) return loopStartBar
+            return bar
+          }
+          if (bar >= timelineEnd) return TIMELINE_START
+          return bar
+        })
+      }
+      return next
+    })
+  }
+
+  // Jalanin playhead pakai requestAnimationFrame selama isPlaying — gak ada
+  // audio yang diputer (sesuai permintaan), tapi posisi playhead maju sesuai
+  // waktu asli lewat delta antar frame, bukan increment tetap per frame.
+  useEffect(() => {
+    if (!isPlaying) return
+
+    const barsPerSecond = PLAYBACK_BPM / 60 / BEATS_PER_BAR
+    let rafId = 0
+
+    const step = (time: number) => {
+      if (lastFrameTimeRef.current === null) lastFrameTimeRef.current = time
+      const deltaSec = (time - lastFrameTimeRef.current) / 1000
+      lastFrameTimeRef.current = time
+
+      setPlayheadBar((prev) => {
+        let next = prev + deltaSec * barsPerSecond
+
+        if (loopEnabled) {
+          const len = loopEndBar - loopStartBar
+          if (len > 0) {
+            while (next >= loopEndBar) next -= len
+          }
+          if (next < loopStartBar) next = loopStartBar
+        } else if (next >= timelineEnd) {
+          next = timelineEnd
+          setIsPlaying(false)
+        }
+
+        return next
+      })
+
+      rafId = requestAnimationFrame(step)
+    }
+
+    rafId = requestAnimationFrame(step)
+    return () => {
+      cancelAnimationFrame(rafId)
+      lastFrameTimeRef.current = null
+    }
+  }, [isPlaying, loopEnabled, loopStartBar, loopEndBar, timelineEnd])
+
+  // Auto-scroll: selama play DAN mode loop aktif, ikutin playhead biar gak
+  // keluar dari area yang keliatan — begitu playhead deket tepi viewport,
+  // kanvas discroll horizontal biar playhead balik ke tengah.
+  useEffect(() => {
+    if (!isPlaying || !loopEnabled) return
+    const container = scrollRef.current
+    if (!container) return
+
+    const x = playheadX + LABEL_WIDTH
+    const viewLeft = container.scrollLeft
+    const viewRight = viewLeft + container.clientWidth
+    const margin = Math.min(160, container.clientWidth / 4)
+
+    if (x < viewLeft + margin || x > viewRight - margin) {
+      container.scrollLeft = Math.max(0, x - container.clientWidth / 2)
+    }
+  }, [playheadX, isPlaying, loopEnabled])
 
   const handleDrag = (clientX: number) => {
     const container = scrollRef.current
@@ -524,12 +611,14 @@ export default function App() {
             loopEndBar={loopEndBar}
             loopEnabled={loopEnabled}
             snapEnabled={snapEnabled}
+            isPlaying={isPlaying}
             onLoopChange={(start, end) => {
               setLoopStartBar(start)
               setLoopEndBar(end)
             }}
             onToggleLoop={() => setLoopEnabled((v) => !v)}
             onToggleSnap={() => setSnapEnabled((v) => !v)}
+            onPlayClick={handlePlayClick}
           />
 
           <div className="relative">
