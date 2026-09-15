@@ -53,8 +53,11 @@ export function blockPxWidth(layer: number, barWidthPx: number): number {
 }
 
 // Ambang minimum lebar kotak (px) biar garis grid nggak numpuk jadi blok
-// solid pas lagi zoom-out.
-const MIN_LAYER_PX = 6
+// solid pas lagi zoom-out. Sengaja agak longgar (8px, bukan 6px) — di layar
+// hp kecil + proyek yang panjang (puluhan/ratusan bar), kolom yang cuma
+// 6-7px kelihatannya emang "ada" tapi kerapatannya bikin mata pusing tanpa
+// nambah info yang kebaca; mendingan turun ke lapisan yang lebih kasar.
+const MIN_LAYER_PX = 8
 
 /**
  * Lapisan yang lagi "aktif" ditampilkan pada barWidth ini: lapisan terhalus
@@ -124,10 +127,12 @@ export function buildArrangementGrid(barWidthPx: number): ArrangementGridStyle {
   const images: string[] = []
   const sizes: string[] = []
 
-  // Garis kolom (kotak terhalus lapisan aktif) — cuma kalau masih cukup
-  // lega buat dibedakan dari garis blok di atasnya.
+  // Garis kolom (kotak terhalus lapisan aktif) — paling redup, cuma sebagai
+  // "tekstur" latar; kalau kekuatannya disamain sama garis blok/bar, semua
+  // keliatan numpuk jadi satu barcode yang bikin pusing pas bar-nya banyak
+  // dan track-nya kosong (nggak ada clip buat jadi acuan mata).
   if (columnPx >= 3 && columns > blocks) {
-    images.push(repeatingGridLine(columns, 'rgba(255,255,255,0.12)'))
+    images.push(repeatingGridLine(columns, 'rgba(255,255,255,0.05)'))
     sizes.push(`${barWidthPx}px 100%`)
   }
 
@@ -135,13 +140,15 @@ export function buildArrangementGrid(barWidthPx: number): ArrangementGridStyle {
   // digambar kalau lapisan aktif punya lebih dari 1 blok per bar (kalau
   // cuma 1, itu sama aja dg garis bar, biar nggak dobel).
   if (blocks > 1) {
-    images.push(repeatingGridLine(blocks, 'rgba(255,255,255,0.22)'))
+    images.push(repeatingGridLine(blocks, 'rgba(255,255,255,0.16)'))
     sizes.push(`${barWidthPx}px 100%`)
   }
 
-  // Garis bar — selalu tampil, paling tegas.
+  // Garis bar — selalu tampil, paling tegas, sengaja dibikin jauh lebih
+  // terang drpd dua lapisan di atas biar batas birama langsung "loncat"
+  // ke mata walau lagi zoom-out ngeliat puluhan bar sekaligus.
   images.push(
-    `linear-gradient(to right, rgba(255,255,255,0.32) 0, rgba(255,255,255,0.32) 1px, transparent 1px, transparent ${barWidthPx}px)`,
+    `linear-gradient(to right, rgba(255,255,255,0.4) 0, rgba(255,255,255,0.4) 1px, transparent 1px, transparent ${barWidthPx}px)`,
   )
   sizes.push(`${barWidthPx}px 100%`)
 
