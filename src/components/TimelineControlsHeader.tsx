@@ -207,7 +207,7 @@ function BeatRulerCanvas({
 
     ctx.font = '500 10px "JetBrains Mono", ui-monospace, monospace'
     ctx.textBaseline = 'middle'
-    ctx.fillStyle = 'rgba(240, 226, 60, 1)' // track-lead
+    ctx.fillStyle = 'rgba(255, 255, 255, 1)' // angka durasi/bar — putih
     ctx.strokeStyle = 'rgba(58, 58, 64, 0.9)'
 
     for (let i = 0; i <= bars; i++) {

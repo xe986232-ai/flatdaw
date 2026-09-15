@@ -39,6 +39,10 @@ export default function App() {
   const [playheadBar, setPlayheadBar] = useState(207)
   const [isPlaying, setIsPlaying] = useState(false)
   const lastFrameTimeRef = useRef<number | null>(null)
+  const playheadBarRef = useRef(playheadBar)
+  useEffect(() => {
+    playheadBarRef.current = playheadBar
+  }, [playheadBar])
 
   // Cycle/loop marker — area loop dalam satuan bar, plus toggle aktif/nonaktif
   // dan toggle snap-to-grid yang dipakai bareng sama drag playhead di bawah.
@@ -133,10 +137,16 @@ export default function App() {
   // Jalanin playhead pakai requestAnimationFrame selama isPlaying — gak ada
   // audio yang diputer (sesuai permintaan), tapi posisi playhead maju sesuai
   // waktu asli lewat delta antar frame, bukan increment tetap per frame.
+  // Auto-scroll digabung di loop yang sama (bukan efek terpisah yang cuma
+  // ngecek posisi tiap re-render) supaya scroll-nya benar-benar smooth,
+  // ngikutin garis playhead tiap frame lewat easing, bukan lompat begitu
+  // playhead nyentuh tepi viewport.
   useEffect(() => {
     if (!isPlaying) return
 
     const barsPerSecond = PLAYBACK_BPM / 60 / BEATS_PER_BAR
+    const SCROLL_FOLLOW_TAU = 0.25 // detik — makin kecil, makin cepat "ngejar" playhead
+    const SCROLL_ANCHOR_RATIO = 0.35 // playhead dijaga di ~35% dari kiri viewport
     let rafId = 0
 
     const step = (time: number) => {
@@ -144,22 +154,34 @@ export default function App() {
       const deltaSec = (time - lastFrameTimeRef.current) / 1000
       lastFrameTimeRef.current = time
 
-      setPlayheadBar((prev) => {
-        let next = prev + deltaSec * barsPerSecond
+      let next = playheadBarRef.current + deltaSec * barsPerSecond
 
-        if (loopEnabled) {
-          const len = loopEndBar - loopStartBar
-          if (len > 0) {
-            while (next >= loopEndBar) next -= len
-          }
-          if (next < loopStartBar) next = loopStartBar
-        } else if (next >= timelineEnd) {
-          next = timelineEnd
-          setIsPlaying(false)
+      if (loopEnabled) {
+        const len = loopEndBar - loopStartBar
+        if (len > 0) {
+          while (next >= loopEndBar) next -= len
         }
+        if (next < loopStartBar) next = loopStartBar
+      } else if (next >= timelineEnd) {
+        next = timelineEnd
+        setIsPlaying(false)
+      }
 
-        return next
-      })
+      playheadBarRef.current = next
+      setPlayheadBar(next)
+
+      // Smooth follow: cuma aktif selama mode loop nyala (sesuai permintaan
+      // — klik tombol Loop yang mengaktifkan auto-scroll). Easing eksponensial
+      // biar konsisten mulus di berbagai frame rate, bukan lerp tetap per frame.
+      if (loopEnabled) {
+        const container = scrollRef.current
+        if (container) {
+          const x = (next - TIMELINE_START) * barWidth + LABEL_WIDTH
+          const target = Math.max(0, x - container.clientWidth * SCROLL_ANCHOR_RATIO)
+          const ease = 1 - Math.exp(-deltaSec / SCROLL_FOLLOW_TAU)
+          container.scrollLeft += (target - container.scrollLeft) * ease
+        }
+      }
 
       rafId = requestAnimationFrame(step)
     }
@@ -169,25 +191,7 @@ export default function App() {
       cancelAnimationFrame(rafId)
       lastFrameTimeRef.current = null
     }
-  }, [isPlaying, loopEnabled, loopStartBar, loopEndBar, timelineEnd])
-
-  // Auto-scroll: selama play DAN mode loop aktif, ikutin playhead biar gak
-  // keluar dari area yang keliatan — begitu playhead deket tepi viewport,
-  // kanvas discroll horizontal biar playhead balik ke tengah.
-  useEffect(() => {
-    if (!isPlaying || !loopEnabled) return
-    const container = scrollRef.current
-    if (!container) return
-
-    const x = playheadX + LABEL_WIDTH
-    const viewLeft = container.scrollLeft
-    const viewRight = viewLeft + container.clientWidth
-    const margin = Math.min(160, container.clientWidth / 4)
-
-    if (x < viewLeft + margin || x > viewRight - margin) {
-      container.scrollLeft = Math.max(0, x - container.clientWidth / 2)
-    }
-  }, [playheadX, isPlaying, loopEnabled])
+  }, [isPlaying, loopEnabled, loopStartBar, loopEndBar, timelineEnd, barWidth])
 
   const handleDrag = (clientX: number) => {
     const container = scrollRef.current
