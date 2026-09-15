@@ -43,17 +43,22 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
     ) => {
       const n = maxs.length
       if (n === 0) return
-      const floor = 0.02 // tinggi minimum biar bagian senyap tetep kebaca sebagai garis tipis, bukan kosong total
+      // Sebelumnya ada floor (tinggi minimum) di sini biar bagian senyap
+      // masih kebaca sebagai garis tipis. Ternyata garis itu malah keliatan
+      // kayak artifact/baseline aneh yang motong di tengah tiap lane
+      // (nembus dari kiri ke kanan pas bagian sepi). User minta dihilangin,
+      // jadi sekarang bagian yang bener-bener senyap ya kosong aja, gak ada
+      // garis flat lagi.
       ctx.beginPath()
       for (let i = 0; i < n; i++) {
         const x = i * slotW
-        const y = laneMidY - Math.max(maxs[i], floor) * laneAmp
+        const y = laneMidY - maxs[i] * laneAmp
         if (i === 0) ctx.moveTo(x, y)
         else ctx.lineTo(x, y)
       }
       for (let i = n - 1; i >= 0; i--) {
         const x = i * slotW
-        const y = laneMidY + Math.max(Math.abs(mins[i]), floor) * laneAmp
+        const y = laneMidY + Math.abs(mins[i]) * laneAmp
         ctx.lineTo(x, y)
       }
       ctx.closePath()
@@ -90,11 +95,6 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
         const right = sampleWaveformColumns(multiRes, 1, {x0: 0, x1: cssW, u0: 0, u1: multiRes.numFrames})
         drawLane(ctx, left.maxs, left.mins, 1, laneH / 2, laneAmp)
         drawLane(ctx, right.maxs, right.mins, 1, laneH + laneH / 2, laneAmp)
-        // Garis pemisah tipis antar dua lane, biar keliatan jelas ini dua
-        // channel terpisah, bukan satu waveform yang kebetulan bercelah.
-        ctx.globalAlpha = 0.15
-        ctx.fillRect(0, laneH - 0.5, cssW, 1)
-        ctx.globalAlpha = 1
         return
       }
 
