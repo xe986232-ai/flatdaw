@@ -72,8 +72,18 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
       const parent = canvas.parentElement
       if (!parent) return
       const dpr = window.devicePixelRatio || 1
-      const cssW = parent.clientWidth || 1
-      const cssH = parent.clientHeight || 16
+      // clientWidth/clientHeight itu ukuran parent TERMASUK padding-nya.
+      // Kalau parent punya padding (mis. px-2/pt-1/pb-1 buat jarak dari tepi
+      // clip), canvas yang di-set persis clientWidth/clientHeight bakal
+      // kegedean dan numpuk/overflow ke bagian padding-bottom — bikin
+      // waveform-nya keliatan "kedorong" turun, ga center lagi. Makanya di
+      // sini kita kurangin padding parent-nya dulu biar canvas pas persis di
+      // content-box parent, gak lebih.
+      const cs = window.getComputedStyle(parent)
+      const padX = parseFloat(cs.paddingLeft || '0') + parseFloat(cs.paddingRight || '0')
+      const padY = parseFloat(cs.paddingTop || '0') + parseFloat(cs.paddingBottom || '0')
+      const cssW = Math.max(1, (parent.clientWidth || 1) - padX)
+      const cssH = Math.max(1, (parent.clientHeight || 16) - padY)
       canvas.width = Math.max(1, Math.round(cssW * dpr))
       canvas.height = Math.max(1, Math.round(cssH * dpr))
       canvas.style.width = `${cssW}px`

@@ -290,7 +290,7 @@ export function ClipBlock({
       aria-valuemax={999}
       aria-valuenow={Math.round(effectiveStartBar - timelineStart)}
       aria-valuetext={`Area dimulai pada ${formatBarBeat(effectiveStartBar - timelineStart)} dan berakhir pada ${formatBarBeat(effectiveStartBar - timelineStart + clip.lengthBars)}`}
-      className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-visible ${
+      className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-visible rounded-[3px] ${
         effectiveColor ? '' : `${fillByKind[kind]} ${inkByKind[kind]}`
       } ${dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : 'cursor-grab'} ${isMenuOpen ? 'z-30' : ''}`}
       style={{ left, width, backgroundColor: effectiveColor?.fill, color: effectiveColor?.ink }}
@@ -345,7 +345,7 @@ export function ClipBlock({
           // semi-transparan. Teksnya sendiri sticky biar tetep kebaca pas
           // clip-nya lebar dan track discroll horizontal.
           <div
-            className={`z-10 block w-full shrink-0 truncate px-2 py-0.5 text-[11px] font-medium leading-none opacity-100 ${
+            className={`z-10 block w-full shrink-0 truncate rounded-t-[3px] px-2 py-0.5 text-[11px] font-medium leading-none opacity-100 ${
               headerFill ? '' : `${fillByKind[kind]} ${inkByKind[kind]} brightness-125`
             }`}
             style={{ backgroundColor: headerFill, color: headerInk }}
