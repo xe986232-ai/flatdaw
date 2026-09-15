@@ -65,6 +65,15 @@ export interface Track {
   clips: Clip[]
 }
 
+// Track diperlakukan sebagai "audio track" (isi-nya rekaman/sample, bukan
+// pattern MIDI instrument) kalau ADA clip di dalamnya yang berasal dari audio
+// (ditandain sampleName dan/atau pattern 'dense' — lihat flmToTracks.ts).
+// Dipakai TrackIcon buat milih ikon waveform vs ikon keyboard di kolom label
+// track (lihat TrackRow.tsx).
+export function isAudioTrack(track: Track): boolean {
+  return track.clips.some((clip) => clip.pattern === 'dense' || clip.sampleName !== undefined)
+}
+
 // Timeline window. TIMELINE_START is just an arbitrary anchor bar number so
 // the ruler doesn't start at "1" (matches the original reference content).
 // TIMELINE_END used to be a second hardcoded constant (205 + a fixed 80 bars)

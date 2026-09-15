@@ -6,14 +6,10 @@ import { TrackIcon } from './TrackIcon'
 import type { ClipMenuAction } from './ClipMenu'
 import { buildArrangementGrid } from '../grid'
 
-const iconInkByKind: Record<Track['kind'], string> = {
-  marker: 'text-track-marker',
-  melodic: 'text-track-melodic',
-  lead: 'text-track-drum',
-  drum: 'text-track-drum',
-  perc: 'text-track-perc',
-  accent: 'text-track-accent',
-}
+// Fallback ink kalau track belum punya warna sendiri (color prop kosong) —
+// ikon (waveform/keyboard, lihat TrackIcon) tetap kebaca sebelum ada warna
+// ditetapkan.
+const DEFAULT_ICON_INK = 'text-track-melodic'
 
 export function TrackRow({
   track,
@@ -69,8 +65,8 @@ export function TrackRow({
         }`}
         style={{ width: labelWidth, height }}
       >
-        <span className={color ? '' : iconInkByKind[track.kind]} style={{ color: color?.fill }}>
-          <TrackIcon kind={track.kind} />
+        <span className={color ? '' : DEFAULT_ICON_INK} style={{ color: color?.fill }}>
+          <TrackIcon track={track} />
         </span>
       </div>
       <div
