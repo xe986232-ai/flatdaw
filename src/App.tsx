@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { toPng } from 'html-to-image'
-import { RulerBar } from './components/RulerBar'
+import { TimelineControlsHeader } from './components/TimelineControlsHeader'
 import { TrackRow } from './components/TrackRow'
 import { AutomationLane } from './components/AutomationLane'
 import { Playhead } from './components/Playhead'
@@ -31,6 +31,13 @@ export default function App() {
   const canvasBoxRef = useRef<HTMLDivElement>(null)
   const [isExporting, setIsExporting] = useState(false)
   const [playheadBar, setPlayheadBar] = useState(207)
+
+  // Cycle/loop marker — area loop dalam satuan bar, plus toggle aktif/nonaktif
+  // dan toggle snap-to-grid yang dipakai bareng sama drag playhead di bawah.
+  const [loopStartBar, setLoopStartBar] = useState(TIMELINE_START)
+  const [loopEndBar, setLoopEndBar] = useState(TIMELINE_START + 8)
+  const [loopEnabled, setLoopEnabled] = useState(false)
+  const [snapEnabled, setSnapEnabled] = useState(true)
   const [trackList, setTrackList] = useState(tracks)
   const [trackColors, setTrackColors] = useState<Record<string, FlatColor>>({})
 
@@ -476,7 +483,22 @@ export default function App() {
       {/* Landscape canvas — fixed 2292x1080, holds the whole playlist/arrangement view */}
       <div ref={canvasBoxRef} className="relative flex aspect-[2292/1080] w-full max-w-[2292px] flex-col overflow-hidden rounded-lg border border-surface-grid bg-surface-base text-white">
         <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
-          <RulerBar startBar={TIMELINE_START} endBar={timelineEnd} barWidth={barWidth} labelWidth={LABEL_WIDTH} />
+          <TimelineControlsHeader
+            startBar={TIMELINE_START}
+            endBar={timelineEnd}
+            barWidth={barWidth}
+            labelWidth={LABEL_WIDTH}
+            loopStartBar={loopStartBar}
+            loopEndBar={loopEndBar}
+            loopEnabled={loopEnabled}
+            snapEnabled={snapEnabled}
+            onLoopChange={(start, end) => {
+              setLoopStartBar(start)
+              setLoopEndBar(end)
+            }}
+            onToggleLoop={() => setLoopEnabled((v) => !v)}
+            onToggleSnap={() => setSnapEnabled((v) => !v)}
+          />
 
           <div className="relative">
             {trackList.map((track, index) => (
