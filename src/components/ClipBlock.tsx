@@ -221,6 +221,11 @@ export function ClipBlock({
   function handlePointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     if (isEditing) return
     e.stopPropagation()
+    // Belum diseleksi (outline putih belum nongol) -> tap ini cuma buat
+    // nyeleksi clip-nya dulu (lihat onClick di bawah), belum boleh nge-drag.
+    // Baru gesture berikutnya (pas udah keseleksi / isMenuOpen true) yang
+    // boleh mulai geser posisi clip.
+    if (!isMenuOpen) return
     e.currentTarget.setPointerCapture(e.pointerId)
     dragInfo.current = { originClientX: e.clientX, originStartBar: clip.startBar, moved: false }
     setDragStartBar(clip.startBar)
@@ -294,15 +299,21 @@ export function ClipBlock({
       aria-valuetext={`Area dimulai pada ${formatBarBeat(effectiveStartBar - timelineStart)} dan berakhir pada ${formatBarBeat(effectiveStartBar - timelineStart + clip.lengthBars)}`}
       className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-visible rounded-[3px] ${
         effectiveColor ? '' : `${fillByKind[kind]} ${inkByKind[kind]}`
-      } ${dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : 'cursor-grab'} ${
-        isMenuOpen ? 'z-30 ring-2 ring-white' : ''
-      }`}
+      } ${
+        dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : isMenuOpen ? 'cursor-grab' : 'cursor-pointer'
+      } ${isMenuOpen ? 'z-30 ring-2 ring-white' : ''}`}
       style={{ left, width, backgroundColor: effectiveColor?.fill, color: effectiveColor?.ink }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={endDrag}
       onPointerCancel={endDrag}
-      onClick={(e) => e.stopPropagation()}
+      onClick={(e) => {
+        e.stopPropagation()
+        // Kalau belum keseleksi, tap ini yang nyeleksi (munculin outline +
+        // menu). Kalau udah keseleksi, toggle-nya sudah ditangani lewat
+        // endDrag di atas (pointer up tanpa gerak), jadi di sini cukup diem.
+        if (!isMenuOpen) onClipClick?.(clip.id)
+      }}
     >
       {clip.loopPoints && clip.loopPoints.length > 0 && (
         // Goresan kecil di titik loop — niru tampilan FL Studio Mobile pas
