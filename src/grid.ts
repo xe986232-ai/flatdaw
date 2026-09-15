@@ -36,6 +36,22 @@ export function cellPxWidth(layer: number, barWidthPx: number): number {
   return barWidthPx / cellsPerBar(layer)
 }
 
+/**
+ * Jumlah "blok" (ketukan/beat) per bar pada suatu lapisan. Aturan wajib:
+ * 1 blok = 4 kolom grid di SEMUA lapisan (1..MAX_LAYER) — makanya ini selalu
+ * cellsPerBar(layer) / 4. Yang berubah tiap lapisan cuma JUMLAH bloknya:
+ * lapisan 1 = 1 blok/bar (blok == bar itu sendiri), lapisan 2 = 2 blok/bar,
+ * lapisan 3 = 4 blok/bar, dst — dobel terus tiap naik satu lapisan.
+ */
+export function blocksPerBar(layer: number): number {
+  return Math.pow(2, layer - 1) // = cellsPerBar(layer) / 4
+}
+
+/** Lebar piksel satu blok (ketukan) pada suatu lapisan. */
+export function blockPxWidth(layer: number, barWidthPx: number): number {
+  return barWidthPx / blocksPerBar(layer)
+}
+
 // Ambang minimum lebar kotak (px) biar garis grid nggak numpuk jadi blok
 // solid pas lagi zoom-out.
 const MIN_LAYER_PX = 6
@@ -64,35 +80,66 @@ export interface ArrangementGridStyle {
 }
 
 /**
- * Bikin background CSS buat area playlist/timeline:
- *  - garis bar (batas antar birama, selalu tampil, paling tegas)
- *  - garis lapisan grid yang lagi aktif (pickActiveLayer) — cuma SATU
- *    lapisan yang digambar; begitu zoom berubah cukup jauh, lapisan ini
- *    diganti seluruhnya oleh lapisan lain, bukan ditambah/ditumpuk.
- * Karena tiap lapisan adalah pembelahan 2x dari lapisan sebelumnya, garis
- * lapisan aktif otomatis mencakup posisi semua lapisan yang lebih kasar —
- * jadi nggak ada info yang hilang walau lapisan lain di-hide.
+ * Bikin satu garis grid berulang (repeating-linear-gradient) dg PERIODE
+ * `barWidthPx` persis — bukan `Math.round(cellPxWidth(...))`. Ini kuncinya:
+ * dulu tiap lapisan dibikin jadi tile CSS sendiri yang lebar-nya dibulatkan
+ * ke piksel bulat, padahal tile "garis bar" dibikin terpisah dg lebar
+ * barWidthPx apa adanya. Begitu barWidthPx bukan kelipatan pas dari piksel
+ * yang dibulatkan itu (hampir selalu begitu, wong hasil zoom bisa berapa aja),
+ * dua tile itu jalan sendiri-sendiri dan makin ke kanan makin ngaco/geser —
+ * itu yang keliatan "ngawur" pas discroll ke bar-bar berikutnya.
+ *
+ * Fix-nya: satu periode grid = SATU bar (barWidthPx, tidak dibulatkan), dan
+ * di dalam satu periode itu semua garis (kolom halus, garis blok/ketukan,
+ * garis bar) ditaruh pakai persentase (%) relatif ke periode itu sendiri.
+ * Karena persentase selalu tepat 1/N dari lebar sebenarnya (bukan hasil
+ * pembulatan), garis-garisnya otomatis presisi 4 kolom per blok di semua
+ * lapisan dan nggak pernah geser walau di-scroll sejauh apa pun.
+ */
+function repeatingGridLine(divisions: number, color: string): string {
+  const stopPct = 100 / divisions
+  return `repeating-linear-gradient(to right, ${color} 0, ${color} 1px, transparent 1px, transparent ${stopPct}%)`
+}
+
+/**
+ * Bikin background CSS buat area playlist/timeline, tiga tingkat, semua
+ * dalam SATU periode `barWidthPx` biar nggak pernah drift:
+ *  - garis kolom (lapisan aktif yg lagi dipilih pickActiveLayer) — paling
+ *    tipis/samar, cuma digambar kalau kolomnya masih cukup lega dari garis
+ *    blok di atasnya (kalau nggak, ya cuma blok+bar yang tampil).
+ *  - garis blok/ketukan (selalu 4 kolom per blok, wajib di semua lapisan) —
+ *    medium, cuma digambar kalau lapisan aktif punya >1 blok per bar (di
+ *    lapisan 1, blok == bar, jadi nggak perlu digambar dobel).
+ *  - garis bar (batas birama) — paling tegas, selalu tampil.
+ * Cuma SATU lapisan kolom yang pernah aktif dalam satu waktu — begitu zoom
+ * berubah cukup jauh, lapisan ini diganti seluruhnya oleh lapisan lain
+ * (pickActiveLayer), bukan ditambah/ditumpuk di atas lapisan sebelumnya.
  */
 export function buildArrangementGrid(barWidthPx: number): ArrangementGridStyle {
   const activeLayer = pickActiveLayer(barWidthPx)
-  // Dibulatkan ke piksel penuh biar tiap tile digambar presisi (garis tipis
-  // 1px di posisi pecahan piksel gampang blur/pudar setelah di-tile
-  // berulang-ulang di sepanjang baris track).
-  const layerPx = Math.max(1, Math.round(cellPxWidth(activeLayer, barWidthPx)))
+  const columns = cellsPerBar(activeLayer)
+  const blocks = blocksPerBar(activeLayer)
+  const columnPx = barWidthPx / columns
 
   const images: string[] = []
   const sizes: string[] = []
 
-  // Lapisan aktif — cuma digambar kalau kotaknya masih cukup lebar buat
-  // dibedakan dari garis bar (kalau lapisan 1 aja udah kelewat sempit,
-  // biarin cuma garis bar yang tampil).
-  if (layerPx >= 3) {
-    images.push(
-      `linear-gradient(to right, rgba(255,255,255,0.14) 0, rgba(255,255,255,0.14) 1px, transparent 1px, transparent ${layerPx}px)`,
-    )
-    sizes.push(`${layerPx}px 100%`)
+  // Garis kolom (kotak terhalus lapisan aktif) — cuma kalau masih cukup
+  // lega buat dibedakan dari garis blok di atasnya.
+  if (columnPx >= 3 && columns > blocks) {
+    images.push(repeatingGridLine(columns, 'rgba(255,255,255,0.12)'))
+    sizes.push(`${barWidthPx}px 100%`)
   }
 
+  // Garis blok/ketukan — wajib 4 kolom per blok di semua lapisan; cuma
+  // digambar kalau lapisan aktif punya lebih dari 1 blok per bar (kalau
+  // cuma 1, itu sama aja dg garis bar, biar nggak dobel).
+  if (blocks > 1) {
+    images.push(repeatingGridLine(blocks, 'rgba(255,255,255,0.22)'))
+    sizes.push(`${barWidthPx}px 100%`)
+  }
+
+  // Garis bar — selalu tampil, paling tegas.
   images.push(
     `linear-gradient(to right, rgba(255,255,255,0.32) 0, rgba(255,255,255,0.32) 1px, transparent 1px, transparent ${barWidthPx}px)`,
   )
