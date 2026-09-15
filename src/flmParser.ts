@@ -151,6 +151,15 @@ function extractAsciiRuns(bytes: Uint8Array, start: number, end: number): { star
 
 const IGNORE_LABELS = /^(Default(\/Default)?|Level|DESc?|CHHD|MASTER|TRKH.?)$/i
 
+// FL Studio Mobile nulis literal string ini di slot instrument/track/sample
+// yang belum pernah diisi user — bukan hasil salah-parse, itu emang begitu
+// di dalam file binary-nya. Klip/pattern yang namanya persis ini biasanya
+// cuma sisa slot kosong, gak ada isinya yang perlu ditampilin di playlist.
+const EMPTY_LITERAL = /^<\s*empty\s*>$/i
+function isEmptyLiteral(s: string | null | undefined): boolean {
+  return !!s && EMPTY_LITERAL.test(s.trim())
+}
+
 // Chunk tag codes used internally by the .flm format. A run that's just one
 // of these (optionally with 1-2 junk bytes like "?" glued to the front,
 // which happens when the tag itself gets swept into the ASCII scan) is
@@ -333,7 +342,11 @@ export function parseFlmFile(bytes: Uint8Array, filename: string): ParseFlmResul
 
   const allResults: EVN2ChunkResult[] = tagOffsets.map((off) => {
     const r = parseEVN2Chunk(bytes, off)
-    r.instrumentName = guessInstrumentName(bytes, off, clipOffsets, trkhOffsets)
+    const guessed = guessInstrumentName(bytes, off, clipOffsets, trkhOffsets)
+    // Nama literal "<empty>" bukan nama beneran — nol-in biar fallback ke
+    // "Pattern #N" (lihat assignDisplayNames), bukan nampilin "<empty>" apa
+    // adanya sebagai label pattern.
+    r.instrumentName = isEmptyLiteral(guessed) ? null : guessed
     return r
   })
 
@@ -357,7 +370,25 @@ export function parseFlmFile(bytes: Uint8Array, filename: string): ParseFlmResul
     offsetToChunkIdx[c.offset] = i
   })
   const parsedClips = parseClips(bytes, allResults, clipOffsets, trkhOffsets)
-  const timelineClips: TimelineClipRaw[] = parsedClips
+
+  // Buang klip yang beneran gak ada isinya:
+  // - klip audio yang sample-nya literal "<empty>" (slot belum pernah diisi
+  //   sample apa pun — gak ada audio buat digambar/dicocokin ke zip)
+  // - klip pattern yang trackName-nya "<empty>" DAN pattern-nya sendiri emang
+  //   nol note (bukan cuma belum dikasih nama tapi beneran gak ada isinya)
+  // Klip pattern yang trackName-nya "<empty>" tapi PUNYA note tetap
+  // dipertahankan (isinya nyata, cuma track-nya belum pernah dikasih nama),
+  // hanya nama tracknya di-null-in biar gak nampilin "<empty>" apa adanya.
+  const cleanedClips = parsedClips
+    .filter((cl) => {
+      if (cl.isAudio) return !isEmptyLiteral(cl.sampleName)
+      const chunk = allResults.find((r) => r.offset === cl.evn2Offset)
+      const isBlankPattern = !chunk || chunk.notes.length === 0
+      return !(isEmptyLiteral(cl.trackName) && isBlankPattern)
+    })
+    .map((cl) => (isEmptyLiteral(cl.trackName) ? { ...cl, trackName: null } : cl))
+
+  const timelineClips: TimelineClipRaw[] = cleanedClips
     .filter((cl) => cl.isAudio || (cl.evn2Offset !== null && Object.prototype.hasOwnProperty.call(offsetToChunkIdx, cl.evn2Offset)))
     .map((cl) => ({
       ...cl,
