@@ -39,8 +39,7 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
       mins: ArrayLike<number>,
       slotW: number,
       laneMidY: number,
-      laneAmp: number,
-      laneW: number
+      laneAmp: number
     ) => {
       const n = maxs.length
       if (n === 0) return
@@ -61,8 +60,6 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
       ctx.fillStyle = 'currentColor'
       ctx.globalAlpha = 0.9
       ctx.fill()
-      ctx.globalAlpha = 0.35
-      ctx.fillRect(0, laneMidY - 0.5, laneW, 1)
       ctx.globalAlpha = 1
     }
 
@@ -91,11 +88,11 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
         const laneAmp = (laneH / 2) * 0.92
         const left = sampleWaveformColumns(multiRes, 0, {x0: 0, x1: cssW, u0: 0, u1: multiRes.numFrames})
         const right = sampleWaveformColumns(multiRes, 1, {x0: 0, x1: cssW, u0: 0, u1: multiRes.numFrames})
-        drawLane(ctx, left.maxs, left.mins, 1, laneH / 2, laneAmp, cssW)
-        drawLane(ctx, right.maxs, right.mins, 1, laneH + laneH / 2, laneAmp, cssW)
+        drawLane(ctx, left.maxs, left.mins, 1, laneH / 2, laneAmp)
+        drawLane(ctx, right.maxs, right.mins, 1, laneH + laneH / 2, laneAmp)
         // Garis pemisah tipis antar dua lane, biar keliatan jelas ini dua
         // channel terpisah, bukan satu waveform yang kebetulan bercelah.
-        ctx.globalAlpha = 0.25
+        ctx.globalAlpha = 0.15
         ctx.fillRect(0, laneH - 0.5, cssW, 1)
         ctx.globalAlpha = 1
         return
@@ -123,7 +120,7 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
         slotW = cssW / Math.max(1, peaks.max.length)
       }
 
-      drawLane(ctx, maxs, mins, slotW, midY, amp, cssW)
+      drawLane(ctx, maxs, mins, slotW, midY, amp)
     }
 
     draw()

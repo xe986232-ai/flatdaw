@@ -44,4 +44,7 @@ export function hexToRgba(hex: string, alpha: number) {
 // clip pattern/MIDI lain. Niru "st-purple-rain-set" di Soundtrap: klip audio
 // asli (punya sampleName/waveform) selalu ungu indigo, apapun warna track-nya,
 // biar kebeda jelas dari clip MIDI/pattern (yang masih ikut palet acak).
-export const AUDIO_REGION_COLOR: FlatColor = { fill: '#6C5CE7', ink: '#EFECFF' }
+// Fill-nya semi-transparan (bukan solid) — niru tampilan region audio di
+// Ableton Live: warna track cuma jadi tint lembut di belakang, waveform-nya
+// (currentColor/ink) yang jadi fokus utama, bukan blok warna pekat.
+export const AUDIO_REGION_COLOR: FlatColor = { fill: hexToRgba('#6C5CE7', 0.55), ink: '#EFECFF' }
