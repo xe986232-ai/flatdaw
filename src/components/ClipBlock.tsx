@@ -356,7 +356,7 @@ export function ClipBlock({
           </div>
         )
       )}
-      <div className="min-h-0 flex-1 px-2 pt-1 pb-1">
+      <div className={`min-h-0 flex-1 pt-1 pb-1 ${clip.waveformPeaks ? 'pl-0 pr-2' : 'px-2'}`}>
         {clip.waveformPeaks ? (
           // Sample-nya ketemu di dalam zip project & sudah didekode — gambar
           // waveform beneran, bukan pola dekoratif. Cuma render, gak diputer.
@@ -364,6 +364,15 @@ export function ClipBlock({
           // bisa nge-loop (ulang) waveform-nya kalau penempatan clip lebih
           // panjang dari satu putaran penuh sample aslinya, bukan nyetrecth
           // satu kopi jadi panjang gak natural (lihat App.tsx resolveWaveforms).
+          //
+          // Padding kiri sengaja DIHILANGKAN (pl-0) khusus buat waveform —
+          // beda dari NotePreview/Pattern yang tetep px-2 di kedua sisi.
+          // Awalnya waveform ikut px-2 kayak yang lain, tapi begitu clip
+          // audio jadi pendek banget (one-shot kick/clap hasil clamp
+          // panjang ke jarak antar hit), 8px padding kiri itu keliatan
+          // sebagai jarak/spasi kosong yang jelas banget sebelum bunyinya
+          // "mulai" — padahal harusnya nempel mentok ke tepi kiri clip
+          // (= titik clip itu beneran mulai main di timeline).
           <WaveformCanvas
             peaks={clip.waveformPeaks}
             multiRes={clip.waveformMultiRes}
