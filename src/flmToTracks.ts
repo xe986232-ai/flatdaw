@@ -59,17 +59,48 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
       const chunk = chunkResults[cl.chunkIdx as number]
       const label = chunk?.displayName || `Pattern #${(cl.chunkIdx as number) + 1}`
 
+      // Panjang pattern ASLI (belum di-loop) dalam beat — dibulatkan ke bar
+      // penuh, konsisten sama patternSpanBars(). Ini periode loop-nya kalau
+      // penempatan clip di playlist lebih panjang dari pattern aslinya.
+      const nativeSpanBars = patternSpanBars(chunk)
+      const nativeSpanBeats = nativeSpanBars * BEATS_PER_BAR
+      const placementBeats = placementBars * BEATS_PER_BAR
+      const originalNotes = chunk?.notes ?? []
+
+      // FL Studio Mobile: kalau clip di playlist ditarik lebih panjang dari
+      // pattern piano-roll aslinya, sisanya BUKAN dibiarin kosong — kontennya
+      // di-loop/diulang buat ngisi penuh sepanjang penempatan itu (ini yang
+      // di tool aslinya ditandain garis kecil di titik loop-nya). Tiling di
+      // sini niru itu: salin ulang semua note tiap kelipatan nativeSpanBeats
+      // sampai penuh sepanjang placementBeats.
+      const shouldLoop = nativeSpanBeats > 0 && placementBeats > nativeSpanBeats + 0.001
+      const notes: Note[] = []
+      const loopPoints: number[] = []
+
+      if (shouldLoop) {
+        let offsetBeats = 0
+        let ni = 0
+        while (offsetBeats < placementBeats - 0.001) {
+          if (offsetBeats > 0) loopPoints.push(offsetBeats / BEATS_PER_BAR)
+          for (const n of originalNotes) {
+            const startBeat = n.pos_beats + offsetBeats
+            if (startBeat >= placementBeats - 0.001) continue
+            const lengthBeats = Math.min(n.dur_beats, placementBeats - startBeat)
+            notes.push({ id: `flm-${key}-c${i}-n${ni}`, pitch: n.pitch, startBeat, lengthBeats })
+            ni++
+          }
+          offsetBeats += nativeSpanBeats
+        }
+      } else {
+        originalNotes.forEach((n, ni) => {
+          notes.push({ id: `flm-${key}-c${i}-n${ni}`, pitch: n.pitch, startBeat: n.pos_beats, lengthBeats: n.dur_beats })
+        })
+      }
+
       // Lebar clip = maksimum antara panjang penempatan di playlist DAN
       // panjang pattern note-nya sendiri, jadi gak ada note yang
       // kepotong/overflow.
-      const lengthBars = Math.max(placementBars, patternSpanBars(chunk), 1)
-
-      const notes: Note[] = (chunk?.notes ?? []).map((n, ni) => ({
-        id: `flm-${key}-c${i}-n${ni}`,
-        pitch: n.pitch,
-        startBeat: n.pos_beats,
-        lengthBeats: n.dur_beats,
-      }))
+      const lengthBars = Math.max(placementBars, nativeSpanBars, 1)
 
       clip = {
         id: `flm-clip-${i}`,
@@ -78,6 +109,7 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
         lengthBars,
         pattern: 'notes',
         notes,
+        loopPoints: loopPoints.length > 0 ? loopPoints : undefined,
       }
     }
 

@@ -243,6 +243,27 @@ export function ClipBlock({
       onPointerCancel={endDrag}
       onClick={(e) => e.stopPropagation()}
     >
+      {clip.loopPoints && clip.loopPoints.length > 0 && (
+        // Goresan kecil di titik loop — niru tampilan FL Studio Mobile pas
+        // pattern-nya diulang buat ngisi penempatan yang lebih panjang.
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-10 h-0">
+          {clip.loopPoints.map((bar, idx) => (
+            <span
+              key={idx}
+              className="absolute -translate-x-1/2"
+              style={{
+                left: `${(bar / clip.lengthBars) * 100}%`,
+                top: 0,
+                width: 0,
+                height: 0,
+                borderLeft: '4px solid transparent',
+                borderRight: '4px solid transparent',
+                borderTop: '6px solid rgba(0,0,0,0.5)',
+              }}
+            />
+          ))}
+        </div>
+      )}
       {isEditing ? (
         <input
           ref={inputRef}

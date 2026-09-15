@@ -22,6 +22,11 @@ export interface Clip {
   lengthBars: number
   pattern?: 'notes' | 'steps' | 'scribble' | 'dense'
   notes?: Note[] // piano-roll content; generated on first "Edit" if absent
+  // Titik-titik (dalam bar, relatif ke awal clip) tempat pattern asli
+  // di-loop/diulang karena penempatan di playlist lebih panjang dari pattern
+  // aslinya (lihat flmToTracks.ts). Dipakai buat gambar goresan penanda loop
+  // di tepi atas clip, niru tampilan FL Studio Mobile.
+  loopPoints?: number[]
   // Klip audio (isAudio=true di flmParser): nama sample mentah dari project,
   // dipakai buat dicocokin ke file di dalam zip (lihat zipProject.ts).
   sampleName?: string
