@@ -76,6 +76,12 @@ export function pickActiveLayer(barWidthPx: number, minPx = MIN_LAYER_PX): numbe
   return chosen
 }
 
+// Warna dasar garis grid — sama persis dg --color-surface-grid (#3A3A40) yang
+// dipakai buat border panel/divider lain di app ini. Sengaja bukan putih:
+// abu-abu senada background jauh lebih adem di mata drpd garis putih terang
+// yang kontras keras sama latar gelap, apalagi kalau bar-nya lagi banyak.
+const GRID_LINE_RGB = '58, 58, 64'
+
 export interface ArrangementGridStyle {
   backgroundImage: string
   backgroundSize: string
@@ -99,8 +105,9 @@ export interface ArrangementGridStyle {
  * pembulatan), garis-garisnya otomatis presisi 4 kolom per blok di semua
  * lapisan dan nggak pernah geser walau di-scroll sejauh apa pun.
  */
-function repeatingGridLine(divisions: number, color: string): string {
+function repeatingGridLine(divisions: number, alpha: number): string {
   const stopPct = 100 / divisions
+  const color = `rgba(${GRID_LINE_RGB}, ${alpha})`
   return `repeating-linear-gradient(to right, ${color} 0, ${color} 1px, transparent 1px, transparent ${stopPct}%)`
 }
 
@@ -132,7 +139,7 @@ export function buildArrangementGrid(barWidthPx: number): ArrangementGridStyle {
   // keliatan numpuk jadi satu barcode yang bikin pusing pas bar-nya banyak
   // dan track-nya kosong (nggak ada clip buat jadi acuan mata).
   if (columnPx >= 3 && columns > blocks) {
-    images.push(repeatingGridLine(columns, 'rgba(255,255,255,0.05)'))
+    images.push(repeatingGridLine(columns, 0.35))
     sizes.push(`${barWidthPx}px 100%`)
   }
 
@@ -140,15 +147,14 @@ export function buildArrangementGrid(barWidthPx: number): ArrangementGridStyle {
   // digambar kalau lapisan aktif punya lebih dari 1 blok per bar (kalau
   // cuma 1, itu sama aja dg garis bar, biar nggak dobel).
   if (blocks > 1) {
-    images.push(repeatingGridLine(blocks, 'rgba(255,255,255,0.16)'))
+    images.push(repeatingGridLine(blocks, 0.65))
     sizes.push(`${barWidthPx}px 100%`)
   }
 
-  // Garis bar — selalu tampil, paling tegas, sengaja dibikin jauh lebih
-  // terang drpd dua lapisan di atas biar batas birama langsung "loncat"
-  // ke mata walau lagi zoom-out ngeliat puluhan bar sekaligus.
+  // Garis bar — selalu tampil, paling tegas (alpha 1 = persis warna
+  // --color-surface-grid solid, senada border-border lain di app).
   images.push(
-    `linear-gradient(to right, rgba(255,255,255,0.4) 0, rgba(255,255,255,0.4) 1px, transparent 1px, transparent ${barWidthPx}px)`,
+    `linear-gradient(to right, rgba(${GRID_LINE_RGB}, 1) 0, rgba(${GRID_LINE_RGB}, 1) 1px, transparent 1px, transparent ${barWidthPx}px)`,
   )
   sizes.push(`${barWidthPx}px 100%`)
 
