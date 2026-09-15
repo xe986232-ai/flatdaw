@@ -540,12 +540,27 @@ export default function App() {
             }
           }
 
+          // Kalau bukan loop, lebar visual clip HARUS ngikutin durasi asli
+          // sample (nativeSpanBars), bukan penempatan/gap ke clip berikutnya
+          // yang dipakai sebagai lebar sementara di flmToTracks.ts. Tanpa ini,
+          // one-shot pendek (Kick ~0.12 bar, Claps ~0.25 bar) kegambar mulur
+          // sampe ke clip berikutnya walau bunyinya udah abis jauh sebelum
+          // itu — persis mismatch yang kelihatan dibanding tool FL Studio
+          // Mobile aslinya. Di-clamp max ke clip.lengthBars biar gak pernah
+          // MELEBIHI penempatan/gap yang udah dihitung sebelumnya (kasus
+          // sample udah ke-trim lebih pendek dari placement-nya sendiri).
+          const resolvedLengthBars =
+            !shouldLoop && nativeSpanBars > 0.001
+              ? Math.min(clip.lengthBars, Math.max(nativeSpanBars, 0.05))
+              : clip.lengthBars
+
           found++
           patchClip(clip.id, {
             waveformPeaks: { min: Array.from(peaks.min), max: Array.from(peaks.max) },
             waveformMultiRes: multiRes,
             waveformStatus: 'found',
             waveformNativeSpanBars: nativeSpanBars,
+            lengthBars: resolvedLengthBars,
             loopPoints: loopPoints.length > 0 ? loopPoints : undefined,
           })
         } catch (err) {
