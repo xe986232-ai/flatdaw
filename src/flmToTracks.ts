@@ -54,7 +54,22 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
       // Klip audio gak punya note — panjangnya cuma dari penempatan di
       // playlist (CLHd), dan labelnya nama sample asli (mis. "Case 19
       // (Kick)"), bukan nama pattern. Pattern 'dense' dipakai sebagai
-      // stand-in visual waveform (kita gak punya data audio beneran).
+      // stand-in visual waveform sebelum sample aslinya ke-decode (lihat
+      // resolveWaveforms() di App.tsx).
+      //
+      // repeatCount (dari sub-chunk LINk, lihat flmParser.ts) nunjukin
+      // sample-nya di-loop berapa kali buat ngisi penempatan ini — beda
+      // dari asumsi lama yang mikir audio gak pernah di-loop. Titik-titik
+      // loopPoints di sini niru persis logic shouldLoop buat klip pattern
+      // di bawah, cuma periodenya sampleLenBeats (durasi asli sample)
+      // bukan nativeSpanBeats (panjang pattern note).
+      const loopPoints: number[] = []
+      if (cl.repeatCount > 1 && cl.sampleLenBeats && cl.sampleLenBeats > 0) {
+        for (let n = 1; n < cl.repeatCount; n++) {
+          loopPoints.push((n * cl.sampleLenBeats) / BEATS_PER_BAR)
+        }
+      }
+
       clip = {
         id: `flm-clip-${i}`,
         label: cl.sampleName || 'Audio',
@@ -63,6 +78,7 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
         pattern: 'dense',
         notes: [],
         sampleName: cl.sampleName ?? undefined,
+        loopPoints: loopPoints.length > 0 ? loopPoints : undefined,
       }
     } else {
       const chunk = chunkResults[cl.chunkIdx as number]

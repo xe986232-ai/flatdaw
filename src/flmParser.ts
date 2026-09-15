@@ -34,6 +34,13 @@ export interface TimelineClipRaw {
   chunkIdx: number | null // null for audio clips (no note-pattern chunk to point at)
   isAudio: boolean
   sampleName: string | null
+  // Durasi asli sample (dalam ketuk), dibaca dari double ke-2 di CLHd — cuma
+  // relevan buat klip audio. null kalau CLHd-nya gak kebaca / bukan audio.
+  sampleLenBeats: number | null
+  // Berapa kali sample-nya diulang buat ngisi penempatan (lenBeats) di
+  // playlist. Dibaca dari sub-chunk "LINk" di dalam CLSm (lihat readClsmInfo).
+  // 1 = main sekali/normal, >1 = di-loop. Default 1 buat klip non-audio.
+  repeatCount: number
 }
 
 export interface ParsedFlm {
@@ -114,12 +121,33 @@ function walkChunks(bytes: Uint8Array, start: number, end: number): SubChunk[] {
 // yang ditampilin di FL Studio Mobile (mis. "Case 19 (Kick)"), di-null-pad
 // sampai akhir chunk. Diambil string ASCII pertama yang cukup panjang di
 // dalam MAIN, sama kayak trackNameFromRange() buat instrument name.
-function extractSampleName(bytes: Uint8Array, clsm: SubChunk): string | null {
+//
+// CLSm juga punya sub-chunk "LINk" (4-byte int32) yang isinya berapa kali
+// sample itu diulang buat ngisi penempatan clip-nya di playlist — 1 kalau
+// main sekali/normal, >1 kalau di-loop. Divalidasi manual terhadap file
+// kalibrasi berisi 2 klip dari sample yang sama persis: klip normal (CLHd
+// panjang 4.0 ketuk, sample asli 4.0 ketuk) punya LINk=1; klip yang
+// ditarik jadi loop (CLHd panjang 8.0 ketuk, sample asli tetap 4.0) punya
+// LINk=2 — persis clipLength/sampleLength. Sebelumnya diasumsikan gak ada
+// field beginian di format ini (lihat catatan lama di App.tsx sebelum
+// perubahan ini); ternyata ada, cuma posisinya gak bisa di-hardcode karena
+// geser tergantung panjang nama sample-nya — makanya dicari lewat tag
+// scan (walkChunks), bukan offset tetap.
+function readClsmInfo(bytes: Uint8Array, clsm: SubChunk): { sampleName: string | null; repeatCount: number } {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   const subs = walkChunks(bytes, clsm.dataStart, clsm.dataEnd)
+
   const main = subs.find((c) => c.tag === 'MAIN')
-  if (!main) return null
-  const runs = extractAsciiRuns(bytes, main.dataStart, main.dataEnd)
-  return runs.length ? runs[0].text : null
+  const sampleName = main ? extractAsciiRuns(bytes, main.dataStart, main.dataEnd)[0]?.text ?? null : null
+
+  let repeatCount = 1
+  const link = subs.find((c) => c.tag === 'LINk')
+  if (link && link.length >= 4 && link.dataStart + 4 <= bytes.length) {
+    const candidate = view.getInt32(link.dataStart, true)
+    if (candidate >= 1 && candidate <= 999) repeatCount = candidate
+  }
+
+  return { sampleName, repeatCount }
 }
 
 function findLastBefore(sortedOffsets: number[], limit: number): number {
@@ -210,6 +238,8 @@ interface RawClip {
   trackName: string | null
   isAudio: boolean
   sampleName: string | null
+  sampleLenBeats: number | null
+  repeatCount: number
 }
 
 // Tiap CLIP di playlist = 1 penempatan pattern di timeline. Struktur:
@@ -233,6 +263,7 @@ function parseClips(bytes: Uint8Array, evn2Results: EVN2ChunkResult[], clipOffse
     const posBeats = posTicks / 128
 
     let lenBeats = 4 // fallback: 1 bar (4/4)
+    let sampleLenBeats: number | null = null
     const clhdRel = findAllTagOffsets(bytes.subarray(dataStart, dataEnd), 'CLHd')
     if (clhdRel.length) {
       const clhdOff = dataStart + clhdRel[0]
@@ -241,6 +272,14 @@ function parseClips(bytes: Uint8Array, evn2Results: EVN2ChunkResult[], clipOffse
       if (clhdLen >= 8 && clhdDataStart + 8 <= bytes.length) {
         const candidate = view.getFloat64(clhdDataStart, true)
         if (candidate > 0 && candidate <= 4096) lenBeats = candidate
+      }
+      // Double ke-2 di CLHd = durasi ASLI sample (beda dari double pertama
+      // di atas, yang cuma panjang penempatan di playlist). Cuma dipakai
+      // buat klip audio; untuk klip pattern nilainya diabaikan (dihitung
+      // dari note asli di flmToTracks.ts, bukan dari sini).
+      if (clhdLen >= 16 && clhdDataStart + 16 <= bytes.length) {
+        const candidate2 = view.getFloat64(clhdDataStart + 8, true)
+        if (candidate2 > 0 && candidate2 <= 4096) sampleLenBeats = candidate2
       }
     }
 
@@ -253,9 +292,22 @@ function parseClips(bytes: Uint8Array, evn2Results: EVN2ChunkResult[], clipOffse
     const subChunks = walkChunks(bytes, dataStart, dataEnd)
     const clsm = subChunks.find((c) => c.tag === 'CLSm')
     const isAudio = !!clsm
-    const sampleName = clsm ? extractSampleName(bytes, clsm) : null
+    const clsmInfo = clsm ? readClsmInfo(bytes, clsm) : null
+    const sampleName = clsmInfo?.sampleName ?? null
+    const repeatCount = clsmInfo?.repeatCount ?? 1
 
-    clips.push({ clipOffset: clipOff, posBeats, lenBeats, evn2Offset: evn2 ? evn2.offset : null, trkhOffset: trkh, trackName, isAudio, sampleName })
+    clips.push({
+      clipOffset: clipOff,
+      posBeats,
+      lenBeats,
+      evn2Offset: evn2 ? evn2.offset : null,
+      trkhOffset: trkh,
+      trackName,
+      isAudio,
+      sampleName,
+      sampleLenBeats: isAudio ? sampleLenBeats : null,
+      repeatCount,
+    })
   })
   return clips.sort((a, b) => a.posBeats - b.posBeats)
 }

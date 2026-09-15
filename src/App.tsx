@@ -406,17 +406,16 @@ export default function App() {
           for (let c = 0; c < audioBuffer.numberOfChannels; c++) channels.push(audioBuffer.getChannelData(c))
           const multiRes = generateMultiResPeaks(channels, audioBuffer.length, targetWidth)
 
-          // Audio clip (one-shot atau potongan sample) SELALU main sekali
-          // doang, gak pernah di-loop/di-tile otomatis — beda sama pattern
-          // instrument (lihat shouldLoop di flmToTracks.ts, yang memang
-          // valid buat MIDI karena FL Studio Mobile beneran ngulang pattern
-          // buat ngisi penempatan yang lebih panjang). Untuk audio, gak ada
-          // field/bukti apapun di file .flm yang nunjukin FL Studio Mobile
-          // ngulang sample audio kalau slot-nya lebih panjang dari durasi
-          // aslinya — sisa slot-nya cuma dibiarin senyap. nativeSpanBars
-          // (durasi asli sample dalam satuan bar di BPM project) dipakai
-          // WaveformCanvas buat nggambar waveform cuma sepanjang durasi
-          // aslinya, terus behenti — bukan nyetreccth atau ngulang.
+          // Durasi asli sample (dalam bar, di BPM project), dari audio yang
+          // beneran ke-decode — dipakai WaveformCanvas buat nggambar waveform
+          // asli cuma sepanjang durasi itu per repetisi, bukan di-stretch.
+          // Loop-tidaknya klip ini (dan titik-titik loopPoints-nya) UDAH
+          // ditentukan lebih awal di flmToTracks.ts langsung dari field LINk
+          // di binary .flm — sengaja gak disentuh/di-overwrite di sini, cuma
+          // ditambahin data waveform-nya. (Sebelumnya di sini selalu
+          // di-set `loopPoints: undefined` berdasarkan asumsi gak ada field
+          // loop buat audio di format .flm — ternyata ada, lihat readClsmInfo
+          // di flmParser.ts.)
           const nativeSpanBars = (audioBuffer.duration * (bpm / 60)) / BEATS_PER_BAR
 
           found++
@@ -425,7 +424,6 @@ export default function App() {
             waveformMultiRes: multiRes,
             waveformStatus: 'found',
             waveformNativeSpanBars: nativeSpanBars,
-            loopPoints: undefined,
           })
         } catch (err) {
           console.error(`Gagal decode sample "${clip.sampleName}":`, err)
