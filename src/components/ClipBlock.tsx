@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { BEATS_PER_BAR, type Clip, type Note, type TrackKind } from '../tracks'
-import type { FlatColor } from '../colors'
+import { AUDIO_REGION_COLOR, type FlatColor } from '../colors'
 import { ClipMenu, type ClipMenuAction } from './ClipMenu'
 import { WaveformCanvas } from './WaveformCanvas'
 
@@ -255,6 +255,12 @@ export function ClipBlock({
   const regionLabel = clip.label || 'Untitled'
   const ariaLabel = trackName ? `${regionLabel} region on track ${trackName}` : `${regionLabel} region`
 
+  // Klip audio asli (punya sampleName) selalu ungu indigo tetap — gak ikut
+  // warna track yang di-random lewat tombol "Random Color", biar konsisten
+  // kebeda dari clip pattern/MIDI seperti region audio asli di Soundtrap.
+  const isAudioClip = !!clip.sampleName
+  const effectiveColor = isAudioClip ? AUDIO_REGION_COLOR : color
+
   return (
     <div
       data-clip-interactive="true"
@@ -266,9 +272,9 @@ export function ClipBlock({
       aria-valuenow={Math.round(effectiveStartBar - timelineStart)}
       aria-valuetext={`Area dimulai pada ${formatBarBeat(effectiveStartBar - timelineStart)} dan berakhir pada ${formatBarBeat(effectiveStartBar - timelineStart + clip.lengthBars)}`}
       className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-visible px-2 py-1 ${
-        color ? '' : `${fillByKind[kind]} ${inkByKind[kind]}`
+        effectiveColor ? '' : `${fillByKind[kind]} ${inkByKind[kind]}`
       } ${dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : 'cursor-grab'} ${isMenuOpen ? 'z-30' : ''}`}
-      style={{ left, width, backgroundColor: color?.fill, color: color?.ink }}
+      style={{ left, width, backgroundColor: effectiveColor?.fill, color: effectiveColor?.ink }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={endDrag}

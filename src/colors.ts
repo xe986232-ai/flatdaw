@@ -39,3 +39,9 @@ export function hexToRgba(hex: string, alpha: number) {
   const b = parseInt(h.substring(4, 6), 16)
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
+
+// Warna region audio — TETAP, gak ikut acakan Random Color/trackColors kayak
+// clip pattern/MIDI lain. Niru "st-purple-rain-set" di Soundtrap: klip audio
+// asli (punya sampleName/waveform) selalu ungu indigo, apapun warna track-nya,
+// biar kebeda jelas dari clip MIDI/pattern (yang masih ikut palet acak).
+export const AUDIO_REGION_COLOR: FlatColor = { fill: '#6C5CE7', ink: '#EFECFF' }
