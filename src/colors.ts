@@ -30,6 +30,21 @@ export function randomFlatColor(exclude?: string): FlatColor {
   return pick
 }
 
+// Blend hex ke arah putih sekian persen (0-1) — dipake buat bikin warna
+// header clip yang lebih terang dari fill body-nya, niru "column header"
+// di Soundtrap: strip judul di atas warnanya lebih muda/pucat dibanding
+// badan clip di bawahnya, bukan cuma garis tipis.
+export function lighten(hex: string, amount: number) {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.substring(0, 2), 16)
+  const g = parseInt(h.substring(2, 4), 16)
+  const b = parseInt(h.substring(4, 6), 16)
+  const nr = Math.round(r + (255 - r) * amount)
+  const ng = Math.round(g + (255 - g) * amount)
+  const nb = Math.round(b + (255 - b) * amount)
+  return `#${nr.toString(16).padStart(2, '0')}${ng.toString(16).padStart(2, '0')}${nb.toString(16).padStart(2, '0')}`
+}
+
 export function hexToRgba(hex: string, alpha: number) {
   const h = hex.replace('#', '')
   const r = parseInt(h.substring(0, 2), 16)
@@ -45,4 +60,5 @@ export function hexToRgba(hex: string, alpha: number) {
 // Fill-nya semi-transparan (bukan solid) — niru tampilan region audio di
 // Ableton Live: warna track cuma jadi tint lembut di belakang, waveform-nya
 // (currentColor/ink) yang jadi fokus utama, bukan blok warna pekat.
-export const AUDIO_REGION_COLOR: FlatColor = { fill: hexToRgba('#6C5CE7', 0.55), ink: '#EFECFF' }
+export const AUDIO_REGION_BASE_HEX = '#6C5CE7'
+export const AUDIO_REGION_COLOR: FlatColor = { fill: hexToRgba(AUDIO_REGION_BASE_HEX, 0.55), ink: '#EFECFF' }

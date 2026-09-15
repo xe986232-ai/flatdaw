@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { BEATS_PER_BAR, type Clip, type Note, type TrackKind } from '../tracks'
-import { AUDIO_REGION_COLOR, hexToRgba, type FlatColor } from '../colors'
+import { AUDIO_REGION_BASE_HEX, AUDIO_REGION_COLOR, hexToRgba, lighten, type FlatColor } from '../colors'
 import { ClipMenu, type ClipMenuAction } from './ClipMenu'
 import { WaveformCanvas } from './WaveformCanvas'
 
@@ -269,6 +269,17 @@ export function ClipBlock({
       ? { fill: hexToRgba(color.fill, 0.88), ink: color.ink }
       : color
 
+  // Warna header (strip judul) — solid 100% opacity, lebih terang dari fill
+  // body (yang semi-transparan). Niru tampilan Soundtrap: strip judul di atas
+  // clip kepisah jelas dari badan clip karena kepucetan warnanya, bukan
+  // karena garis. Base hex-nya diambil dari warna aslinya sebelum di-alpha.
+  const headerFill = isAudioClip
+    ? lighten(AUDIO_REGION_BASE_HEX, 0.28)
+    : color
+      ? lighten(color.fill, 0.28)
+      : undefined
+  const headerInk = effectiveColor?.ink
+
   return (
     <div
       data-clip-interactive="true"
@@ -279,7 +290,7 @@ export function ClipBlock({
       aria-valuemax={999}
       aria-valuenow={Math.round(effectiveStartBar - timelineStart)}
       aria-valuetext={`Area dimulai pada ${formatBarBeat(effectiveStartBar - timelineStart)} dan berakhir pada ${formatBarBeat(effectiveStartBar - timelineStart + clip.lengthBars)}`}
-      className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-visible px-2 py-1 ${
+      className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-visible ${
         effectiveColor ? '' : `${fillByKind[kind]} ${inkByKind[kind]}`
       } ${dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : 'cursor-grab'} ${isMenuOpen ? 'z-30' : ''}`}
       style={{ left, width, backgroundColor: effectiveColor?.fill, color: effectiveColor?.ink }}
@@ -323,26 +334,27 @@ export function ClipBlock({
               e.currentTarget.blur()
             }
           }}
-          className="sticky left-2 z-30 mb-1 w-[calc(100%-1rem)] min-w-0 max-w-full shrink-0 rounded-sm border border-black/30 bg-white/95 px-1 text-[11px] font-medium leading-tight text-black outline-none"
+          className="sticky left-2 z-30 mx-2 mt-1 mb-1 w-[calc(100%-1rem)] min-w-0 max-w-full shrink-0 rounded-sm border border-black/30 bg-white/95 px-1 text-[11px] font-medium leading-tight text-black outline-none"
         />
       ) : (
         clip.label && (
-          // sticky (bukan cuma left-aligned): nama region tetap kebaca di tepi kiri
-          // yang lagi keliatan pas ditrack di-scroll horizontal, tapi gak pernah
-          // keluar dari batas region-nya sendiri (browser yang clamp otomatis).
-          // Garis pembatas di bawah nama sekarang narik sampe ujung lebar clip
-          // (w-full, bukan cuma selebar teks) biar keliatan kayak header kolom.
-          // opacity:1 dipaksa di sini biar garis & teksnya tetep solid/kebaca
-          // jelas walau background clip-nya sendiri semi-transparan.
-          <span
-            className="sticky left-0 z-10 mb-1 block w-full shrink-0 truncate border-b border-current pb-0.5 text-[11px] font-medium leading-none opacity-100"
-            style={{ borderColor: effectiveColor?.ink }}
+          // Strip judul (header) sekarang berupa blok warna solid 100% opacity
+          // yang narik penuh selebar clip (bukan cuma garis di bawah teks) —
+          // niru header kolom di Soundtrap. Lebih terang dari badan clip di
+          // bawahnya (lihat headerFill), jadi kepisah jelas walau badannya
+          // semi-transparan. Teksnya sendiri sticky biar tetep kebaca pas
+          // clip-nya lebar dan track discroll horizontal.
+          <div
+            className={`z-10 block w-full shrink-0 truncate px-2 py-0.5 text-[11px] font-medium leading-none opacity-100 ${
+              headerFill ? '' : `${fillByKind[kind]} ${inkByKind[kind]} brightness-125`
+            }`}
+            style={{ backgroundColor: headerFill, color: headerInk }}
           >
-            {clip.label}
-          </span>
+            <span className="sticky left-0">{clip.label}</span>
+          </div>
         )
       )}
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 px-2 pt-1 pb-1">
         {clip.waveformPeaks ? (
           // Sample-nya ketemu di dalam zip project & sudah didekode — gambar
           // waveform beneran, bukan pola dekoratif. Cuma render, gak diputer.
