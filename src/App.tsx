@@ -80,6 +80,7 @@ export default function App() {
   const [isImportingFlm, setIsImportingFlm] = useState(false)
 
   // Clip context menu: which clip's menu/edit state is open, plus a one-slot clipboard for cut/copy → paste.
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
   const [openMenu, setOpenMenu] = useState<{ trackId: string; clipId: string } | null>(null)
   const [editingClip, setEditingClip] = useState<{ trackId: string; clipId: string } | null>(null)
   const [clipboard, setClipboard] = useState<Clip | null>(null)
@@ -124,6 +125,17 @@ export default function App() {
     document.addEventListener('pointerdown', handlePointerDown)
     return () => document.removeEventListener('pointerdown', handlePointerDown)
   }, [openMenu])
+
+  // Deselect track on any pointer interaction outside the track's icon column.
+  useEffect(() => {
+    if (!selectedTrackId) return
+    function handlePointerDown(e: PointerEvent) {
+      const target = e.target as HTMLElement | null
+      if (!target?.closest('[data-track-interactive]')) setSelectedTrackId(null)
+    }
+    document.addEventListener('pointerdown', handlePointerDown)
+    return () => document.removeEventListener('pointerdown', handlePointerDown)
+  }, [selectedTrackId])
 
   // Play/Pause: mulai dari posisi playhead sekarang. Kalau mode loop aktif
   // dan posisi sekarang di luar area loop, lompat ke awal loop dulu. Kalau
@@ -228,6 +240,10 @@ export default function App() {
   const handleClipClick = (trackId: string, clipId: string) => {
     setEditingClip(null)
     setOpenMenu((prev) => (prev?.clipId === clipId ? null : { trackId, clipId }))
+  }
+
+  const handleTrackClick = (trackId: string) => {
+    setSelectedTrackId((prev) => (prev === trackId ? null : trackId))
   }
 
   const handleRenameCommit = (trackId: string, clipId: string, label: string) => {
@@ -695,10 +711,12 @@ export default function App() {
                 openMenuClipId={openMenu?.trackId === track.id ? openMenu.clipId : null}
                 editingClipId={editingClip?.trackId === track.id ? editingClip.clipId : null}
                 flipMenuDown={index === 0}
+                isSelected={selectedTrackId === track.id}
                 onClipClick={(clipId) => handleClipClick(track.id, clipId)}
                 onMenuAction={(clipId, action) => handleMenuAction(track.id, clipId, action)}
                 onRenameCommit={(clipId, label) => handleRenameCommit(track.id, clipId, label)}
                 onBackgroundClick={(bar) => handleBackgroundClick(track.id, bar)}
+                onTrackClick={() => handleTrackClick(track.id)}
               />
             ))}
 

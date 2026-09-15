@@ -294,7 +294,9 @@ export function ClipBlock({
       aria-valuetext={`Area dimulai pada ${formatBarBeat(effectiveStartBar - timelineStart)} dan berakhir pada ${formatBarBeat(effectiveStartBar - timelineStart + clip.lengthBars)}`}
       className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-visible rounded-[3px] ${
         effectiveColor ? '' : `${fillByKind[kind]} ${inkByKind[kind]}`
-      } ${dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : 'cursor-grab'} ${isMenuOpen ? 'z-30' : ''}`}
+      } ${dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : 'cursor-grab'} ${
+        isMenuOpen ? 'z-30 ring-2 ring-white' : ''
+      }`}
       style={{ left, width, backgroundColor: effectiveColor?.fill, color: effectiveColor?.ink }}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}

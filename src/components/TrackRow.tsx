@@ -28,10 +28,12 @@ export function TrackRow({
   openMenuClipId = null,
   editingClipId = null,
   flipMenuDown = false,
+  isSelected = false,
   onClipClick,
   onMenuAction,
   onRenameCommit,
   onBackgroundClick,
+  onTrackClick,
 }: {
   track: Track
   barWidth: number
@@ -45,17 +47,26 @@ export function TrackRow({
   openMenuClipId?: string | null
   editingClipId?: string | null
   flipMenuDown?: boolean
+  isSelected?: boolean
   onClipClick?: (clipId: string) => void
   onMenuAction?: (clipId: string, action: ClipMenuAction) => void
   onRenameCommit?: (clipId: string, label: string) => void
   onBackgroundClick?: (bar: number) => void
+  onTrackClick?: () => void
 }) {
   const gridStyle = useMemo(() => buildArrangementGrid(barWidth), [barWidth])
 
   return (
     <div className="box-border flex border-b border-row-divider">
       <div
-        className="sticky left-0 z-10 box-border flex shrink-0 items-center justify-center border-r border-surface-grid/60 bg-surface-panel"
+        data-track-interactive="true"
+        role="button"
+        tabIndex={0}
+        aria-pressed={isSelected}
+        onClick={onTrackClick}
+        className={`sticky left-0 z-10 box-border flex shrink-0 cursor-pointer items-center justify-center border-r border-surface-grid/60 bg-surface-panel ${
+          isSelected ? 'ring-2 ring-inset ring-white' : ''
+        }`}
         style={{ width: labelWidth, height }}
       >
         <span className={color ? '' : iconInkByKind[track.kind]} style={{ color: color?.fill }}>
