@@ -406,35 +406,18 @@ export default function App() {
           for (let c = 0; c < audioBuffer.numberOfChannels; c++) channels.push(audioBuffer.getChannelData(c))
           const multiRes = generateMultiResPeaks(channels, audioBuffer.length, targetWidth)
 
-          // Sebelumnya di sini berhenti: waveform sample asli langsung
-          // ditempel ke clip apa adanya, terus WaveformCanvas nyemir SATU
-          // putaran penuh sample itu biar pas selebar clip — padahal kalau
-          // penempatan di playlist lebih panjang dari durasi asli sample-nya
-          // (mis. hi-hat one-shot yang ditarik lebar buat ngisi banyak bar),
-          // FL Studio Mobile ngulang/nge-loop sample itu, BUKAN nyetrecth
-          // satu kopi jadi panjang banget (itu yang bikin waveform-nya
-          // keliatan "mentah dari directory" / gak sesuai BPM project).
-          // nativeSpanBars = durasi asli sample dikonversi ke satuan bar di
-          // BPM project — dipakai buat mendeteksi ini loop atau bukan, sama
-          // kayak nativeSpanBars/shouldLoop buat instrument pattern di
-          // flmToTracks.ts.
+          // Audio clip (one-shot atau potongan sample) SELALU main sekali
+          // doang, gak pernah di-loop/di-tile otomatis — beda sama pattern
+          // instrument (lihat shouldLoop di flmToTracks.ts, yang memang
+          // valid buat MIDI karena FL Studio Mobile beneran ngulang pattern
+          // buat ngisi penempatan yang lebih panjang). Untuk audio, gak ada
+          // field/bukti apapun di file .flm yang nunjukin FL Studio Mobile
+          // ngulang sample audio kalau slot-nya lebih panjang dari durasi
+          // aslinya — sisa slot-nya cuma dibiarin senyap. nativeSpanBars
+          // (durasi asli sample dalam satuan bar di BPM project) dipakai
+          // WaveformCanvas buat nggambar waveform cuma sepanjang durasi
+          // aslinya, terus behenti — bukan nyetreccth atau ngulang.
           const nativeSpanBars = (audioBuffer.duration * (bpm / 60)) / BEATS_PER_BAR
-          const placementBars = clip.lengthBars
-          const shouldLoop = nativeSpanBars > 0.001 && placementBars > nativeSpanBars + 0.001
-
-          const loopPoints: number[] = []
-          if (shouldLoop) {
-            let offset = nativeSpanBars
-            // Guard iterasi: kalau nativeSpanBars kebetulan sangat kecil
-            // (sample nyaris hening/salah-decode), jangan sampai bikin
-            // ribuan loop-point yang gak berguna.
-            let guard = 0
-            while (offset < placementBars - 0.001 && guard < 500) {
-              loopPoints.push(offset)
-              offset += nativeSpanBars
-              guard++
-            }
-          }
 
           found++
           patchClip(clip.id, {
@@ -442,7 +425,7 @@ export default function App() {
             waveformMultiRes: multiRes,
             waveformStatus: 'found',
             waveformNativeSpanBars: nativeSpanBars,
-            loopPoints: loopPoints.length > 0 ? loopPoints : undefined,
+            loopPoints: undefined,
           })
         } catch (err) {
           console.error(`Gagal decode sample "${clip.sampleName}":`, err)

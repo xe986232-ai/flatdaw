@@ -125,6 +125,28 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
     rowClips.get(key)!.push(clip)
   })
 
+  // Audio clip yang di-cut pendek (mis. one-shot kick/clap yang ditempatin
+  // rapet-rapet buat nyusun pola beat) bisa punya `lenBeats` di CLHd yang gak
+  // nyerminin jarak asli ke clip berikutnya — kadang jauh lebih panjang dari
+  // jarak antar hit (lihat catatan investigasi: banyak clip 1 bar padahal
+  // jaraknya cuma 0.25-0.38 bar). Kalau dibiarin apa adanya, blok clip-nya
+  // numpuk/overlap di playlist dan clip yang ketutupan keliatan "ilang".
+  // Clamp panjang tiap audio clip ke jarak ke clip berikutnya DI TRACK YANG
+  // SAMA (kalau ada), biar blok-bloknya gak pernah overlap. Clip pattern
+  // MIDI/instrument sengaja gak disentuh di sini — field CLHd-nya udah
+  // divalidasi bener buat kasus itu.
+  for (const clips of rowClips.values()) {
+    for (let i = 0; i < clips.length - 1; i++) {
+      const clip = clips[i]
+      if (clip.pattern !== 'dense') continue // cuma audio clip
+      const next = clips[i + 1]
+      const gap = next.startBar - clip.startBar
+      if (gap > 0 && gap < clip.lengthBars) {
+        clip.lengthBars = Math.max(0.05, gap)
+      }
+    }
+  }
+
   // Row order = ascending trkhOffset, i.e. the order TRKH chunks physically
   // appear in the file — this IS the original track list order in the FL
   // Studio Mobile playlist (track 1, track 2, track 3, ... top to bottom).
