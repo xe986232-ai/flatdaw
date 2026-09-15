@@ -27,10 +27,20 @@ export async function decodeAudioBytes(bytes: ArrayBuffer): Promise<AudioBuffer>
   return await ctx.decodeAudioData(copy)
 }
 
-// Ringkas AudioBuffer jadi N bucket, tiap bucket nyimpen nilai min & max
-// sample (di-mix-down ke mono dulu) — format standar buat gambar waveform
+// Interface minimal yang dibutuhin computePeaks — sengaja BUKAN AudioBuffer
+// beneran, karena sumber datanya sekarang bisa channel Float32Array hasil
+// WSOLA (lihat timeStretch.ts / resolveWaveforms di App.tsx), bukan cuma
+// AudioBuffer hasil decode langsung.
+export interface ChannelSource {
+  numberOfChannels: number
+  length: number
+  getChannelData(channel: number): Float32Array
+}
+
+// Ringkas sinyal jadi N bucket, tiap bucket nyimpen nilai min & max sample
+// (di-mix-down ke mono dulu) — format standar buat gambar waveform
 // "mirrored bars" tanpa perlu nyimpen semua sample mentahnya di memori/state.
-export function computePeaks(buffer: AudioBuffer, buckets: number): WaveformPeaks {
+export function computePeaks(buffer: ChannelSource, buckets: number): WaveformPeaks {
   const channels = buffer.numberOfChannels
   const length = buffer.length
   const min = new Float32Array(buckets)
