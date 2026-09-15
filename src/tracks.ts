@@ -32,6 +32,13 @@ export interface Clip {
   // Klip audio (isAudio=true di flmParser): nama sample mentah dari project,
   // dipakai buat dicocokin ke file di dalam zip (lihat zipProject.ts).
   sampleName?: string
+  // Rasio time-stretch klip audio ini (dari sub-chunk STRC, lihat
+  // extractStretchRatio() di flmParser.ts). 1.0 = kecepatan alami. Kalau
+  // user sengaja slow-in/stretch sample-nya di FL Studio Mobile, rasio ini
+  // berubah sesuai (mis. di-slow 2x -> rasio dobel dari rasio tempo-sync
+  // normalnya). Dipakai App.tsx buat ngitung waveformNativeSpanBars yang
+  // akurat, biar klip yang di-stretch gak salah kedeteksi sebagai loop.
+  stretchRatio?: number
   // Diisi belakangan (async, setelah decode audio) kalau sample-nya ketemu di
   // dalam zip project yang di-import — dipakai ClipBlock buat gambar waveform
   // asli di kanvas, gantiin pattern 'dense' yang cuma dekorasi.
