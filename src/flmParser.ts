@@ -158,7 +158,27 @@ function readClsmInfo(bytes: Uint8Array, clsm: SubChunk): { sampleName: string |
   const subs = walkChunks(bytes, clsm.dataStart, clsm.dataEnd)
 
   const main = subs.find((c) => c.tag === 'MAIN')
-  const sampleName = main ? extractAsciiRuns(bytes, main.dataStart, main.dataEnd)[0]?.text ?? null : null
+  const mainName = main ? extractAsciiRuns(bytes, main.dataStart, main.dataEnd)[0]?.text ?? null : null
+
+  // MAIN cuma nyimpen nama DISPLAY yang ditampilin di FL Studio Mobile —
+  // kalau slot itu belum pernah dikasih nama, MAIN isinya literal "<empty>"
+  // walaupun sample-nya sendiri valid dan kepasang beneran di clip. Sumber
+  // nama yang lebih bisa diandalkan buat kasus itu: sub-chunk PTH1, yang
+  // nyimpen PATH LENGKAP ke file sample asli (mis.
+  // "My Samples/.../Zay-Reverse Cras Down.wav") — selalu ada selama sample
+  // beneran ke-assign, karena itu path yang dipakai app buat load file-nya.
+  // Divalidasi terhadap file project asli: ketemu 14 clip di mana
+  // MAIN="<empty>" tapi PTH1 punya path valid — SEBELUM fix ini semuanya
+  // kebuang total dari hasil parsing (dianggap "klip kosong beneran" gara-
+  // gara sampleName="<empty>" kena isEmptyLiteral di parseFlmFile), padahal
+  // isinya sample yang valid dan ada di dalam zip project.
+  let sampleName = mainName
+  if (isEmptyLiteral(sampleName)) {
+    const pth1 = subs.find((c) => c.tag === 'PTH1')
+    const pathText = pth1 ? extractAsciiRuns(bytes, pth1.dataStart, pth1.dataEnd).pop()?.text ?? null : null
+    const base = pathText ? pathText.split('/').pop() : null
+    if (base) sampleName = base
+  }
 
   let repeatCount = 1
   const link = subs.find((c) => c.tag === 'LINk')
