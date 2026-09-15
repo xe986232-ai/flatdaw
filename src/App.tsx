@@ -32,6 +32,17 @@ const ZOOM_STEP = 0.2
 // HEAD (lihat parseProjectBpm di flmParser.ts), bukan hardcoded lagi.
 const DEFAULT_BPM = 120
 
+// Ambang minimal durasi asli sample (dalam bar, sudah dikoreksi stretchRatio)
+// buat dianggap "genuinely loopable" di resolveWaveforms(). Ketemu dari cek
+// distribusi ke 169 clip di project asli: transient one-shot pendek (Kick
+// ~0.12 bar, Claps ~0.25 bar) semuanya di bawah ini, sample yang beneran
+// loop (LANA RMX-CHOP ~0.5 bar, FREE UP WOOD LOOP ~1 bar, Hi Hats Loop 28
+// ~2 bar) semuanya di atas — ada jarak yang jelas di angka 0.4. Tanpa
+// ambang ini, one-shot pendek yang penempatannya lebih lebar dari sample-
+// nya cuma karena ada gap/jeda sebelum hit berikutnya bisa ke-flag loop
+// keliru cuma berdasar rasio panjang doang.
+const MIN_LOOPABLE_NATIVE_SPAN_BARS = 0.4
+
 export default function App() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const canvasBoxRef = useRef<HTMLDivElement>(null)
@@ -407,16 +418,39 @@ export default function App() {
           const multiRes = generateMultiResPeaks(channels, audioBuffer.length, targetWidth)
 
           // Durasi asli sample (dalam bar, di BPM project), dari audio yang
-          // beneran ke-decode — dipakai WaveformCanvas buat nggambar waveform
-          // asli cuma sepanjang durasi itu per repetisi, bukan di-stretch.
-          // Loop-tidaknya klip ini (dan titik-titik loopPoints-nya) UDAH
-          // ditentukan lebih awal di flmToTracks.ts langsung dari field LINk
-          // di binary .flm — sengaja gak disentuh/di-overwrite di sini, cuma
-          // ditambahin data waveform-nya. (Sebelumnya di sini selalu
-          // di-set `loopPoints: undefined` berdasarkan asumsi gak ada field
-          // loop buat audio di format .flm — ternyata ada, lihat readClsmInfo
-          // di flmParser.ts.)
-          const nativeSpanBars = (audioBuffer.duration * (bpm / 60)) / BEATS_PER_BAR
+          // beneran ke-decode — sumber ini jauh lebih dipercaya dibanding
+          // field binary apa pun di .flm (LINk sudah pernah dicek KELIRU,
+          // lihat flmParser.ts). Dikoreksi dulu pakai stretchRatio (STRC)
+          // biar klip yang user SENGAJA time-stretch gak salah kehitung
+          // durasi native-nya (durasi_hasil_stretch = audioBuffer.duration
+          // * stretchRatio — lihat extractStretchRatio di flmParser.ts).
+          const correctedDurationSec = audioBuffer.duration * (clip.stretchRatio ?? 1)
+          const nativeSpanBars = (correctedDurationSec * (bpm / 60)) / BEATS_PER_BAR
+
+          // shouldLoop: sama pola kayak shouldLoop buat pattern MIDI di
+          // flmToTracks.ts (penempatan lebih panjang dari konten asli ->
+          // di-loop, bukan dibiarin kosong), cuma DUA syarat sekarang,
+          // gabungan:
+          // 1. Penempatan (lengthBars) harus lebih panjang dari durasi
+          //    asli sample yang udah dikoreksi stretchRatio.
+          // 2. DAN durasi asli sample itu minimal
+          //    MIN_LOOPABLE_NATIVE_SPAN_BARS — nyaring transient pendek
+          //    kayak kick/klap yang emang gak pernah dimaksudkan buat
+          //    di-loop meskipun placement-nya lebih lebar dari durasi
+          //    bunyinya (ada gap/jeda sebelum hit berikutnya).
+          const shouldLoop =
+            nativeSpanBars > 0.001 &&
+            clip.lengthBars > nativeSpanBars + 0.001 &&
+            nativeSpanBars >= MIN_LOOPABLE_NATIVE_SPAN_BARS
+
+          const loopPoints: number[] = []
+          if (shouldLoop) {
+            let offsetBars = nativeSpanBars
+            while (offsetBars < clip.lengthBars - 0.001) {
+              loopPoints.push(offsetBars)
+              offsetBars += nativeSpanBars
+            }
+          }
 
           found++
           patchClip(clip.id, {
@@ -424,6 +458,7 @@ export default function App() {
             waveformMultiRes: multiRes,
             waveformStatus: 'found',
             waveformNativeSpanBars: nativeSpanBars,
+            loopPoints: loopPoints.length > 0 ? loopPoints : undefined,
           })
         } catch (err) {
           console.error(`Gagal decode sample "${clip.sampleName}":`, err)

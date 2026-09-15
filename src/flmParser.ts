@@ -40,7 +40,13 @@ export interface TimelineClipRaw {
   // Berapa kali sample-nya diulang buat ngisi penempatan (lenBeats) di
   // playlist. Dibaca dari sub-chunk "LINk" di dalam CLSm (lihat readClsmInfo).
   // 1 = main sekali/normal, >1 = di-loop. Default 1 buat klip non-audio.
+  // TIDAK dipakai buat nentuin loop (lihat catatan di readClsmInfo) — cuma
+  // disimpan siapa tau kepake nanti.
   repeatCount: number
+  // Rasio time-stretch dari sub-chunk STRC di dalam CLSm (lihat
+  // extractStretchRatio). null buat klip non-audio atau kalau STRC gak
+  // ketemu (dianggap 1.0 / gak di-stretch oleh pemakainya).
+  stretchRatio: number | null
 }
 
 export interface ParsedFlm {
@@ -138,8 +144,15 @@ function walkChunks(bytes: Uint8Array, start: number, end: number): SubChunk[] {
 // 1..33 — dan klip yang beneran butuh loop malah sering kebaca LINk=1
 // kalau kebetulan itu pemakaian pertamanya di file. Jadi field ini TETEP
 // dibaca & disimpan di bawah (siapa tau kepake buat sesuatu yang lain di
-// masa depan), tapi JANGAN dipakai lagi buat nentuin loop/repeat sample —
-// lihat flmToTracks.ts, audio clip sekarang selalu loopPoints: undefined.
+// masa depan), tapi JANGAN dipakai lagi buat nentuin loop/repeat sample.
+//
+// Deteksi loop audio yang dipakai sekarang gak berangkat dari field
+// binary itu sama sekali — lihat resolveWaveforms() di App.tsx, yang
+// bandingin lengthBars (penempatan di playlist, dari CLHd) sama durasi
+// asli sample HASIL DEKODE BENERAN (audioBuffer.duration), dikoreksi
+// pakai stretchRatio (STRC, lihat extractStretchRatio di bawah) plus
+// ambang minimal panjang biar transient pendek (kick/klap) gak
+// ke-flag loop cuma karena ada gap sebelum hit berikutnya.
 function readClsmInfo(bytes: Uint8Array, clsm: SubChunk): { sampleName: string | null; repeatCount: number } {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   const subs = walkChunks(bytes, clsm.dataStart, clsm.dataEnd)
@@ -155,6 +168,28 @@ function readClsmInfo(bytes: Uint8Array, clsm: SubChunk): { sampleName: string |
   }
 
   return { sampleName, repeatCount }
+}
+
+// Rasio time-stretch klip audio, dari sub-chunk STRC di dalam CLSm. Layout
+// data STRC: [1 byte flag][float64 rasio stretch][float64 lain, biasanya
+// 1.0][...]. Divalidasi manual terhadap project kalibrasi berisi 2 klip
+// dari sample yang sama (KSHMR_Short_Drum_Fill_27_128.wav, native 128 BPM,
+// project 140 BPM): klip yang diputer apa adanya (auto tempo-sync, gak
+// di-override user) punya rasio persis 128/140 = 0.914286; klip ke-2 yang
+// user SENGAJA slow-in 2x punya rasio persis 2x lipat dari itu (1.828571)
+// — dan panjang penempatannya di CLHd juga otomatis dobel (4 beat -> 8
+// beat), konsisten: durasi_hasil_stretch_detik = audioBuffer.duration *
+// rasio_ini. Dipakai App.tsx buat ngoreksi durasi asli sample sebelum
+// dibandingin ke panjang penempatan, biar klip yang di-stretch gak salah
+// kedeteksi sebagai loop.
+function extractStretchRatio(bytes: Uint8Array, clsm: SubChunk): number | null {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  const subs = walkChunks(bytes, clsm.dataStart, clsm.dataEnd)
+  const strc = subs.find((c) => c.tag === 'STRC')
+  if (!strc || strc.length < 9 || strc.dataStart + 9 > bytes.length) return null
+  const ratio = view.getFloat64(strc.dataStart + 1, true) // +1 byte buat skip flag byte
+  if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 1000) return null
+  return ratio
 }
 
 function findLastBefore(sortedOffsets: number[], limit: number): number {
@@ -247,6 +282,7 @@ interface RawClip {
   sampleName: string | null
   sampleLenBeats: number | null
   repeatCount: number
+  stretchRatio: number | null
 }
 
 // Tiap CLIP di playlist = 1 penempatan pattern di timeline. Struktur:
@@ -302,6 +338,7 @@ function parseClips(bytes: Uint8Array, evn2Results: EVN2ChunkResult[], clipOffse
     const clsmInfo = clsm ? readClsmInfo(bytes, clsm) : null
     const sampleName = clsmInfo?.sampleName ?? null
     const repeatCount = clsmInfo?.repeatCount ?? 1
+    const stretchRatio = clsm ? extractStretchRatio(bytes, clsm) : null
 
     clips.push({
       clipOffset: clipOff,
@@ -314,6 +351,7 @@ function parseClips(bytes: Uint8Array, evn2Results: EVN2ChunkResult[], clipOffse
       sampleName,
       sampleLenBeats: isAudio ? sampleLenBeats : null,
       repeatCount,
+      stretchRatio: isAudio ? stretchRatio : null,
     })
   })
   return clips.sort((a, b) => a.posBeats - b.posBeats)

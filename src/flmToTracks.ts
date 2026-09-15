@@ -57,24 +57,31 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
       // stand-in visual waveform sebelum sample aslinya ke-decode (lihat
       // resolveWaveforms() di App.tsx).
       //
-      // TIDAK ADA loop buat klip audio. Sempet dicoba pakai sub-chunk
-      // "LINk" di dalam CLSm (lihat flmParser.ts) buat nentuin berapa kali
-      // sample-nya diulang — ternyata itu KELIRU. Dicek pakai file project
-      // asli (33 instrumen/169 sample, bukan cuma file kalibrasi 2-klip):
-      // nilai LINk ternyata cuma counter urutan PEMAKAIAN sample itu di
-      // seluruh file (1, 2, 3, ... tiap kali sample yang sama dipakai lagi
-      // di clip lain manapun), sama sekali gak nyerminin apakah clip
-      // TERTENTU ini di-loop. Buktinya: klip one-shot biasa kayak "Case 19
-      // (Kick)" yang ditaruh 33x terpisah (masing-masing PAS 4 ketuk sama
-      // panjang sample aslinya, jelas bukan loop) kebaca LINk 1..33 —
-      // naik terus padahal gak ada satu pun yang beneran loop. Sebaliknya
-      // klip yang beneran perlu loop (placement lebih panjang dari sample
-      // asli) sering kebaca LINk=1 kalau kebetulan itu pemakaian pertama
-      // sample-nya di file. Jadi field ini di-drop sepenuhnya dari
-      // penentuan loop; klip audio balik ke perilaku aman: sample digambar
-      // & diputar SEKALI dari titik awal clip, sisa lebar penempatan
-      // (kalau lebih panjang dari sample asli) dibiarin kosong/senyap —
-      // niru satu one-shot yang main sekali terus berhenti.
+      // Belum bisa nentuin loop-tidaknya klip audio DI SINI. Sempet dicoba
+      // pakai sub-chunk "LINk" di dalam CLSm (lihat flmParser.ts) buat
+      // nentuin berapa kali sample-nya diulang — ternyata itu KELIRU.
+      // Dicek pakai file project asli (33 instrumen/169 sample, bukan cuma
+      // file kalibrasi 2-klip): nilai LINk ternyata cuma counter urutan
+      // PEMAKAIAN sample itu di seluruh file (1, 2, 3, ... tiap kali
+      // sample yang sama dipakai lagi di clip lain manapun), sama sekali
+      // gak nyerminin apakah clip TERTENTU ini di-loop. Buktinya: klip
+      // one-shot biasa kayak "Case 19 (Kick)" yang ditaruh 33x terpisah
+      // (masing-masing PAS 4 ketuk sama panjang sample aslinya, jelas
+      // bukan loop) kebaca LINk 1..33 — naik terus padahal gak ada satu
+      // pun yang beneran loop.
+      //
+      // Sumber data yang jauh lebih dipercaya buat ini: durasi asli
+      // sample hasil DEKODE BENERAN (audioBuffer.duration), dikoreksi
+      // rasio time-stretch (STRC/stretchRatio, lihat flmParser.ts), plus
+      // ambang minimal panjang biar transient pendek (kick/klap yang
+      // placement-nya emang lebih panjang dari sample-nya cuma karena ada
+      // gap sebelum hit berikutnya) gak ke-flag loop keliru. Tapi audio-
+      // nya belum ke-decode di titik ini — baru dibaca async belakangan
+      // (lihat resolveWaveforms() di App.tsx) — jadi shouldLoop buat audio
+      // ditentuin DI SANA, bukan di sini. loopPoints sengaja dibiarin
+      // undefined dulu; stretchRatio dibawa serta biar resolveWaveforms
+      // bisa ngoreksi audioBuffer.duration sebelum dibandingin ke
+      // lengthBars.
       clip = {
         id: `flm-clip-${i}`,
         label: cl.sampleName || 'Audio',
@@ -83,6 +90,7 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
         pattern: 'dense',
         notes: [],
         sampleName: cl.sampleName ?? undefined,
+        stretchRatio: cl.stretchRatio ?? undefined,
         loopPoints: undefined,
       }
     } else {

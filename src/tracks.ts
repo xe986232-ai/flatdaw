@@ -50,6 +50,12 @@ export interface Clip {
   // niru cara instrument pattern di-loop di flmToTracks.ts), bukan cuma
   // di-stretch/disemir jadi satu putaran panjang yang gak natural.
   waveformNativeSpanBars?: number
+  // Rasio time-stretch klip audio (sub-chunk STRC di dalam CLSm, lihat
+  // extractStretchRatio() di flmParser.ts). undefined buat klip non-audio
+  // atau kalau STRC gak ketemu (dianggap 1.0). Dipakai resolveWaveforms()
+  // di App.tsx buat ngoreksi audioBuffer.duration sebelum dibandingin ke
+  // lengthBars, biar klip yang di-stretch gak salah kedeteksi sebagai loop.
+  stretchRatio?: number
 }
 
 export interface Track {
