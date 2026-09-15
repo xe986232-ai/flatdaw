@@ -20,7 +20,27 @@ import { sampleWaveformColumns, type MultiResPeaks } from '../waveformPeaksMulti
 // masing-masing mirror di sekitar garis tengahnya sendiri — niru tampilan
 // waveform stereo di DAW pada umumnya. Sample mono tetap satu bentuk penuh
 // setinggi klip seperti sebelumnya.
-export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; multiRes?: MultiResPeaks }) {
+//
+// TILING (loop): kalau `nativeSpanBars` dikasih dan lebih pendek dari
+// `lengthBars` (penempatan clip di playlist lebih panjang dari satu putaran
+// penuh sample aslinya — mis. hi-hat one-shot yang ditarik lebar buat ngisi
+// banyak bar), sebelumnya seluruh sample cuma di-"semir"/di-stretch jadi
+// satu putaran panjang yang ngisi lebar klip — itu bukan gambaran yang
+// bener dari cara FL Studio Mobile mutar sample-nya (diulang/di-loop, niru
+// cara instrument pattern di-loop di flmToTracks.ts). Sekarang tiap tile
+// selebar nativeSpanBars (dalam px) digambar ulang dari awal peaks-nya
+// (u0=0..u1=numFrames), berulang sampai ngisi penuh lebar klip.
+export function WaveformCanvas({
+  peaks,
+  multiRes,
+  lengthBars,
+  nativeSpanBars,
+}: {
+  peaks: WaveformPeaksData
+  multiRes?: MultiResPeaks
+  lengthBars?: number
+  nativeSpanBars?: number
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -31,13 +51,15 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
     // dari kiri ke kanan pakai nilai max, lalu jalur bawah dari kanan ke
     // kiri pakai nilai min, ditutup jadi satu shape lalu di-fill sekali.
     // Ini yang bikin hasilnya keliatan "padet"/solid kayak Soundtrap, gak
-    // blocky/grainy kayak fillRect per-kolom. Dipanggil sekali per lane
-    // (satu lane penuh buat mono, dua lane atas/bawah buat stereo).
+    // blocky/grainy kayak fillRect per-kolom. xOffset menggeser seluruh
+    // polygon ke kanan sejauh N piksel — dipakai buat naro tiap tile
+    // (putaran ulang sample) di posisi x yang bener saat di-loop.
     const drawLane = (
       ctx: CanvasRenderingContext2D,
       maxs: ArrayLike<number>,
       mins: ArrayLike<number>,
       slotW: number,
+      xOffset: number,
       laneMidY: number,
       laneAmp: number
     ) => {
@@ -51,13 +73,13 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
       // garis flat lagi.
       ctx.beginPath()
       for (let i = 0; i < n; i++) {
-        const x = i * slotW
+        const x = xOffset + i * slotW
         const y = laneMidY - maxs[i] * laneAmp
         if (i === 0) ctx.moveTo(x, y)
         else ctx.lineTo(x, y)
       }
       for (let i = n - 1; i >= 0; i--) {
-        const x = i * slotW
+        const x = xOffset + i * slotW
         const y = laneMidY + Math.abs(mins[i]) * laneAmp
         ctx.lineTo(x, y)
       }
@@ -94,6 +116,16 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       ctx.clearRect(0, 0, cssW, cssH)
 
+      // Lebar satu tile (dalam px) = satu putaran penuh sample aslinya.
+      // Cuma dipakai kalau penempatan clip (lengthBars) beneran lebih
+      // panjang dari satu putaran itu (nativeSpanBars) — kalau enggak (mis.
+      // clip lebih pendek/sama dengan sample aslinya), gak perlu di-loop,
+      // satu tile selebar cssW aja (perilaku lama).
+      const hasTiles =
+        !!nativeSpanBars && !!lengthBars && nativeSpanBars > 0.001 && lengthBars > nativeSpanBars + 0.001
+      const tileWidthCss = hasTiles ? Math.max(1, (nativeSpanBars! / lengthBars!) * cssW) : cssW
+      const MAX_TILES = 500 // guard biar gak infinite-loop/nge-freeze render
+
       const isStereo = !!multiRes && multiRes.stages.length > 0 && multiRes.numChannels >= 2
 
       if (isStereo && multiRes) {
@@ -101,43 +133,54 @@ export function WaveformCanvas({ peaks, multiRes }: { peaks: WaveformPeaksData; 
         // tengahnya sendiri (bukan satu garis tengah buat seluruh klip).
         const laneH = cssH / 2
         const laneAmp = (laneH / 2) * 0.92
-        const left = sampleWaveformColumns(multiRes, 0, {x0: 0, x1: cssW, u0: 0, u1: multiRes.numFrames})
-        const right = sampleWaveformColumns(multiRes, 1, {x0: 0, x1: cssW, u0: 0, u1: multiRes.numFrames})
-        drawLane(ctx, left.maxs, left.mins, 1, laneH / 2, laneAmp)
-        drawLane(ctx, right.maxs, right.mins, 1, laneH + laneH / 2, laneAmp)
+        let tileStart = 0
+        let tiles = 0
+        while (tileStart < cssW && tiles < MAX_TILES) {
+          const tileEnd = Math.min(cssW, tileStart + tileWidthCss)
+          const left = sampleWaveformColumns(multiRes, 0, { x0: tileStart, x1: tileEnd, u0: 0, u1: multiRes.numFrames })
+          const right = sampleWaveformColumns(multiRes, 1, { x0: tileStart, x1: tileEnd, u0: 0, u1: multiRes.numFrames })
+          drawLane(ctx, left.maxs, left.mins, 1, tileStart, laneH / 2, laneAmp)
+          drawLane(ctx, right.maxs, right.mins, 1, tileStart, laneH + laneH / 2, laneAmp)
+          tileStart = tileEnd
+          tiles++
+        }
         return
       }
 
       const midY = cssH / 2
       const amp = midY * 0.92 // dikit padding atas/bawah biar puncaknya gak mepet tepi
 
-      // Dua sumber data yang mungkin dipakai, disamakan jadi satu bentuk
-      // umum: array nilai max per-kolom + array nilai min per-kolom, lebar
-      // slot per kolom (px). Multi-res sumbernya 1 kolom = 1 pixel asli;
-      // fallback sumbernya 1 kolom = 1 bucket (bisa lebih lebar dari 1px).
-      let maxs: ArrayLike<number>
-      let mins: ArrayLike<number>
-      let slotW: number
-
       if (multiRes && multiRes.stages.length > 0) {
-        const sampled = sampleWaveformColumns(multiRes, 0, {x0: 0, x1: cssW, u0: 0, u1: multiRes.numFrames})
-        maxs = sampled.maxs
-        mins = sampled.mins
-        slotW = 1
-      } else {
-        maxs = peaks.max
-        mins = peaks.min
-        slotW = cssW / Math.max(1, peaks.max.length)
+        let tileStart = 0
+        let tiles = 0
+        while (tileStart < cssW && tiles < MAX_TILES) {
+          const tileEnd = Math.min(cssW, tileStart + tileWidthCss)
+          const sampled = sampleWaveformColumns(multiRes, 0, { x0: tileStart, x1: tileEnd, u0: 0, u1: multiRes.numFrames })
+          drawLane(ctx, sampled.maxs, sampled.mins, 1, tileStart, midY, amp)
+          tileStart = tileEnd
+          tiles++
+        }
+        return
       }
 
-      drawLane(ctx, maxs, mins, slotW, midY, amp)
+      // Fallback (gak ada multiRes, cuma `peaks` bucket tetap dari waktu
+      // import) — sama-sama di-tile kalau perlu, tapi 1 kolom = 1 bucket
+      // (bisa lebih lebar dari 1px), bukan 1 kolom = 1px kayak multiRes.
+      let tileStart = 0
+      let tiles = 0
+      const slotW = tileWidthCss / Math.max(1, peaks.max.length)
+      while (tileStart < cssW && tiles < MAX_TILES) {
+        drawLane(ctx, peaks.max, peaks.min, slotW, tileStart, midY, amp)
+        tileStart += tileWidthCss
+        tiles++
+      }
     }
 
     draw()
     const ro = new ResizeObserver(draw)
     if (canvas.parentElement) ro.observe(canvas.parentElement)
     return () => ro.disconnect()
-  }, [peaks, multiRes])
+  }, [peaks, multiRes, lengthBars, nativeSpanBars])
 
   return <canvas ref={canvasRef} className="block h-full w-full" style={{ color: 'currentColor' }} />
 }

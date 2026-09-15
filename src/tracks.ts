@@ -42,6 +42,14 @@ export interface Clip {
   // disimpan sebagai fallback (mis. kalau field ini kosong di data lama).
   waveformMultiRes?: MultiResPeaks
   waveformStatus?: 'pending' | 'found' | 'missing'
+  // Panjang (dalam bar, di BPM project) dari SATU kali putaran penuh sample
+  // asli yang sudah didekode — dihitung dari audioBuffer.duration * bpm/60 /
+  // BEATS_PER_BAR (lihat resolveWaveforms() di App.tsx). Dipakai buat
+  // mendeteksi & menggambar audio clip yang penempatannya di playlist lebih
+  // panjang dari durasi asli sample-nya sebagai LOOP (sample-nya diulang,
+  // niru cara instrument pattern di-loop di flmToTracks.ts), bukan cuma
+  // di-stretch/disemir jadi satu putaran panjang yang gak natural.
+  waveformNativeSpanBars?: number
 }
 
 export interface Track {

@@ -360,7 +360,16 @@ export function ClipBlock({
         {clip.waveformPeaks ? (
           // Sample-nya ketemu di dalam zip project & sudah didekode — gambar
           // waveform beneran, bukan pola dekoratif. Cuma render, gak diputer.
-          <WaveformCanvas peaks={clip.waveformPeaks} multiRes={clip.waveformMultiRes} />
+          // lengthBars & waveformNativeSpanBars dikirim biar WaveformCanvas
+          // bisa nge-loop (ulang) waveform-nya kalau penempatan clip lebih
+          // panjang dari satu putaran penuh sample aslinya, bukan nyetrecth
+          // satu kopi jadi panjang gak natural (lihat App.tsx resolveWaveforms).
+          <WaveformCanvas
+            peaks={clip.waveformPeaks}
+            multiRes={clip.waveformMultiRes}
+            lengthBars={clip.lengthBars}
+            nativeSpanBars={clip.waveformNativeSpanBars}
+          />
         ) : clip.notes && clip.notes.length > 0 ? (
           <NotePreview notes={clip.notes} totalBeats={clip.lengthBars * BEATS_PER_BAR} />
         ) : (
