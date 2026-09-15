@@ -5,21 +5,19 @@ export interface FlatColor {
   ink: string
 }
 
+// Palet dibatasi cuma 10 warna ini (diambil langsung dari swatch yang di-share
+// user) — Random Color gak lagi milih di luar 10 warna ini.
 export const FLAT_PALETTE: FlatColor[] = [
-  { fill: '#FF3EA5', ink: '#1A0410' }, // hot magenta
-  { fill: '#FFE600', ink: '#0D0D00' }, // pure yellow
-  { fill: '#FF7A00', ink: '#1F0F00' }, // vivid orange
-  { fill: '#0091FF', ink: '#00121F' }, // electric blue
-  { fill: '#00E0D0', ink: '#00201D' }, // bright teal/cyan
-  { fill: '#22FF6E', ink: '#00230E' }, // acid green
-  { fill: '#B026FF', ink: '#1B0429' }, // vivid purple
-  { fill: '#FF2E2E', ink: '#210000' }, // pure red
-  { fill: '#00B3FF', ink: '#001A24' }, // sky blue
-  { fill: '#FFC800', ink: '#1F1700' }, // gold
-  { fill: '#FF00C8', ink: '#210019' }, // magenta-pink
-  { fill: '#39FF14', ink: '#062400' }, // neon green
-  { fill: '#00FFA3', ink: '#00241A' }, // spring green
-  { fill: '#FF5CB3', ink: '#26051A' }, // bubblegum pink
+  { fill: '#C25355', ink: '#1F0A0A' }, // crimson red
+  { fill: '#993169', ink: '#1C0A14' }, // berry magenta
+  { fill: '#8052D5', ink: '#140B2B' }, // violet purple
+  { fill: '#5141D5', ink: '#0C0A2B' }, // indigo blue-violet
+  { fill: '#499CC7', ink: '#081C26' }, // sky blue
+  { fill: '#6680CF', ink: '#0C1529' }, // periwinkle blue
+  { fill: '#4CA490', ink: '#081F1A' }, // teal green
+  { fill: '#81B246', ink: '#16220A' }, // olive green
+  { fill: '#C0922B', ink: '#241B08' }, // gold
+  { fill: '#AF7742', ink: '#221708' }, // orange-tan
 ]
 
 export function randomFlatColor(exclude?: string): FlatColor {

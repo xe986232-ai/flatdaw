@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { BEATS_PER_BAR, type Clip, type Note, type TrackKind } from '../tracks'
-import { AUDIO_REGION_COLOR, type FlatColor } from '../colors'
+import { AUDIO_REGION_COLOR, hexToRgba, type FlatColor } from '../colors'
 import { ClipMenu, type ClipMenuAction } from './ClipMenu'
 import { WaveformCanvas } from './WaveformCanvas'
 
@@ -259,7 +259,15 @@ export function ClipBlock({
   // warna track yang di-random lewat tombol "Random Color", biar konsisten
   // kebeda dari clip pattern/MIDI seperti region audio asli di Soundtrap.
   const isAudioClip = !!clip.sampleName
-  const effectiveColor = isAudioClip ? AUDIO_REGION_COLOR : color
+  // Clip instrument/pattern sekarang ikutan dikasih sedikit transparan juga
+  // (kayak region audio), biar ga solid pekat — cuma transparansinya lebih
+  // tipis (0.88) dibanding audio (0.55) soalnya isinya masih perlu kebaca
+  // jelas (note preview, step, dll).
+  const effectiveColor = isAudioClip
+    ? AUDIO_REGION_COLOR
+    : color
+      ? { fill: hexToRgba(color.fill, 0.88), ink: color.ink }
+      : color
 
   return (
     <div
