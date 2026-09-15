@@ -51,9 +51,18 @@ export function TrackRow({
   onTrackClick?: () => void
 }) {
   const gridStyle = useMemo(() => buildArrangementGrid(barWidth), [barWidth])
+  // Lebar total row (label + seluruh timeline) — dikasih EKSPLISIT di sini,
+  // bukan dibiarin auto. Alasannya: kontainer ini `display:flex` block-level,
+  // yang defaultnya cuma selebar parent (area canvas yang keliatan), BUKAN
+  // selebar konten di dalamnya. Anak-anaknya (label + area clip) tetap
+  // render lebar penuh & bisa discroll, tapi border-b (garis pembatas
+  // horizontal antar-track) nempel di box parent yang sempit itu — makanya
+  // garisnya keliatan kepotong pas discroll ke kanan, padahal seharusnya
+  // ikut sepanjang seluruh timeline.
+  const rowWidth = labelWidth + totalBars * barWidth
 
   return (
-    <div className="box-border flex border-b border-row-divider">
+    <div className="box-border flex border-b border-row-divider" style={{ width: rowWidth }}>
       <div
         data-track-interactive="true"
         role="button"

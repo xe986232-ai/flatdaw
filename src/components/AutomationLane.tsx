@@ -19,6 +19,10 @@ export function AutomationLane({
   const width = totalBars * barWidth
   const step = width / teeth
   const gridStyle = useMemo(() => buildArrangementGrid(barWidth), [barWidth])
+  // Sama kayak TrackRow: kasih lebar eksplisit (label + timeline) biar
+  // border-b (garis horizontal) nutup seluruh lebar konten, bukan cuma
+  // selebar viewport canvas yang keliatan pas discroll ke kanan.
+  const rowWidth = labelWidth + width
 
   const points = Array.from({ length: teeth + 1 }, (_, i) => {
     const x = i * step
@@ -27,7 +31,7 @@ export function AutomationLane({
   }).join(' ')
 
   return (
-    <div className="box-border flex border-b border-row-divider">
+    <div className="box-border flex border-b border-row-divider" style={{ width: rowWidth }}>
       <div
         className="sticky left-0 z-10 box-border flex shrink-0 items-center border-r border-surface-grid/60 bg-surface-panel px-3"
         style={{ width: labelWidth, height }}
