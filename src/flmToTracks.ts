@@ -32,34 +32,52 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
       order.push(key)
     }
 
-    const chunk = chunkResults[cl.chunkIdx]
-    const label = chunk?.displayName || `Pattern #${cl.chunkIdx + 1}`
-
-    // Lebar clip = maksimum antara panjang penempatan di playlist DAN panjang
-    // pattern note-nya sendiri, jadi gak ada note yang kepotong/overflow.
-    const placementBars = Math.max(0.25, cl.lenBeats / BEATS_PER_BAR)
-    const lengthBars = Math.max(placementBars, patternSpanBars(chunk), 1)
-
     // No upper clamp here anymore — the arrangement's total length (used to
     // size the grid/ruler) is now derived FROM these positions in App.tsx via
     // getTimelineEnd(), instead of clips being squeezed to fit a fixed window.
     const rawStartBar = TIMELINE_START + cl.posBeats / BEATS_PER_BAR
     const startBar = Math.max(TIMELINE_START, rawStartBar)
+    const placementBars = Math.max(0.25, cl.lenBeats / BEATS_PER_BAR)
 
-    const notes: Note[] = (chunk?.notes ?? []).map((n, ni) => ({
-      id: `flm-${key}-c${i}-n${ni}`,
-      pitch: n.pitch,
-      startBeat: n.pos_beats,
-      lengthBeats: n.dur_beats,
-    }))
+    let clip: Clip
 
-    const clip: Clip = {
-      id: `flm-clip-${i}`,
-      label,
-      startBar,
-      lengthBars,
-      pattern: 'notes',
-      notes,
+    if (cl.isAudio) {
+      // Klip audio gak punya note — panjangnya cuma dari penempatan di
+      // playlist (CLHd), dan labelnya nama sample asli (mis. "Case 19
+      // (Kick)"), bukan nama pattern. Pattern 'dense' dipakai sebagai
+      // stand-in visual waveform (kita gak punya data audio beneran).
+      clip = {
+        id: `flm-clip-${i}`,
+        label: cl.sampleName || 'Audio',
+        startBar,
+        lengthBars: placementBars,
+        pattern: 'dense',
+        notes: [],
+      }
+    } else {
+      const chunk = chunkResults[cl.chunkIdx as number]
+      const label = chunk?.displayName || `Pattern #${(cl.chunkIdx as number) + 1}`
+
+      // Lebar clip = maksimum antara panjang penempatan di playlist DAN
+      // panjang pattern note-nya sendiri, jadi gak ada note yang
+      // kepotong/overflow.
+      const lengthBars = Math.max(placementBars, patternSpanBars(chunk), 1)
+
+      const notes: Note[] = (chunk?.notes ?? []).map((n, ni) => ({
+        id: `flm-${key}-c${i}-n${ni}`,
+        pitch: n.pitch,
+        startBeat: n.pos_beats,
+        lengthBeats: n.dur_beats,
+      }))
+
+      clip = {
+        id: `flm-clip-${i}`,
+        label,
+        startBar,
+        lengthBars,
+        pattern: 'notes',
+        notes,
+      }
     }
 
     rowClips.get(key)!.push(clip)

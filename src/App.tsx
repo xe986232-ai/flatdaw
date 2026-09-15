@@ -251,7 +251,7 @@ export default function App() {
         setFlmError(result.error)
         return
       }
-      const { chunkResults, timelineClips, skippedAudioCount, namedCount } = result.data
+      const { chunkResults, timelineClips, namedCount, audioClipCount } = result.data
       const mappedTracks = flmToTracks(result.data)
 
       setTrackList(mappedTracks)
@@ -264,7 +264,7 @@ export default function App() {
       setFlmStatus(
         `${file.name} · ${chunkResults.length} pattern` +
           (namedCount ? ` · ${namedCount} instrumen dikenali` : '') +
-          (skippedAudioCount ? ` · ${skippedAudioCount} track audio disaring` : '') +
+          (audioClipCount ? ` · ${audioClipCount} klip audio (sample) ikut kebaca` : '') +
           ` · ${timelineClips.length} clip masuk playlist`,
       )
     } catch (err) {

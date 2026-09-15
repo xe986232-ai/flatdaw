@@ -31,7 +31,9 @@ export interface TimelineClipRaw {
   evn2Offset: number | null
   trkhOffset: number
   trackName: string | null
-  chunkIdx: number
+  chunkIdx: number | null // null for audio clips (no note-pattern chunk to point at)
+  isAudio: boolean
+  sampleName: string | null
 }
 
 export interface ParsedFlm {
@@ -40,6 +42,7 @@ export interface ParsedFlm {
   bpm: number
   skippedAudioCount: number
   namedCount: number
+  audioClipCount: number
 }
 
 export type ParseFlmResult = { ok: true; data: ParsedFlm } | { ok: false; error: string }
@@ -60,6 +63,63 @@ function findAllTagOffsets(bytes: Uint8Array, tag: string): number[] {
     if (match) offsets.push(i)
   }
   return offsets
+}
+
+// Generic tag+length chunk walker: scans [start, end) treating every
+// 4-byte-ASCII-tag + 4-byte-LE-length as a chunk header, like the top-level
+// EVN2/CLIP/TRKH tags but for the sub-chunks nested *inside* a CLIP's own
+// data (CLHd, ZOOM, CLSm, and — inside CLSm — MAIN/LINk/STRC/STR1/PTH1/PRST/
+// PRMS). Same "don't hardcode offsets, search for the tag" philosophy as the
+// rest of this file, verified against a real calibration file with audio
+// clips (see CLSm handling below).
+interface SubChunk {
+  offset: number
+  tag: string
+  length: number
+  dataStart: number
+  dataEnd: number
+}
+
+function walkChunks(bytes: Uint8Array, start: number, end: number): SubChunk[] {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  const results: SubChunk[] = []
+  let i = start
+  while (i < end - 8) {
+    let isTag = true
+    for (let j = 0; j < 4; j++) {
+      const b = bytes[i + j]
+      if (b < 32 || b >= 127) {
+        isTag = false
+        break
+      }
+    }
+    if (isTag) {
+      const length = view.getUint32(i + 4, true)
+      const dataStart = i + 8
+      const dataEnd = dataStart + length
+      if (length >= 0 && dataEnd > dataStart && dataEnd <= end + 16) {
+        results.push({ offset: i, tag: String.fromCharCode(bytes[i], bytes[i + 1], bytes[i + 2], bytes[i + 3]), length, dataStart, dataEnd })
+        i = dataEnd
+        continue
+      }
+    }
+    i++
+  }
+  return results
+}
+
+// Klip audio (bukan instrument/MIDI) selalu punya sub-chunk CLSm di antara
+// ZOOM dan EVN2-nya (EVN2-nya sendiri kosong, cuma placeholder). Di dalam
+// CLSm ada chunk MAIN yang isinya: 12 byte header numerik lalu nama sample
+// yang ditampilin di FL Studio Mobile (mis. "Case 19 (Kick)"), di-null-pad
+// sampai akhir chunk. Diambil string ASCII pertama yang cukup panjang di
+// dalam MAIN, sama kayak trackNameFromRange() buat instrument name.
+function extractSampleName(bytes: Uint8Array, clsm: SubChunk): string | null {
+  const subs = walkChunks(bytes, clsm.dataStart, clsm.dataEnd)
+  const main = subs.find((c) => c.tag === 'MAIN')
+  if (!main) return null
+  const runs = extractAsciiRuns(bytes, main.dataStart, main.dataEnd)
+  return runs.length ? runs[0].text : null
 }
 
 function findLastBefore(sortedOffsets: number[], limit: number): number {
@@ -135,6 +195,8 @@ interface RawClip {
   evn2Offset: number | null
   trkhOffset: number
   trackName: string | null
+  isAudio: boolean
+  sampleName: string | null
 }
 
 // Tiap CLIP di playlist = 1 penempatan pattern di timeline. Struktur:
@@ -172,7 +234,15 @@ function parseClips(bytes: Uint8Array, evn2Results: EVN2ChunkResult[], clipOffse
     const evn2 = evn2Results.find((r) => r.offset > clipOff && r.offset < dataEnd)
     const trkh = findLastBefore(trkhOffsets, clipOff)
     const trackName = trkh !== -1 ? trackNameFromRange(bytes, trkh, clipOff) : null
-    clips.push({ clipOffset: clipOff, posBeats, lenBeats, evn2Offset: evn2 ? evn2.offset : null, trkhOffset: trkh, trackName })
+
+    // Klip audio (bukan pattern instrument) punya sub-chunk CLSm nangkring
+    // di antara ZOOM dan EVN2 kosongnya. Kalau ada, ini bukan pattern MIDI.
+    const subChunks = walkChunks(bytes, dataStart, dataEnd)
+    const clsm = subChunks.find((c) => c.tag === 'CLSm')
+    const isAudio = !!clsm
+    const sampleName = clsm ? extractSampleName(bytes, clsm) : null
+
+    clips.push({ clipOffset: clipOff, posBeats, lenBeats, evn2Offset: evn2 ? evn2.offset : null, trkhOffset: trkh, trackName, isAudio, sampleName })
   })
   return clips.sort((a, b) => a.posBeats - b.posBeats)
 }
@@ -288,11 +358,15 @@ export function parseFlmFile(bytes: Uint8Array, filename: string): ParseFlmResul
   })
   const parsedClips = parseClips(bytes, allResults, clipOffsets, trkhOffsets)
   const timelineClips: TimelineClipRaw[] = parsedClips
-    .filter((cl) => cl.evn2Offset !== null && Object.prototype.hasOwnProperty.call(offsetToChunkIdx, cl.evn2Offset))
-    .map((cl) => ({ ...cl, chunkIdx: offsetToChunkIdx[cl.evn2Offset as number] }))
+    .filter((cl) => cl.isAudio || (cl.evn2Offset !== null && Object.prototype.hasOwnProperty.call(offsetToChunkIdx, cl.evn2Offset)))
+    .map((cl) => ({
+      ...cl,
+      chunkIdx: !cl.isAudio && cl.evn2Offset !== null ? offsetToChunkIdx[cl.evn2Offset] : null,
+    }))
 
   const namedCount = chunkResults.filter((c) => c.instrumentName).length
+  const audioClipCount = timelineClips.filter((cl) => cl.isAudio).length
   const bpm = guessBPM(filename)
 
-  return { ok: true, data: { chunkResults, timelineClips, bpm, skippedAudioCount, namedCount } }
+  return { ok: true, data: { chunkResults, timelineClips, bpm, skippedAudioCount, namedCount, audioClipCount } }
 }
