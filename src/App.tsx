@@ -47,6 +47,8 @@ export default function App() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const canvasBoxRef = useRef<HTMLDivElement>(null)
   const [isExporting, setIsExporting] = useState(false)
+  const [exportProgress, setExportProgress] = useState(0)
+  const [exportStage, setExportStage] = useState('')
   const [playheadBar, setPlayheadBar] = useState(207)
   const [isPlaying, setIsPlaying] = useState(false)
   const [projectBpm, setProjectBpm] = useState(DEFAULT_BPM)
@@ -365,19 +367,87 @@ export default function App() {
   // ImageEncoder for still PNG/JPEG export, so rasterizing the DOM to a
   // bitmap (via html-to-image, which draws into a <canvas> under the hood)
   // and downloading that is the standard/correct approach for a still image.
+  //
+  // Sebelumnya toPng dipanggil langsung di canvasBoxRef, tapi anak-nya
+  // (scrollRef) punya overflow-auto — html-to-image nge-clone & ngerender
+  // SELURUH scrollWidth/scrollHeight konten (semua track & bar, termasuk
+  // yang lagi di-scroll keluar layar), bukan cuma yang keliatan. Itu
+  // sebabnya hasil export nggak match posisi yang lagi dilihat, dan
+  // kenapa prosesnya lama banget — bisa ngerender kanvas yang jauh lebih
+  // gede dari yang sebenernya butuh keliatan.
+  //
+  // Fix: geser konten scrollRef pake transform (posisi persis sama kaya
+  // scrollLeft/scrollTop saat ini), terus kunci ukuran scrollRef ke
+  // clientWidth/clientHeight-nya (ukuran viewport, bukan total konten)
+  // sebelum di-capture. Abis itu ukuran & posisi asli dikembaliin lagi.
   const handleExportImage = async () => {
-    if (!canvasBoxRef.current || isExporting) return
+    const box = canvasBoxRef.current
+    const scrollEl = scrollRef.current
+    if (!box || !scrollEl || isExporting) return
+
     setIsExporting(true)
+    setExportProgress(4)
+    setExportStage('Menyiapkan tampilan yang lagi keliatan…')
+
+    const prevTransform = scrollEl.style.transform
+    const prevWidth = scrollEl.style.width
+    const prevHeight = scrollEl.style.height
+    const prevOverflow = scrollEl.style.overflow
+
+    const { scrollLeft, scrollTop, clientWidth, clientHeight } = scrollEl
+
+    let progressTimer: ReturnType<typeof setInterval> | null = null
+
     try {
-      const dataUrl = await toPng(canvasBoxRef.current, { pixelRatio: 2, cacheBust: true })
+      scrollEl.style.transform = `translate(${-scrollLeft}px, ${-scrollTop}px)`
+      scrollEl.style.width = `${clientWidth}px`
+      scrollEl.style.height = `${clientHeight}px`
+      scrollEl.style.overflow = 'hidden'
+
+      // html-to-image nggak nyediain callback progress asli buat toPng,
+      // jadi progress bar-nya di-animasiin manual pelan-pelan sampe ~90%
+      // selama proses render jalan, biar ada tanda progresnya JALAN
+      // (bukan macet), terus dilompatin ke 100% begitu beneran selesai.
+      setExportStage('Merender gambar…')
+      progressTimer = setInterval(() => {
+        setExportProgress((p) => Math.min(p + 4 + Math.random() * 6, 90))
+      }, 150)
+
+      const dataUrl = await toPng(box, {
+        pixelRatio: 2,
+        cacheBust: true,
+        width: box.clientWidth,
+        height: box.clientHeight,
+      })
+
+      if (progressTimer) {
+        clearInterval(progressTimer)
+        progressTimer = null
+      }
+      setExportProgress(96)
+      setExportStage('Menyimpan file…')
+
       const link = document.createElement('a')
       link.download = `flatdaw-export-${Date.now()}.png`
       link.href = dataUrl
       link.click()
+
+      setExportProgress(100)
+      setExportStage('Selesai!')
     } catch (err) {
       console.error('Export gambar gagal:', err)
+      setExportStage('Export gagal, coba lagi.')
     } finally {
-      setIsExporting(false)
+      if (progressTimer) clearInterval(progressTimer)
+      scrollEl.style.transform = prevTransform
+      scrollEl.style.width = prevWidth
+      scrollEl.style.height = prevHeight
+      scrollEl.style.overflow = prevOverflow
+      setTimeout(() => {
+        setIsExporting(false)
+        setExportProgress(0)
+        setExportStage('')
+      }, 700)
     }
   }
 
@@ -848,6 +918,21 @@ export default function App() {
         >
           {isExporting ? 'Mengekspor…' : 'Export Gambar (PNG)'}
         </button>
+
+        {isExporting && (
+          <div className="flex flex-col gap-1 bg-[#2a2a2e] px-3 py-2">
+            <div className="flex items-center justify-between text-[12px] text-white/80">
+              <span>{exportStage}</span>
+              <span>{Math.round(exportProgress)}%</span>
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-track-accent transition-[width] duration-150 ease-out"
+                style={{ width: `${exportProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )
