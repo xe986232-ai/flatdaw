@@ -4,6 +4,13 @@ import type { WaveformPeaksData } from '../tracks'
 // Gambar waveform audio asli (min/max per bucket) ke <canvas>. Ini murni
 // render visual — gak ada elemen <audio>, gak ada AudioContext yang
 // disambung ke speaker, jadi gak ada suara yang keluar sama sekali.
+//
+// Gaya bar tegak rapat (mirror atas/bawah dari garis tengah), niru tampilan
+// region audio Soundtrap — bukan lagi kurva envelope halus. Tiap bar mewakili
+// satu bucket peak (min/max), digambar sebagai satu batang solid dari
+// midY-max sampai midY+|min|, dipisah celah tipis biar keliatan sebagai
+// deretan bar diskrit, konsisten sama pola 'dense' (placeholder sebelum
+// waveform asli ketemu) yang juga bar-style.
 export function WaveformCanvas({ peaks }: { peaks: WaveformPeaksData }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -32,52 +39,28 @@ export function WaveformCanvas({ peaks }: { peaks: WaveformPeaksData }) {
       if (n === 0) return
       const midY = cssH / 2
       const amp = midY * 0.92 // dikit padding atas/bawah biar puncaknya gak mepet tepi
-      const stepX = cssW / (n - 1 || 1)
-      const yTop = (i: number) => midY - Math.max(max[i], 0.015) * amp
-      const yBot = (i: number) => midY + Math.max(Math.abs(min[i]), 0.015) * amp
 
-      // Gambar sebagai 1 shape envelope yang smooth (top curve -> bottom curve,
-      // digabung jadi 1 path lalu di-fill) — mirip tampilan waveform di
-      // Ableton/DAW lain, bukan bar chart terpisah-pisah. midpoint antar titik
-      // dipakai sebagai titik kontrol quadratic curve biar hasilnya halus
-      // walau data peak-nya "kasar".
-      ctx.beginPath()
-      ctx.moveTo(0, yTop(0))
-      for (let i = 1; i < n; i++) {
-        const xPrev = (i - 1) * stepX
-        const x = i * stepX
-        const xMid = (xPrev + x) / 2
-        ctx.quadraticCurveTo(xPrev, yTop(i - 1), xMid, (yTop(i - 1) + yTop(i)) / 2)
-      }
-      ctx.lineTo((n - 1) * stepX, yTop(n - 1))
-      ctx.lineTo((n - 1) * stepX, yBot(n - 1))
-      for (let i = n - 2; i >= 0; i--) {
-        const xNext = (i + 1) * stepX
-        const x = i * stepX
-        const xMid = (xNext + x) / 2
-        ctx.quadraticCurveTo(xNext, yBot(i + 1), xMid, (yBot(i + 1) + yBot(i)) / 2)
-      }
-      ctx.lineTo(0, yBot(0))
-      ctx.closePath()
+      // Lebar tiap bar + celah antar-bar. Kalau bucket-nya lebih rapat dari
+      // ~2px/bar, celahnya dihilangkan (jadi rapat solid) biar gak jadi
+      // noise garis-garis tipis pas clip-nya lebar/banyak data.
+      const slotW = cssW / n
+      const gap = slotW > 2.2 ? Math.min(1, slotW * 0.25) : 0
+      const barW = Math.max(0.6, slotW - gap)
 
       ctx.fillStyle = 'currentColor'
-      ctx.globalAlpha = 0.32
-      ctx.fill()
 
-      ctx.strokeStyle = 'currentColor'
-      ctx.globalAlpha = 0.95
-      ctx.lineWidth = 1.1
-      ctx.lineJoin = 'round'
-      ctx.stroke()
+      for (let i = 0; i < n; i++) {
+        const x = i * slotW
+        const top = midY - Math.max(max[i], 0.02) * amp
+        const bottom = midY + Math.max(Math.abs(min[i]), 0.02) * amp
+        ctx.globalAlpha = 0.9
+        ctx.fillRect(x, top, barW, Math.max(1, bottom - top))
+      }
 
       // Garis tengah tipis (nol amplitudo) biar bagian yang senyap/pelan tetep
       // kebaca sebagai garis, bukan kosong total.
       ctx.globalAlpha = 0.35
-      ctx.lineWidth = 1
-      ctx.beginPath()
-      ctx.moveTo(0, midY)
-      ctx.lineTo(cssW, midY)
-      ctx.stroke()
+      ctx.fillRect(0, midY - 0.5, cssW, 1)
       ctx.globalAlpha = 1
     }
 
