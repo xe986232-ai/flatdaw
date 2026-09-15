@@ -57,19 +57,24 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
       // stand-in visual waveform sebelum sample aslinya ke-decode (lihat
       // resolveWaveforms() di App.tsx).
       //
-      // repeatCount (dari sub-chunk LINk, lihat flmParser.ts) nunjukin
-      // sample-nya di-loop berapa kali buat ngisi penempatan ini — beda
-      // dari asumsi lama yang mikir audio gak pernah di-loop. Titik-titik
-      // loopPoints di sini niru persis logic shouldLoop buat klip pattern
-      // di bawah, cuma periodenya sampleLenBeats (durasi asli sample)
-      // bukan nativeSpanBeats (panjang pattern note).
-      const loopPoints: number[] = []
-      if (cl.repeatCount > 1 && cl.sampleLenBeats && cl.sampleLenBeats > 0) {
-        for (let n = 1; n < cl.repeatCount; n++) {
-          loopPoints.push((n * cl.sampleLenBeats) / BEATS_PER_BAR)
-        }
-      }
-
+      // TIDAK ADA loop buat klip audio. Sempet dicoba pakai sub-chunk
+      // "LINk" di dalam CLSm (lihat flmParser.ts) buat nentuin berapa kali
+      // sample-nya diulang — ternyata itu KELIRU. Dicek pakai file project
+      // asli (33 instrumen/169 sample, bukan cuma file kalibrasi 2-klip):
+      // nilai LINk ternyata cuma counter urutan PEMAKAIAN sample itu di
+      // seluruh file (1, 2, 3, ... tiap kali sample yang sama dipakai lagi
+      // di clip lain manapun), sama sekali gak nyerminin apakah clip
+      // TERTENTU ini di-loop. Buktinya: klip one-shot biasa kayak "Case 19
+      // (Kick)" yang ditaruh 33x terpisah (masing-masing PAS 4 ketuk sama
+      // panjang sample aslinya, jelas bukan loop) kebaca LINk 1..33 —
+      // naik terus padahal gak ada satu pun yang beneran loop. Sebaliknya
+      // klip yang beneran perlu loop (placement lebih panjang dari sample
+      // asli) sering kebaca LINk=1 kalau kebetulan itu pemakaian pertama
+      // sample-nya di file. Jadi field ini di-drop sepenuhnya dari
+      // penentuan loop; klip audio balik ke perilaku aman: sample digambar
+      // & diputar SEKALI dari titik awal clip, sisa lebar penempatan
+      // (kalau lebih panjang dari sample asli) dibiarin kosong/senyap —
+      // niru satu one-shot yang main sekali terus berhenti.
       clip = {
         id: `flm-clip-${i}`,
         label: cl.sampleName || 'Audio',
@@ -78,7 +83,7 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
         pattern: 'dense',
         notes: [],
         sampleName: cl.sampleName ?? undefined,
-        loopPoints: loopPoints.length > 0 ? loopPoints : undefined,
+        loopPoints: undefined,
       }
     } else {
       const chunk = chunkResults[cl.chunkIdx as number]

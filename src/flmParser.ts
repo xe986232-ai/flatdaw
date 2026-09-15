@@ -122,17 +122,24 @@ function walkChunks(bytes: Uint8Array, start: number, end: number): SubChunk[] {
 // sampai akhir chunk. Diambil string ASCII pertama yang cukup panjang di
 // dalam MAIN, sama kayak trackNameFromRange() buat instrument name.
 //
-// CLSm juga punya sub-chunk "LINk" (4-byte int32) yang isinya berapa kali
-// sample itu diulang buat ngisi penempatan clip-nya di playlist — 1 kalau
-// main sekali/normal, >1 kalau di-loop. Divalidasi manual terhadap file
-// kalibrasi berisi 2 klip dari sample yang sama persis: klip normal (CLHd
-// panjang 4.0 ketuk, sample asli 4.0 ketuk) punya LINk=1; klip yang
-// ditarik jadi loop (CLHd panjang 8.0 ketuk, sample asli tetap 4.0) punya
-// LINk=2 — persis clipLength/sampleLength. Sebelumnya diasumsikan gak ada
-// field beginian di format ini (lihat catatan lama di App.tsx sebelum
-// perubahan ini); ternyata ada, cuma posisinya gak bisa di-hardcode karena
-// geser tergantung panjang nama sample-nya — makanya dicari lewat tag
-// scan (walkChunks), bukan offset tetap.
+// CLSm juga punya sub-chunk "LINk" (4-byte int32). SEMPET dikira ini
+// "berapa kali sample diulang buat ngisi penempatan clip di playlist"
+// (loop count) — divalidasi manual terhadap file kalibrasi kecil isi 2
+// klip dari sample yang sama persis, dan angkanya (1 lalu 2) kebetulan
+// cocok sama clipLength/sampleLength.
+//
+// TERNYATA KELIRU. Dicek ulang pakai file project asli (33 instrumen/169
+// sample, jauh lebih representatif dari file kalibrasi 2-klip): nilai
+// LINk itu cuma counter urutan PEMAKAIAN sample tsb di SELURUH file (naik
+// 1 tiap kali sample yang sama dipakai lagi di clip manapun — gak peduli
+// clip itu di-loop atau nggak). Buktinya klip one-shot biasa yang ditaruh
+// puluhan kali terpisah (mis. "Case 19 (Kick)", tiap instance PAS sama
+// panjangnya kayak sample asli, jelas bukan loop) kebaca LINk naik terus
+// 1..33 — dan klip yang beneran butuh loop malah sering kebaca LINk=1
+// kalau kebetulan itu pemakaian pertamanya di file. Jadi field ini TETEP
+// dibaca & disimpan di bawah (siapa tau kepake buat sesuatu yang lain di
+// masa depan), tapi JANGAN dipakai lagi buat nentuin loop/repeat sample —
+// lihat flmToTracks.ts, audio clip sekarang selalu loopPoints: undefined.
 function readClsmInfo(bytes: Uint8Array, clsm: SubChunk): { sampleName: string | null; repeatCount: number } {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   const subs = walkChunks(bytes, clsm.dataStart, clsm.dataEnd)
