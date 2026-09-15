@@ -14,7 +14,6 @@ import { flmToTracks } from './flmToTracks'
 import { loadZipProject, matchSampleFile } from './zipProject'
 import { decodeAudioBytes, computePeaks } from './waveform'
 import { generateMultiResPeaks } from './waveformPeaksMultiRes'
-import { wsolaTimeStretch } from './timeStretch'
 
 const BASE_BAR_WIDTH = 96
 const BASE_ROW_HEIGHT = 56
@@ -475,41 +474,6 @@ export default function App() {
   const resolveWaveforms = async (mappedTracks: typeof tracks, audioFiles: Map<string, import('jszip').JSZipObject>, bpm: number) => {
     const audioClips = mappedTracks.flatMap((t) => t.clips).filter((c) => c.pattern === 'dense' && c.sampleName)
 
-    // Cache per (file sample + stretchRatio dibulatkan) — satu project bisa
-    // makai sample yang SAMA puluhan kali (mis. "Case 19 (Kick)" dipasang
-    // 62x buat nyusun pola beat, lihat catatan investigasi). Tanpa cache,
-    // tiap instance bakal decode ARRAYBUFFER + jalanin WSOLA dari nol, yang
-    // buang-buang CPU banget padahal hasilnya bakal IDENTIK karena
-    // sample+ratio-nya sama. Key-nya sengaja gak masukin clip.lengthBars
-    // (buat targetWidth resolusi mipmap) — dipatok ke lebar zoom maksimum
-    // yang SAMA buat semua instance, jadi valid dipakai bareng.
-    const stretchCache = new Map<
-      string,
-      Promise<{ channels: Float32Array[]; sampleRate: number; rawDurationSec: number }>
-    >()
-
-    const getStretchedChannels = (entry: import('jszip').JSZipObject, ratio: number) => {
-      const key = `${entry.name}::${ratio.toFixed(4)}`
-      let pending = stretchCache.get(key)
-      if (!pending) {
-        pending = (async () => {
-          const arrayBuf = await entry.async('arraybuffer')
-          const audioBuffer = await decodeAudioBytes(arrayBuf)
-          const rawChannels: Float32Array[] = []
-          for (let c = 0; c < audioBuffer.numberOfChannels; c++) rawChannels.push(audioBuffer.getChannelData(c))
-          // Stretch BENERAN (WSOLA) di sini — bukan lagi cuma nge-squeeze
-          // linear peaks mentah ke lebar kotak kayak sebelumnya. ratio=1
-          // (atau beda <0.3%) di-skip otomatis di dalam wsolaTimeStretch,
-          // jadi sample yang gak butuh koreksi (udah pas sama tempo project)
-          // gak kena overhead sia-sia.
-          const stretched = wsolaTimeStretch(rawChannels, ratio, { sampleRate: audioBuffer.sampleRate })
-          return { channels: stretched, sampleRate: audioBuffer.sampleRate, rawDurationSec: audioBuffer.duration }
-        })()
-        stretchCache.set(key, pending)
-      }
-      return pending
-    }
-
     let found = 0
     let missing = 0
     await Promise.all(
@@ -521,36 +485,35 @@ export default function App() {
           return
         }
         try {
-          const ratio = clip.stretchRatio ?? 1
-          const { channels, sampleRate, rawDurationSec } = await getStretchedChannels(entry, ratio)
-          const numFrames = channels[0]?.length ?? 0
-
+          const arrayBuf = await entry.async('arraybuffer')
+          const audioBuffer = await decodeAudioBytes(arrayBuf)
           const bucketCount = Math.max(120, Math.min(2400, Math.round(clip.lengthBars * 80)))
-          const peaks = computePeaks(
-            { numberOfChannels: channels.length, length: numFrames, getChannelData: (c: number) => channels[c] },
-            bucketCount,
-          )
+          const peaks = computePeaks(audioBuffer, bucketCount)
           // Peak multi-resolusi ("mipmap"): dibangun sekali di sini dari
-          // channel HASIL STRETCH (bukan raw lagi), lalu WaveformCanvas
-          // otomatis milih tingkat resolusi paling pas tiap kali barWidth
-          // berubah karena Zoom H — jadi waveform tetep tajam pas di-zoom
-          // in, bukan stuck di resolusi bucket saat import.
+          // audioBuffer (gak perlu di-generate ulang tiap re-render), lalu
+          // WaveformCanvas otomatis milih tingkat resolusi paling pas tiap
+          // kali barWidth berubah karena Zoom H — jadi waveform tetep tajam
+          // pas di-zoom in, bukan stuck di resolusi bucket saat import.
           // targetWidth dihitung dari lebar klip di piksel pada Zoom H
           // maksimum (H_ZOOM_MAX), biar stage paling detail-nya cukup buat
           // seluruh rentang zoom yang tersedia di UI.
           const targetWidth = Math.max(300, Math.round(clip.lengthBars * BASE_BAR_WIDTH * H_ZOOM_MAX))
-          const multiRes = generateMultiResPeaks(channels, numFrames, targetWidth)
+          // Peak per channel dipisah (gak di-mixdown ke mono kayak sebelumnya)
+          // — biar file stereo bisa digambar sebagai dua lane kiri/kanan
+          // (lihat WaveformCanvas). File mono otomatis tetap 1 channel aja.
+          const channels: Float32Array[] = []
+          for (let c = 0; c < audioBuffer.numberOfChannels; c++) channels.push(audioBuffer.getChannelData(c))
+          const multiRes = generateMultiResPeaks(channels, audioBuffer.length, targetWidth)
 
-          // Durasi asli sample (dalam bar, di BPM project) — sekarang
-          // DIUKUR LANGSUNG dari panjang buffer hasil WSOLA (numFrames /
-          // sampleRate), bukan dihitung tidak langsung dari
-          // audioBuffer.duration*stretchRatio kayak sebelumnya. Dua-duanya
-          // seharusnya ketemu di angka yang sama (WSOLA nargetin
-          // round(inLen*ratio) sample persis), tapi ngukur dari buffer
-          // asli lebih jujur karena itu PERSIS data yang beneran digambar.
-          const correctedDurationSec = numFrames / sampleRate
+          // Durasi asli sample (dalam bar, di BPM project), dari audio yang
+          // beneran ke-decode — sumber ini jauh lebih dipercaya dibanding
+          // field binary apa pun di .flm (LINk sudah pernah dicek KELIRU,
+          // lihat flmParser.ts). Dikoreksi dulu pakai stretchRatio (STRC)
+          // biar klip yang user SENGAJA time-stretch gak salah kehitung
+          // durasi native-nya (durasi_hasil_stretch = audioBuffer.duration
+          // * stretchRatio — lihat extractStretchRatio di flmParser.ts).
+          const correctedDurationSec = audioBuffer.duration * (clip.stretchRatio ?? 1)
           const nativeSpanBars = (correctedDurationSec * (bpm / 60)) / BEATS_PER_BAR
-          void rawDurationSec // disimpen di cache buat referensi/debug, gak dipake langsung di sini
 
           // shouldLoop: sama pola kayak shouldLoop buat pattern MIDI di
           // flmToTracks.ts (penempatan lebih panjang dari konten asli ->
