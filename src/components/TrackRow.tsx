@@ -63,7 +63,7 @@ export function TrackRow({
         </span>
       </div>
       <div
-        className="relative box-border bg-surface-base"
+        className="relative box-border shrink-0 bg-surface-base"
         style={{ width: totalBars * barWidth, height, ...gridStyle }}
         onClick={(e) => {
           if (!onBackgroundClick) return

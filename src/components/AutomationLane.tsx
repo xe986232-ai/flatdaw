@@ -34,7 +34,7 @@ export function AutomationLane({
       >
         <span className="truncate text-[11px] font-medium text-track-accent">{label}</span>
       </div>
-      <div className="relative box-border bg-track-accent/10" style={{ width, height, ...gridStyle }}>
+      <div className="relative box-border shrink-0 bg-track-accent/10" style={{ width, height, ...gridStyle }}>
         <svg viewBox={`0 0 ${width} ${height}`} className="absolute inset-0 h-full w-full text-track-accent" preserveAspectRatio="none">
           <polyline points={points} fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.75" />
         </svg>

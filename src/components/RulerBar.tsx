@@ -40,7 +40,7 @@ export function RulerBar({
         </button>
       </div>
 
-      <div className="relative flex h-full" style={{ width: bars.length * barWidth, ...gridStyle }}>
+      <div className="relative flex h-full shrink-0" style={{ width: bars.length * barWidth, ...gridStyle }}>
         {bars.map((bar, i) => {
           const isBadge = i % badgeEvery === 0
           if (!isBadge) return null
