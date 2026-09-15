@@ -1,3 +1,6 @@
+import { useMemo } from 'react'
+import { buildArrangementGrid } from '../grid'
+
 function PlayIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-4 w-4 translate-x-[1px]">
@@ -23,26 +26,27 @@ export function RulerBar({
   // using +1 here made the ruler exactly one barWidth wider than the track
   // rows below it (which size themselves off `endBar - startBar` bars).
   const bars = Array.from({ length: endBar - startBar }, (_, i) => startBar + i)
+  const gridStyle = useMemo(() => buildArrangementGrid(barWidth), [barWidth])
 
   return (
-    <div className="sticky top-0 z-20 box-border flex h-12 items-center bg-surface-base">
-      <div className="flex h-full shrink-0 items-center justify-center" style={{ width: labelWidth }}>
+    <div className="sticky top-0 z-20 box-border flex h-12 items-center border-b border-surface-grid/60 bg-surface-panel">
+      <div className="flex h-full shrink-0 items-center justify-center border-r border-surface-grid/60" style={{ width: labelWidth }}>
         <button
           type="button"
           aria-label="Play"
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-track-melodic-ink text-surface-base"
+          className="flex h-8 w-8 items-center justify-center rounded-full bg-track-accent text-white"
         >
           <PlayIcon />
         </button>
       </div>
 
-      <div className="relative flex h-full" style={{ width: bars.length * barWidth }}>
+      <div className="relative flex h-full" style={{ width: bars.length * barWidth, ...gridStyle }}>
         {bars.map((bar, i) => {
           const isBadge = i % badgeEvery === 0
           if (!isBadge) return null
           return (
             <div key={bar} className="relative shrink-0" style={{ width: barWidth }}>
-              <span className="absolute left-1/2 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-track-melodic-ink font-mono-daw text-[10px] font-medium text-surface-base">
+              <span className="absolute left-1/2 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-track-accent font-mono-daw text-[10px] font-medium text-white">
                 {bar}
               </span>
             </div>

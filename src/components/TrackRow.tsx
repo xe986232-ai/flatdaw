@@ -1,8 +1,10 @@
+import { useMemo } from 'react'
 import type { Track } from '../tracks'
 import type { FlatColor } from '../colors'
 import { ClipBlock } from './ClipBlock'
 import { TrackIcon } from './TrackIcon'
 import type { ClipMenuAction } from './ClipMenu'
+import { buildArrangementGrid } from '../grid'
 
 const iconInkByKind: Record<Track['kind'], string> = {
   marker: 'text-track-marker',
@@ -48,10 +50,12 @@ export function TrackRow({
   onRenameCommit?: (clipId: string, label: string) => void
   onBackgroundClick?: (bar: number) => void
 }) {
+  const gridStyle = useMemo(() => buildArrangementGrid(barWidth), [barWidth])
+
   return (
-    <div className="box-border flex">
+    <div className="box-border flex border-b border-row-divider">
       <div
-        className="sticky left-0 z-10 box-border flex shrink-0 items-center justify-center bg-surface-base"
+        className="sticky left-0 z-10 box-border flex shrink-0 items-center justify-center border-r border-surface-grid/60 bg-surface-panel"
         style={{ width: labelWidth, height }}
       >
         <span className={color ? '' : iconInkByKind[track.kind]} style={{ color: color?.fill }}>
@@ -59,8 +63,8 @@ export function TrackRow({
         </span>
       </div>
       <div
-        className="relative box-border"
-        style={{ width: totalBars * barWidth, height }}
+        className="relative box-border bg-surface-base"
+        style={{ width: totalBars * barWidth, height, ...gridStyle }}
         onClick={(e) => {
           if (!onBackgroundClick) return
           const rect = e.currentTarget.getBoundingClientRect()

@@ -14,10 +14,10 @@ export function Playhead({ x, onDrag }: { x: number; onDrag: (clientX: number) =
     <div className="pointer-events-none absolute top-0 bottom-0 z-30" style={{ left: x }}>
       <div
         onPointerDown={handlePointerDown}
-        className="pointer-events-auto absolute -top-[1px] -left-2 h-3.5 w-4 cursor-ew-resize rounded-b-sm bg-track-melodic-ink/90"
+        className="pointer-events-auto absolute -top-[1px] -left-2 h-3.5 w-4 cursor-ew-resize rounded-b-sm bg-track-lead"
         style={{ clipPath: 'polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%)' }}
       />
-      <div className="h-full w-px bg-track-melodic-ink/70" />
+      <div className="h-full w-px bg-track-lead/90" />
     </div>
   )
 }

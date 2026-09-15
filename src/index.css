@@ -1,26 +1,30 @@
 @import "tailwindcss";
 
 @theme {
-  /* Track category palette — extracted from DAW reference */
+  /* Track category palette — tetap dipakai sebagai warna aksen clip di atas
+     latar gelap (mirip clip berwarna-warni di Ableton), cuma "ink" diganti
+     jadi gelap solid biar kontras rapi di semua kondisi. */
   --color-track-melodic: #E8788A;
   --color-track-melodic-line: #D65F73;
-  --color-track-melodic-ink: #4A2530;
+  --color-track-melodic-ink: #241014;
 
-  --color-track-marker: #A8DDE6;
-  --color-track-marker-ink: #1A1A1A;
+  --color-track-marker: #6FD6E8;
+  --color-track-marker-ink: #0A1A1D;
 
   --color-track-lead: #F0E23C;
   --color-track-drum: #C9BE3A;
-  --color-track-drum-block: #0D0D0D;
+  --color-track-drum-block: #14140A;
 
   --color-track-perc: #EEA24E;
-  --color-track-perc-step: #2B1B0A;
+  --color-track-perc-step: #1C1208;
 
-  --color-track-accent: #3B6FA0;
+  --color-track-accent: #4F8FC4;
 
-  --color-surface-base: #F3D9E6;
-  --color-surface-grid: #C9A8BC;
-  --color-row-divider: #A9DCE8;
+  /* Latar playlist/timeline ala Ableton — gelap, netral, flat (tanpa gradient). */
+  --color-surface-base: #1C1C1F;
+  --color-surface-panel: #202024;
+  --color-surface-grid: #3A3A40;
+  --color-row-divider: #2C2C31;
 
   --font-mono-daw: "JetBrains Mono", ui-monospace, monospace;
 }

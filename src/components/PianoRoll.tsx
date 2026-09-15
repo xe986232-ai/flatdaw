@@ -131,7 +131,7 @@ export function PianoRoll({
   }
 
   return (
-    <div className="absolute inset-0 z-50 flex flex-col bg-surface-base text-track-melodic-ink">
+    <div className="absolute inset-0 z-50 flex flex-col bg-surface-base text-white">
       <div className="flex shrink-0 items-center gap-3 border-b border-surface-grid/40 bg-[#202024] px-4 py-2.5">
         <button
           type="button"
