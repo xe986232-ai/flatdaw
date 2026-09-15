@@ -3,6 +3,7 @@ import type { PointerEvent as ReactPointerEvent } from 'react'
 import { BEATS_PER_BAR, type Clip, type Note, type TrackKind } from '../tracks'
 import type { FlatColor } from '../colors'
 import { ClipMenu, type ClipMenuAction } from './ClipMenu'
+import { WaveformCanvas } from './WaveformCanvas'
 
 const fillByKind: Record<TrackKind, string> = {
   marker: 'bg-track-marker',
@@ -263,7 +264,11 @@ export function ClipBlock({
         )
       )}
       <div className="min-h-0 flex-1">
-        {clip.notes && clip.notes.length > 0 ? (
+        {clip.waveformPeaks ? (
+          // Sample-nya ketemu di dalam zip project & sudah didekode — gambar
+          // waveform beneran, bukan pola dekoratif. Cuma render, gak diputer.
+          <WaveformCanvas peaks={clip.waveformPeaks} />
+        ) : clip.notes && clip.notes.length > 0 ? (
           <NotePreview notes={clip.notes} totalBeats={clip.lengthBars * BEATS_PER_BAR} />
         ) : (
           <Pattern pattern={clip.pattern} seed={seed} />

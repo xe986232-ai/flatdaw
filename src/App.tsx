@@ -11,6 +11,8 @@ import { generateNotesForClip } from './notes'
 import { randomFlatColor, type FlatColor } from './colors'
 import { parseFlmFile } from './flmParser'
 import { flmToTracks } from './flmToTracks'
+import { loadZipProject, matchSampleFile } from './zipProject'
+import { decodeAudioBytes, computePeaks } from './waveform'
 
 const BASE_BAR_WIDTH = 96
 const BASE_ROW_HEIGHT = 56
@@ -237,16 +239,91 @@ export default function App() {
     }
   }
 
-  // Baca file .flm -> parseFlmFile (logic EVN2 parser gak diubah sama sekali)
-  // -> flmToTracks -> ganti isi playlist dengan hasil parsing.
+  // Update satu clip di trackList tanpa nyentuh yang lain — dipakai buat
+  // nempelin hasil decode waveform belakangan (async), satu per satu, tanpa
+  // nunggu semua sample kelar didekode dulu.
+  const patchClip = (clipId: string, patch: Partial<Clip>) => {
+    setTrackList((prev) =>
+      prev.map((t) => ({
+        ...t,
+        clips: t.clips.map((c) => (c.id === clipId ? { ...c, ...patch } : c)),
+      })),
+    )
+  }
+
+  // Setelah tracks ke-render, jalanin pass async: buat tiap klip audio yang
+  // punya sampleName, cari file-nya di dalam zip project, decode
+  // (decodeAudioData — cuma dekode, GAK diputer/gak nyambung ke speaker),
+  // ringkas jadi peaks, terus tempelin ke clip itu biar ClipBlock gambar
+  // waveform aslinya. Kalau sample-nya gak ketemu di zip, klip itu tetep
+  // jatuh ke pattern 'dense' dekoratif seperti sebelumnya.
+  const resolveWaveforms = async (mappedTracks: typeof tracks, audioFiles: Map<string, import('jszip').JSZipObject>) => {
+    const audioClips = mappedTracks.flatMap((t) => t.clips).filter((c) => c.pattern === 'dense' && c.sampleName)
+
+    let found = 0
+    let missing = 0
+    await Promise.all(
+      audioClips.map(async (clip) => {
+        const entry = matchSampleFile(clip.sampleName!, audioFiles)
+        if (!entry) {
+          missing++
+          patchClip(clip.id, { waveformStatus: 'missing' })
+          return
+        }
+        try {
+          const arrayBuf = await entry.async('arraybuffer')
+          const audioBuffer = await decodeAudioBytes(arrayBuf)
+          const bucketCount = Math.max(20, Math.min(200, Math.round(clip.lengthBars * 12)))
+          const peaks = computePeaks(audioBuffer, bucketCount)
+          found++
+          patchClip(clip.id, {
+            waveformPeaks: { min: Array.from(peaks.min), max: Array.from(peaks.max) },
+            waveformStatus: 'found',
+          })
+        } catch (err) {
+          console.error(`Gagal decode sample "${clip.sampleName}":`, err)
+          missing++
+          patchClip(clip.id, { waveformStatus: 'missing' })
+        }
+      }),
+    )
+
+    if (audioClips.length > 0) {
+      setFlmStatus(
+        (prev) => `${prev ?? ''} · waveform: ${found} sample ketemu & ke-render${missing ? `, ${missing} gak ketemu di zip` : ''}`,
+      )
+    }
+  }
+
+  // Baca file .flm ATAU .zip (project + folder sample-nya) -> parseFlmFile
+  // (logic EVN2 parser gak diubah sama sekali) -> flmToTracks -> ganti isi
+  // playlist dengan hasil parsing. Kalau yang di-import .zip dan ada file
+  // audio yang cocok sama sample klip, waveform asli ikut di-decode & digambar.
   const handleImportFlm = async (file: File) => {
     setIsImportingFlm(true)
     setFlmError(null)
     setFlmStatus(null)
     try {
-      const buffer = await file.arrayBuffer()
-      const bytes = new Uint8Array(buffer)
-      const result = parseFlmFile(bytes, file.name)
+      const isZip = /\.zip$/i.test(file.name)
+      let flmBytes: Uint8Array
+      let flmName = file.name
+      let audioFiles: Map<string, import('jszip').JSZipObject> | null = null
+
+      if (isZip) {
+        const zipResult = await loadZipProject(file)
+        if (!zipResult.ok) {
+          setFlmError(zipResult.error)
+          return
+        }
+        flmBytes = zipResult.data.flmBytes
+        flmName = zipResult.data.flmName
+        audioFiles = zipResult.data.audioFiles
+      } else {
+        const buffer = await file.arrayBuffer()
+        flmBytes = new Uint8Array(buffer)
+      }
+
+      const result = parseFlmFile(flmBytes, flmName)
       if (!result.ok) {
         setFlmError(result.error)
         return
@@ -262,14 +339,19 @@ export default function App() {
       setClipboard(null)
 
       setFlmStatus(
-        `${file.name} · ${chunkResults.length} pattern` +
+        `${flmName} · ${chunkResults.length} pattern` +
           (namedCount ? ` · ${namedCount} instrumen dikenali` : '') +
           (audioClipCount ? ` · ${audioClipCount} klip audio (sample) ikut kebaca` : '') +
-          ` · ${timelineClips.length} clip masuk playlist`,
+          ` · ${timelineClips.length} clip masuk playlist` +
+          (isZip ? ` · zip: ${audioFiles?.size ?? 0} file audio ditemukan` : ''),
       )
+
+      if (audioFiles && audioFiles.size > 0) {
+        void resolveWaveforms(mappedTracks, audioFiles)
+      }
     } catch (err) {
-      console.error('Gagal membaca file .flm:', err)
-      setFlmError('File .flm gak bisa dibaca. Pastikan formatnya sesuai (FL Studio Mobile project).')
+      console.error('Gagal membaca file project:', err)
+      setFlmError('File gak bisa dibaca. Pastikan ini .flm (FL Studio Mobile) atau .zip berisi project + folder sample.')
     } finally {
       setIsImportingFlm(false)
     }
@@ -457,9 +539,9 @@ export default function App() {
           disabled={isImportingFlm}
           className="bg-[#3B6FA0] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
         >
-          {isImportingFlm ? 'Mem-parsing .flm…' : 'Import Project .flm'}
+          {isImportingFlm ? 'Mem-parsing project…' : 'Import Project (.zip / .flm)'}
         </button>
-        <input ref={flmInputRef} type="file" accept=".flm" className="hidden" onChange={handleFlmInputChange} />
+        <input ref={flmInputRef} type="file" accept=".zip,.flm" className="hidden" onChange={handleFlmInputChange} />
         {flmStatus && <div className="bg-[#1d3a2a] px-3 py-1.5 text-[12px] text-white/85">{flmStatus}</div>}
         {flmError && <div className="bg-[#5A2A2A] px-3 py-1.5 text-[12px] text-white/90">{flmError}</div>}
 

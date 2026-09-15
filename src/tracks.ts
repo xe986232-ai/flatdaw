@@ -10,6 +10,11 @@ export interface Note {
 
 export const BEATS_PER_BAR = 4
 
+export interface WaveformPeaksData {
+  min: number[]
+  max: number[]
+}
+
 export interface Clip {
   id: string
   label: string
@@ -17,6 +22,14 @@ export interface Clip {
   lengthBars: number
   pattern?: 'notes' | 'steps' | 'scribble' | 'dense'
   notes?: Note[] // piano-roll content; generated on first "Edit" if absent
+  // Klip audio (isAudio=true di flmParser): nama sample mentah dari project,
+  // dipakai buat dicocokin ke file di dalam zip (lihat zipProject.ts).
+  sampleName?: string
+  // Diisi belakangan (async, setelah decode audio) kalau sample-nya ketemu di
+  // dalam zip project yang di-import — dipakai ClipBlock buat gambar waveform
+  // asli di kanvas, gantiin pattern 'dense' yang cuma dekorasi.
+  waveformPeaks?: WaveformPeaksData
+  waveformStatus?: 'pending' | 'found' | 'missing'
 }
 
 export interface Track {

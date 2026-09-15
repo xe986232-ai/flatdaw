@@ -53,6 +53,7 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
         lengthBars: placementBars,
         pattern: 'dense',
         notes: [],
+        sampleName: cl.sampleName ?? undefined,
       }
     } else {
       const chunk = chunkResults[cl.chunkIdx as number]
