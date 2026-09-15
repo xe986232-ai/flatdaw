@@ -27,10 +27,10 @@ const V_ZOOM_MIN = 0.6
 const V_ZOOM_MAX = 2.5
 const ZOOM_STEP = 0.2
 
-// Belum ada konsep tempo di data project (.flm gak nyimpen BPM di sini), jadi
-// playback pakai tempo tetap — cukup buat bikin playhead "jalan" di timeline
-// sesuai permintaan (gak perlu akurat ke project asli karena gak ada audio).
-const PLAYBACK_BPM = 120
+// Dipakai selama belum ada project ke-import (playlist kosong) — begitu file
+// .flm/.zip di-import, projectBpm di-update ke BPM asli hasil parsing chunk
+// HEAD (lihat parseProjectBpm di flmParser.ts), bukan hardcoded lagi.
+const DEFAULT_BPM = 120
 
 export default function App() {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -38,6 +38,7 @@ export default function App() {
   const [isExporting, setIsExporting] = useState(false)
   const [playheadBar, setPlayheadBar] = useState(207)
   const [isPlaying, setIsPlaying] = useState(false)
+  const [projectBpm, setProjectBpm] = useState(DEFAULT_BPM)
   const lastFrameTimeRef = useRef<number | null>(null)
   const playheadBarRef = useRef(playheadBar)
   useEffect(() => {
@@ -144,7 +145,7 @@ export default function App() {
   useEffect(() => {
     if (!isPlaying) return
 
-    const barsPerSecond = PLAYBACK_BPM / 60 / BEATS_PER_BAR
+    const barsPerSecond = projectBpm / 60 / BEATS_PER_BAR
     const SCROLL_FOLLOW_TAU = 0.25 // detik — makin kecil, makin cepat "ngejar" playhead
     const SCROLL_ANCHOR_RATIO = 0.35 // playhead dijaga di ~35% dari kiri viewport
     let rafId = 0
@@ -191,7 +192,7 @@ export default function App() {
       cancelAnimationFrame(rafId)
       lastFrameTimeRef.current = null
     }
-  }, [isPlaying, loopEnabled, loopStartBar, loopEndBar, timelineEnd, barWidth])
+  }, [isPlaying, loopEnabled, loopStartBar, loopEndBar, timelineEnd, barWidth, projectBpm])
 
   const handleDrag = (clientX: number) => {
     const container = scrollRef.current
@@ -458,7 +459,7 @@ export default function App() {
         setFlmError(result.error)
         return
       }
-      const { chunkResults, timelineClips, namedCount, audioClipCount } = result.data
+      const { chunkResults, timelineClips, namedCount, audioClipCount, bpm } = result.data
       const mappedTracks = flmToTracks(result.data)
 
       setTrackList(mappedTracks)
@@ -467,12 +468,15 @@ export default function App() {
       setEditingClip(null)
       setPianoRoll(null)
       setClipboard(null)
+      setIsPlaying(false)
+      setProjectBpm(bpm)
 
       setFlmStatus(
         `${flmName} · ${chunkResults.length} pattern` +
           (namedCount ? ` · ${namedCount} instrumen dikenali` : '') +
           (audioClipCount ? ` · ${audioClipCount} klip audio (sample) ikut kebaca` : '') +
           ` · ${timelineClips.length} clip masuk playlist` +
+          ` · ${bpm} BPM` +
           (isZip ? ` · zip: ${audioFiles?.size ?? 0} file audio ditemukan` : ''),
       )
 
@@ -616,6 +620,7 @@ export default function App() {
             loopEnabled={loopEnabled}
             snapEnabled={snapEnabled}
             isPlaying={isPlaying}
+            bpm={projectBpm}
             onLoopChange={(start, end) => {
               setLoopStartBar(start)
               setLoopEndBar(end)

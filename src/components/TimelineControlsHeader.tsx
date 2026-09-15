@@ -264,6 +264,7 @@ export function TimelineControlsHeader({
   onToggleSnap,
   onPlayClick,
   isPlaying = false,
+  bpm,
 }: {
   startBar: number
   endBar: number
@@ -278,6 +279,7 @@ export function TimelineControlsHeader({
   onToggleSnap: () => void
   onPlayClick?: () => void
   isPlaying?: boolean
+  bpm?: number
 }) {
   return (
     <div className="sticky top-0 z-20 box-border flex h-12 items-stretch border-b border-surface-grid/60 bg-surface-panel">
@@ -294,6 +296,9 @@ export function TimelineControlsHeader({
         >
           {isPlaying ? <PauseIcon /> : <PlayIcon />}
         </button>
+        {typeof bpm === 'number' && (
+          <span className="text-[10px] font-medium tabular-nums text-white/70">{bpm} BPM</span>
+        )}
       </div>
 
       <div className="relative shrink-0" style={{ width: (endBar - startBar) * barWidth }}>

@@ -301,6 +301,47 @@ function parseEVN2Chunk(bytes: Uint8Array, tagOffset: number): EVN2ChunkResult {
   return { offset: tagOffset, length, headerSkip, notes, error: null }
 }
 
+// Baca BPM asli project dari chunk HEAD (chunk paling depan file, ditandai
+// prefix magic "10LF" sebelum tag "HEAD" itu sendiri — beda dari chunk-chunk
+// kecil "HEAD" lain yang nempel di tiap track/instrumen buat data lain).
+// Divalidasi manual terhadap 1 file kalibrasi (BPM asli 129, dikonfirmasi
+// user): layout isi chunk HEAD dari awal datanya adalah
+//   [0:8]    int64 — belum jelas fungsinya, bukan bagian tempo
+//   [8:264]  nama project, 256 byte, null-padded (mis. "New Song")
+//   [264:272] BPM asli project, disimpan sebagai float64 (double)
+//   [272:280] 0.0 di file kalibrasi — belum jelas (mungkin master pitch)
+//   [280:288] 100.0 di file kalibrasi — kemungkinan besar Master Volume %
+// Kalau strukturnya gak cocok (versi format beda / chunk gak ketemu / nilai
+// di luar rentang BPM wajar), fallback ke guessBPM(filename) biar tetep ada
+// angka yang masuk akal daripada gagal total.
+const HEAD_NAME_FIELD_SIZE = 256
+const HEAD_INT_HEADER_SIZE = 8
+const HEAD_BPM_OFFSET = HEAD_INT_HEADER_SIZE + HEAD_NAME_FIELD_SIZE // 264
+
+function parseProjectBpm(bytes: Uint8Array, filename: string): number {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  const headOffsets = findAllTagOffsets(bytes, 'HEAD')
+  // Chunk HEAD project-level selalu yang pertama muncul di file (paling
+  // depan, langsung setelah 4-byte magic "10LF") — chunk "HEAD" lain (satu
+  // per track/instrumen) selalu muncul jauh lebih belakang dan lebih pendek.
+  const headOffset = headOffsets.length ? headOffsets[0] : -1
+
+  if (headOffset !== -1 && headOffset + 8 <= bytes.length) {
+    const length = view.getUint32(headOffset + 4, true)
+    const dataStart = headOffset + 8
+    const dataEnd = dataStart + length
+    const bpmFieldStart = dataStart + HEAD_BPM_OFFSET
+    if (length > 0 && dataEnd <= bytes.length && bpmFieldStart + 8 <= dataEnd) {
+      const candidate = view.getFloat64(bpmFieldStart, true)
+      if (Number.isFinite(candidate) && candidate >= 20 && candidate <= 999) {
+        return Math.round(candidate * 100) / 100
+      }
+    }
+  }
+
+  return guessBPM(filename)
+}
+
 function guessBPM(filename: string): number {
   const m = filename.match(/\((\d{2,3})\)/) || filename.match(/[_\s-](\d{2,3})[_\s.-]/)
   if (m) {
@@ -401,7 +442,7 @@ export function parseFlmFile(bytes: Uint8Array, filename: string): ParseFlmResul
 
   const namedCount = chunkResults.filter((c) => c.instrumentName).length
   const audioClipCount = timelineClips.filter((cl) => cl.isAudio).length
-  const bpm = guessBPM(filename)
+  const bpm = parseProjectBpm(bytes, filename)
 
   return { ok: true, data: { chunkResults, timelineClips, bpm, skippedAudioCount, namedCount, audioClipCount } }
 }
