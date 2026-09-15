@@ -61,4 +61,4 @@ export function hexToRgba(hex: string, alpha: number) {
 // Ableton Live: warna track cuma jadi tint lembut di belakang, waveform-nya
 // (currentColor/ink) yang jadi fokus utama, bukan blok warna pekat.
 export const AUDIO_REGION_BASE_HEX = '#6C5CE7'
-export const AUDIO_REGION_COLOR: FlatColor = { fill: hexToRgba(AUDIO_REGION_BASE_HEX, 0.55), ink: '#EFECFF' }
+export const AUDIO_REGION_COLOR: FlatColor = { fill: hexToRgba(AUDIO_REGION_BASE_HEX, 0.88), ink: '#EFECFF' }

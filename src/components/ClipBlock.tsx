@@ -261,11 +261,12 @@ export function ClipBlock({
   // (AUDIO_REGION_COLOR) cuma jadi fallback kalau track-nya belum pernah
   // di-random-in warnanya sama sekali (color masih undefined).
   const isAudioClip = !!clip.sampleName
-  // Transparansinya beda dikit: audio 0.55 (lebih transparan, niru region
-  // audio di Ableton/Soundtrap), instrument 0.88 (lebih solid soalnya isinya
-  // masih perlu kebaca jelas — note preview, step, dll).
+  // Opacity clip audio sekarang disamain sama clip instrument (0.88) —
+  // sebelumnya audio dipaksa lebih transparan (0.55), sekarang ngikutin
+  // opacity track instrument biar konsisten.
+  const CLIP_FILL_ALPHA = 0.88
   const effectiveColor = color
-    ? { fill: hexToRgba(color.fill, isAudioClip ? 0.55 : 0.88), ink: color.ink }
+    ? { fill: hexToRgba(color.fill, CLIP_FILL_ALPHA), ink: color.ink }
     : isAudioClip
       ? AUDIO_REGION_COLOR
       : color
