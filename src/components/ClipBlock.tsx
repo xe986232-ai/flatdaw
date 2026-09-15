@@ -330,7 +330,14 @@ export function ClipBlock({
           // sticky (bukan cuma left-aligned): nama region tetap kebaca di tepi kiri
           // yang lagi keliatan pas ditrack di-scroll horizontal, tapi gak pernah
           // keluar dari batas region-nya sendiri (browser yang clamp otomatis).
-          <span className="sticky left-0 z-10 block max-w-full shrink-0 truncate text-[11px] font-medium leading-none mb-1">
+          // Garis pembatas di bawah nama sekarang narik sampe ujung lebar clip
+          // (w-full, bukan cuma selebar teks) biar keliatan kayak header kolom.
+          // opacity:1 dipaksa di sini biar garis & teksnya tetep solid/kebaca
+          // jelas walau background clip-nya sendiri semi-transparan.
+          <span
+            className="sticky left-0 z-10 mb-1 block w-full shrink-0 truncate border-b border-current pb-0.5 text-[11px] font-medium leading-none opacity-100"
+            style={{ borderColor: effectiveColor?.ink }}
+          >
             {clip.label}
           </span>
         )
