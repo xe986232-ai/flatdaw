@@ -273,7 +273,7 @@ export default function App() {
         try {
           const arrayBuf = await entry.async('arraybuffer')
           const audioBuffer = await decodeAudioBytes(arrayBuf)
-          const bucketCount = Math.max(60, Math.min(1200, Math.round(clip.lengthBars * 40)))
+          const bucketCount = Math.max(120, Math.min(2400, Math.round(clip.lengthBars * 80)))
           const peaks = computePeaks(audioBuffer, bucketCount)
           found++
           patchClip(clip.id, {

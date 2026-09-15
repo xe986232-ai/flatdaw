@@ -107,19 +107,32 @@ function Pattern({ pattern, seed = 0 }: { pattern: Clip['pattern']; seed?: numbe
     )
   }
   if (pattern === 'dense') {
+    // Lebih banyak bar (90, dari 40) + gap lebih tipis buat kesan lebih
+    // padet. Tinggi tiap bar sekarang gabungan 2 gelombang sinus beda
+    // frekuensi (biar ada bentuk "envelope" naik-turun kayak amplitudo
+    // audio asli, bukan garis lurus) plus noise per-bar dari seeded(),
+    // dan makein `seed` (sebelumnya diterima tapi gak dipakai di cabang
+    // ini) biar tiap clip punya bentuk unik sendiri, bukan pola identik
+    // yang diulang persis sama di semua clip audio.
+    const count = 90
     return (
-      <div className="flex h-4 w-full items-end gap-[2px] overflow-hidden">
-        {Array.from({ length: 40 }).map((_, i) => (
-          <span
-            key={i}
-            className="flex-1 rounded-[1px]"
-            style={{
-              height: `${30 + ((i * 37) % 70)}%`,
-              backgroundColor: 'currentColor',
-              opacity: 0.85,
-            }}
-          />
-        ))}
+      <div className="flex h-4 w-full items-end gap-[1px] overflow-hidden">
+        {Array.from({ length: count }).map((_, i) => {
+          const envelope = Math.sin(i * 0.35 + seed) * Math.sin(i * 0.06 + seed * 0.31)
+          const noise = seeded(i, seed)
+          const h = 14 + Math.abs(envelope) * 58 + noise * 28
+          return (
+            <span
+              key={i}
+              className="flex-1 rounded-[0.5px]"
+              style={{
+                height: `${Math.min(100, Math.max(8, h))}%`,
+                backgroundColor: 'currentColor',
+                opacity: 0.5 + noise * 0.4,
+              }}
+            />
+          )
+        })}
       </div>
     )
   }
