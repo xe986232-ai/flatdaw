@@ -20,10 +20,6 @@ function patternSpanBars(chunk: EVN2ChunkResult | undefined): number {
 export function flmToTracks(parsed: ParsedFlm): Track[] {
   const { chunkResults, timelineClips } = parsed
 
-  const order: string[] = []
-  const rowLabel = new Map<string, string>()
-  const rowClips = new Map<string, Clip[]>()
-
   // Row identity = trkhOffset (the actual TRKH chunk this clip's CLIP is
   // nested inside), NEVER trackName. FL Studio Mobile writes a generic
   // default name ("Audio 11", "Audio 33", ...) into the DESc of any track
@@ -35,12 +31,14 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
   // misplaced-pattern symptom. trkhOffset is unique per real TRKH chunk in
   // the binary, so it's the only safe grouping key; the name is used for
   // the label only, and disambiguated below when it collides.
+  const rowLabel = new Map<string, string>()
+  const rowClips = new Map<string, Clip[]>()
+
   timelineClips.forEach((cl, i) => {
     const key = `trkh:${cl.trkhOffset}`
     if (!rowClips.has(key)) {
       rowClips.set(key, [])
-      rowLabel.set(key, cl.trackName || `Track ${order.length + 1}`)
-      order.push(key)
+      rowLabel.set(key, cl.trackName || `Track ${rowClips.size}`)
     }
 
     // No upper clamp here anymore — the arrangement's total length (used to
@@ -125,6 +123,21 @@ export function flmToTracks(parsed: ParsedFlm): Track[] {
     }
 
     rowClips.get(key)!.push(clip)
+  })
+
+  // Row order = ascending trkhOffset, i.e. the order TRKH chunks physically
+  // appear in the file — this IS the original track list order in the FL
+  // Studio Mobile playlist (track 1, track 2, track 3, ... top to bottom).
+  // Previously rows were ordered by "whichever track's first clip starts
+  // earliest in time", which has nothing to do with the real track order:
+  // a track listed 3rd in the project but whose first clip happens to start
+  // late in the arrangement would render far down the list, while a track
+  // listed 20th but with an early clip would jump near the top — the whole
+  // vertical order came out shuffled relative to the source project.
+  const order = [...rowClips.keys()].sort((a, b) => {
+    const trkhA = Number(a.slice('trkh:'.length))
+    const trkhB = Number(b.slice('trkh:'.length))
+    return trkhA - trkhB
   })
 
   // Two different real tracks (different trkhOffset, so already separate
