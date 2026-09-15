@@ -36,14 +36,19 @@ export function cellPxWidth(layer: number, barWidthPx: number): number {
   return barWidthPx / cellsPerBar(layer)
 }
 
-// Ambang minimum lebar kotak (px) biar garis subdivisi nggak numpuk jadi
-// blok solid pas lagi zoom-out — persis alasan grid Ableton otomatis
-// "melebur" ke lapisan yang lebih kasar waktu di-zoom keluar.
-const MIN_SUBDIV_PX = 6
-const MIN_BEAT_PX = 3
+// Ambang minimum lebar kotak (px) biar garis grid nggak numpuk jadi blok
+// solid pas lagi zoom-out.
+const MIN_LAYER_PX = 6
 
-/** Lapisan subdivisi terhalus yang kotaknya masih >= minPx pada barWidth ini. */
-export function pickFinestLayer(barWidthPx: number, minPx = MIN_SUBDIV_PX): number {
+/**
+ * Lapisan yang lagi "aktif" ditampilkan pada barWidth ini: lapisan terhalus
+ * yang kotaknya masih >= minPx. Makin di-zoom in, kotak tiap lapisan makin
+ * lebar sehingga lapisan berikutnya (2x lebih rapat) jadi cukup lega buat
+ * ditampilkan dan menggantikan lapisan sebelumnya. Makin di-zoom out, balik
+ * ke lapisan yang lebih kasar. Cuma SATU lapisan yang pernah digambar dalam
+ * satu waktu — lapisan lain otomatis ke-hide, bukan ditumpuk.
+ */
+export function pickActiveLayer(barWidthPx: number, minPx = MIN_LAYER_PX): number {
   let chosen = 1
   for (let layer = 2; layer <= MAX_LAYER; layer++) {
     if (cellPxWidth(layer, barWidthPx) < minPx) break
@@ -59,41 +64,37 @@ export interface ArrangementGridStyle {
 }
 
 /**
- * Bikin background CSS 3-tingkat buat area playlist/timeline:
- *  - garis bar (paling tegas, selalu tampil)
- *  - garis ketukan / lapisan 1 (medium, hilang kalau kotaknya kelewat sempit)
- *  - garis subdivisi terhalus yang masih kebaca (adaptif sesuai zoom)
- * Semua dihitung dari cellPxWidth() di atas, jadi kerapatannya selalu
- * konsisten dengan rumus tick pada dokumentasi.
+ * Bikin background CSS buat area playlist/timeline:
+ *  - garis bar (batas antar birama, selalu tampil, paling tegas)
+ *  - garis lapisan grid yang lagi aktif (pickActiveLayer) — cuma SATU
+ *    lapisan yang digambar; begitu zoom berubah cukup jauh, lapisan ini
+ *    diganti seluruhnya oleh lapisan lain, bukan ditambah/ditumpuk.
+ * Karena tiap lapisan adalah pembelahan 2x dari lapisan sebelumnya, garis
+ * lapisan aktif otomatis mencakup posisi semua lapisan yang lebih kasar —
+ * jadi nggak ada info yang hilang walau lapisan lain di-hide.
  */
 export function buildArrangementGrid(barWidthPx: number): ArrangementGridStyle {
-  // Tile ukuran subdivisi dibulatkan ke piksel penuh — sama seperti barWidth
-  // di App.tsx, ini menjaga tiap tile digambar presisi (garis tipis 1px yang
-  // digambar di posisi pecahan piksel gampang jadi blur/pudar setelah
-  // di-tile berulang-ulang di sepanjang baris track).
-  const beatPx = Math.max(1, Math.round(cellPxWidth(1, barWidthPx)))
-  const finestLayer = pickFinestLayer(barWidthPx)
-  const subPx = Math.max(1, Math.round(cellPxWidth(finestLayer, barWidthPx)))
+  const activeLayer = pickActiveLayer(barWidthPx)
+  // Dibulatkan ke piksel penuh biar tiap tile digambar presisi (garis tipis
+  // 1px di posisi pecahan piksel gampang blur/pudar setelah di-tile
+  // berulang-ulang di sepanjang baris track).
+  const layerPx = Math.max(1, Math.round(cellPxWidth(activeLayer, barWidthPx)))
 
   const images: string[] = []
   const sizes: string[] = []
 
-  if (finestLayer > 1) {
+  // Lapisan aktif — cuma digambar kalau kotaknya masih cukup lebar buat
+  // dibedakan dari garis bar (kalau lapisan 1 aja udah kelewat sempit,
+  // biarin cuma garis bar yang tampil).
+  if (layerPx >= 3) {
     images.push(
-      `linear-gradient(to right, rgba(255,255,255,0.05) 0, rgba(255,255,255,0.05) 1px, transparent 1px, transparent ${subPx}px)`,
+      `linear-gradient(to right, rgba(255,255,255,0.14) 0, rgba(255,255,255,0.14) 1px, transparent 1px, transparent ${layerPx}px)`,
     )
-    sizes.push(`${subPx}px 100%`)
-  }
-
-  if (beatPx >= MIN_BEAT_PX) {
-    images.push(
-      `linear-gradient(to right, rgba(255,255,255,0.13) 0, rgba(255,255,255,0.13) 1px, transparent 1px, transparent ${beatPx}px)`,
-    )
-    sizes.push(`${beatPx}px 100%`)
+    sizes.push(`${layerPx}px 100%`)
   }
 
   images.push(
-    `linear-gradient(to right, rgba(255,255,255,0.30) 0, rgba(255,255,255,0.30) 1px, transparent 1px, transparent ${barWidthPx}px)`,
+    `linear-gradient(to right, rgba(255,255,255,0.32) 0, rgba(255,255,255,0.32) 1px, transparent 1px, transparent ${barWidthPx}px)`,
   )
   sizes.push(`${barWidthPx}px 100%`)
 
