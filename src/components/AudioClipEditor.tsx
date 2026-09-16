@@ -1,9 +1,10 @@
 import { useRef, useState, useEffect } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
-import { BEATS_PER_BAR, type Clip } from '../tracks'
+import { BEATS_PER_BAR, type Clip, type Track } from '../tracks'
 import { buildArrangementGrid, cellsPerBar, pickActiveLayer } from '../grid'
 import { AUDIO_REGION_BASE_HEX, AUDIO_REGION_COLOR, hexToRgba, lighten, type FlatColor } from '../colors'
 import { WaveformCanvas } from './WaveformCanvas'
+import { TrackIcon } from './TrackIcon'
 
 // Tampilan "Edit" khusus clip audio — niru layar edit sample di FL Studio
 // Mobile (lihat referensi: waveform digambar penuh di dalam satu lajur besar
@@ -21,6 +22,10 @@ const BEAT_WIDTH = 64
 const BAR_WIDTH = BEAT_WIDTH * BEATS_PER_BAR
 const RULER_HEIGHT = 32
 const LANE_HEIGHT = 220
+// Lebar kartu label track di kiri — sama persis LABEL_WIDTH di App.tsx/TrackRow,
+// biar kolom ikon track di sini sejajar & konsisten sama tampilan timeline utama
+// (sebelumnya lajur ini cuma waveform doang, gak ada kartu track-nya sama sekali).
+const LABEL_WIDTH = 72
 const MIN_LENGTH_BARS = 0.125
 const CLICK_THRESHOLD_PX = 4
 // Berapa bar tambahan digambar di belakang ujung clip biar grid-nya
@@ -95,6 +100,11 @@ export function AudioClipEditor({
 
   const stretchPct = hasNative ? Math.round((effectiveLengthBars / nativeSpanBars!) * 100) : 100
 
+  // Track palsu buat TrackIcon — cuma butuh kolom clips-nya keisi clip audio
+  // ini biar isAudioTrack() (dipanggil di dalam TrackIcon) balikin true dan
+  // ikonnya jadi WaveIcon, sama kayak kolom label di TrackRow beneran.
+  const iconTrack: Track = { id: clip.id, name: trackName, kind: 'accent', clips: [clip] }
+
   function handleKnobPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     e.stopPropagation()
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -143,92 +153,114 @@ export function AudioClipEditor({
       </div>
 
       <div className="relative min-h-0 flex-1 overflow-auto p-4">
-        <div className="relative" style={{ width: laneWidth }}>
-          {/* Ruler */}
+        <div className="relative" style={{ width: LABEL_WIDTH + laneWidth }}>
+          {/* Ruler — sekarang selebar kartu label + lajur, biar sejajar sama
+              baris di bawahnya (pattern sticky top+left niru TimelineControlsHeader). */}
           <div
-            className="sticky top-0 z-20 rounded-t-sm border-b border-surface-grid/40 bg-[#202024]"
-            style={{ width: laneWidth, height: RULER_HEIGHT }}
+            className="sticky top-0 z-20 flex rounded-t-sm border-b border-surface-grid/40 bg-[#202024]"
+            style={{ width: LABEL_WIDTH + laneWidth, height: RULER_HEIGHT }}
           >
-            {Array.from({ length: viewBars }).map((_, i) => (
-              <span
-                key={i}
-                className="absolute top-1/2 -translate-y-1/2 text-[11px] font-medium text-white/60"
-                style={{ left: i * BAR_WIDTH + 6 }}
-              >
-                {i + 1}
-              </span>
-            ))}
+            <div
+              className="sticky left-0 z-10 shrink-0 border-r border-surface-grid/40 bg-[#202024]"
+              style={{ width: LABEL_WIDTH, height: RULER_HEIGHT }}
+            />
+            <div className="relative shrink-0" style={{ width: laneWidth, height: RULER_HEIGHT }}>
+              {Array.from({ length: viewBars }).map((_, i) => (
+                <span
+                  key={i}
+                  className="absolute top-1/2 -translate-y-1/2 text-[11px] font-medium text-white/60"
+                  style={{ left: i * BAR_WIDTH + 6 }}
+                >
+                  {i + 1}
+                </span>
+              ))}
+            </div>
           </div>
 
-          {/* Lajur waveform, berpatok ke grid bar/ketukan sepenuhnya */}
-          <div
-            className="relative rounded-b-sm"
-            style={{
-              width: laneWidth,
-              height: LANE_HEIGHT,
-              backgroundColor: '#16161a',
-              backgroundImage: grid.backgroundImage,
-              backgroundSize: grid.backgroundSize,
-              backgroundRepeat: grid.backgroundRepeat,
-            }}
-          >
-            {/* Region clip: badan + header, isinya waveform beneran (WaveformCanvas
-                sama persis komponen yang dipakai di timeline) — stretchToFit
-                selalu true di sini, karena lajur ini KHUSUS buat nge-preview
-                gimana hasilnya kalau di-stretch pas ngisi grid. */}
+          {/* Baris track: kartu label (ikon + nama, sticky di kiri — niru
+              kolom kiri di TrackRow) + lajur waveform berpatok ke grid
+              bar/ketukan. Sebelumnya di sini cuma ada lajur waveform-nya
+              doang tanpa kartu track-nya. */}
+          <div className="flex" style={{ width: LABEL_WIDTH + laneWidth, height: LANE_HEIGHT }}>
             <div
-              className="absolute inset-y-3 left-0 flex flex-col overflow-hidden rounded-[4px]"
-              style={{ width: Math.max(2, regionWidth), backgroundColor: regionFill, color: regionInk }}
+              className="sticky left-0 z-10 flex shrink-0 flex-col items-center justify-center gap-1 border-r border-surface-grid/60 bg-surface-panel px-1"
+              style={{ width: LABEL_WIDTH, height: LANE_HEIGHT }}
             >
-              <div
-                className="shrink-0 truncate px-2 py-0.5 text-[11px] font-medium leading-none"
-                style={{ backgroundColor: headerFill, color: regionInk }}
-              >
-                {clip.label || clip.sampleName}
-              </div>
-              <div className="relative min-h-0 flex-1 pt-1 pb-1 pr-1">
-                {clip.waveformPeaks ? (
-                  <WaveformCanvas
-                    peaks={clip.waveformPeaks}
-                    multiRes={clip.waveformMultiRes}
-                    lengthBars={effectiveLengthBars}
-                    nativeSpanBars={nativeSpanBars}
-                    loop={isLoopedClip}
-                    stretchToFit
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-[11px] text-white/50">
-                    Sample belum ke-decode
-                  </div>
-                )}
-              </div>
+              <span className={color ? '' : 'text-track-melodic'} style={{ color: color?.fill }}>
+                <TrackIcon track={iconTrack} />
+              </span>
+              <span className="max-w-full truncate text-[10px] font-medium text-white/70">{trackName}</span>
             </div>
 
-            {/* Garis putus-putus penanda panjang ASLI sample (sebelum di-stretch) —
-                cuma ditampilin kalau bedanya beneran keliatan, biar user tau
-                seberapa jauh dia narik knob dari ukuran natural sample-nya. */}
-            {hasNative && Math.abs(nativeSpanBars! - effectiveLengthBars) > 0.01 && nativeSpanBars! < viewBars && (
-              <div
-                className="pointer-events-none absolute top-3 bottom-3 border-l-2 border-dashed border-white/40"
-                style={{ left: nativeSpanBars! * BAR_WIDTH }}
-              >
-                <span className="absolute -top-4 left-1 whitespace-nowrap text-[10px] text-white/40">asli</span>
-              </div>
-            )}
-
-            {/* Knob Stretch — satu-satunya kontrol di sini, niru knob kanan-bawah
-                di FL Studio Mobile: geser kanan/kiri buat manjangin/mendekin
-                clip, berpatok ke grid (snap sama persis kayak timeline). */}
             <div
-              data-clip-interactive="true"
-              className="absolute z-30 flex h-9 w-9 -translate-y-1/2 cursor-ew-resize touch-none items-center justify-center rounded-full border-2 border-black/20 shadow-md"
-              style={{ left: regionWidth, top: LANE_HEIGHT / 2, backgroundColor: 'rgba(255,255,255,0.95)' }}
-              onPointerDown={handleKnobPointerDown}
-              onPointerMove={handleKnobPointerMove}
-              onPointerUp={endKnobDrag}
-              onPointerCancel={endKnobDrag}
+              className="relative shrink-0 rounded-b-sm"
+              style={{
+                width: laneWidth,
+                height: LANE_HEIGHT,
+                backgroundColor: '#16161a',
+                backgroundImage: grid.backgroundImage,
+                backgroundSize: grid.backgroundSize,
+                backgroundRepeat: grid.backgroundRepeat,
+              }}
             >
-              <span className="text-[10px] font-semibold text-black/70">↔</span>
+              {/* Region clip: badan + header, isinya waveform beneran (WaveformCanvas
+                  sama persis komponen yang dipakai di timeline) — stretchToFit
+                  selalu true di sini, karena lajur ini KHUSUS buat nge-preview
+                  gimana hasilnya kalau di-stretch pas ngisi grid. */}
+              <div
+                className="absolute inset-y-3 left-0 flex flex-col overflow-hidden rounded-[4px]"
+                style={{ width: Math.max(2, regionWidth), backgroundColor: regionFill, color: regionInk }}
+              >
+                <div
+                  className="shrink-0 truncate px-2 py-0.5 text-[11px] font-medium leading-none"
+                  style={{ backgroundColor: headerFill, color: regionInk }}
+                >
+                  {clip.label || clip.sampleName}
+                </div>
+                <div className="relative min-h-0 flex-1 pt-1 pb-1 pr-1">
+                  {clip.waveformPeaks ? (
+                    <WaveformCanvas
+                      peaks={clip.waveformPeaks}
+                      multiRes={clip.waveformMultiRes}
+                      lengthBars={effectiveLengthBars}
+                      nativeSpanBars={nativeSpanBars}
+                      loop={isLoopedClip}
+                      stretchToFit
+                    />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center text-[11px] text-white/50">
+                      Sample belum ke-decode
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Garis putus-putus penanda panjang ASLI sample (sebelum di-stretch) —
+                  cuma ditampilin kalau bedanya beneran keliatan, biar user tau
+                  seberapa jauh dia narik knob dari ukuran natural sample-nya. */}
+              {hasNative && Math.abs(nativeSpanBars! - effectiveLengthBars) > 0.01 && nativeSpanBars! < viewBars && (
+                <div
+                  className="pointer-events-none absolute top-3 bottom-3 border-l-2 border-dashed border-white/40"
+                  style={{ left: nativeSpanBars! * BAR_WIDTH }}
+                >
+                  <span className="absolute -top-4 left-1 whitespace-nowrap text-[10px] text-white/40">asli</span>
+                </div>
+              )}
+
+              {/* Knob Stretch — satu-satunya kontrol di sini, niru knob kanan-bawah
+                  di FL Studio Mobile: geser kanan/kiri buat manjangin/mendekin
+                  clip, berpatok ke grid (snap sama persis kayak timeline). */}
+              <div
+                data-clip-interactive="true"
+                className="absolute z-30 flex h-9 w-9 -translate-y-1/2 cursor-ew-resize touch-none items-center justify-center rounded-full border-2 border-black/20 shadow-md"
+                style={{ left: regionWidth, top: LANE_HEIGHT / 2, backgroundColor: 'rgba(255,255,255,0.95)' }}
+                onPointerDown={handleKnobPointerDown}
+                onPointerMove={handleKnobPointerMove}
+                onPointerUp={endKnobDrag}
+                onPointerCancel={endKnobDrag}
+              >
+                <span className="text-[10px] font-semibold text-black/70">↔</span>
+              </div>
             </div>
           </div>
         </div>
