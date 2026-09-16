@@ -42,7 +42,21 @@ function NotePreview({ notes, totalBeats }: { notes: Note[]; totalBeats: number 
   const safeTotalBeats = Math.max(totalBeats, 1)
 
   return (
-    <div className="relative h-full w-full opacity-90">
+    // absolute + inset-0 (bukan relative + w-full/h-full) sengaja: elemen
+    // absolute mengacu ke PADDING BOX ancestor `position: relative` terdekat
+    // (parent-nya, lihat ClipBlock — div `px-2` di sekitar sini), yang
+    // artinya kotak ini bentang PENUH termasuk area padding kiri/kanan-nya,
+    // BUKAN cuma content-box yang udah kepotong px-2. Kalau dulu (relative +
+    // w-full biasa, elemen normal-flow) kotak referensi 0%-100% jadi lebih
+    // sempit 16px (8px tiap sisi) drpd lebar clip yang beneran sejajar grid,
+    // jadi tiap note ketarik sesuai posisi sepanjang totalBeats: yang dekat
+    // awal clip ketarik ke kanan (jadi kayak "telat" dibanding grid), yang
+    // dekat akhir clip ketarik ke kiri ("keduluan") — makin lebar
+    // padding relatif terhadap clip (clip pendek/sempit), makin kentara.
+    // Absolute+inset-0 di sini bikin 0%-100% pas persis sama lebar clip asli
+    // (effectiveLengthBars * barWidth), jadi hasilnya sama-sama akurat kayak
+    // urutan/posisi note di dalam Piano Roll.
+    <div className="absolute inset-0 opacity-90">
       {notes.map((n) => {
         const left = Math.min(98, Math.max(0, (n.startBeat / safeTotalBeats) * 100))
         const width = Math.max((n.lengthBeats / safeTotalBeats) * 100, 0.8)
@@ -503,7 +517,7 @@ export function ClipBlock({
           </div>
         )
       )}
-      <div className={`min-h-0 flex-1 pt-1 pb-1 ${clip.waveformPeaks ? 'pl-0 pr-2' : 'px-2'}`}>
+      <div className={`relative min-h-0 flex-1 pt-1 pb-1 ${clip.waveformPeaks ? 'pl-0 pr-2' : 'px-2'}`}>
         {clip.waveformPeaks ? (
           // Sample-nya ketemu di dalam zip project & sudah didekode — gambar
           // waveform beneran, bukan pola dekoratif. lengthBars &
