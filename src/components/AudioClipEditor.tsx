@@ -2,7 +2,7 @@ import { useRef, useState, useEffect } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { BEATS_PER_BAR, type Clip, type Track } from '../tracks'
 import { buildArrangementGrid, cellsPerBar, pickActiveLayer } from '../grid'
-import { AUDIO_REGION_BASE_HEX, AUDIO_REGION_COLOR, hexToRgba, lighten, type FlatColor } from '../colors'
+import { AUDIO_REGION_COLOR, type FlatColor } from '../colors'
 import { WaveformCanvas } from './WaveformCanvas'
 import { TrackIcon } from './TrackIcon'
 
@@ -90,13 +90,9 @@ export function AudioClipEditor({
   const regionWidth = effectiveLengthBars * BAR_WIDTH
 
   const grid = buildArrangementGrid(BAR_WIDTH)
-  // Sama konvensi warna kayak ClipBlock: badan clip semi-transparan (0.88
-  // alpha), strip judul solid & lebih terang. Base hex-nya dari warna
-  // track kalau ada, jatuh balik ke ungu indigo AUDIO_REGION_BASE_HEX.
-  const baseHex = color ? color.fill : AUDIO_REGION_BASE_HEX
+  // Cuma dipakai buat warna waveform-nya sendiri (currentColor di
+  // WaveformCanvas) — gak ada lagi card/strip judul berwarna di belakangnya.
   const regionInk = color ? color.ink : AUDIO_REGION_COLOR.ink
-  const regionFill = hexToRgba(baseHex, 0.88)
-  const headerFill = lighten(baseHex, 0.28)
 
   const stretchPct = hasNative ? Math.round((effectiveLengthBars / nativeSpanBars!) * 100) : 100
 
@@ -203,36 +199,33 @@ export function AudioClipEditor({
                 backgroundRepeat: grid.backgroundRepeat,
               }}
             >
-              {/* Region clip: badan + header, isinya waveform beneran (WaveformCanvas
-                  sama persis komponen yang dipakai di timeline) — stretchToFit
-                  selalu true di sini, karena lajur ini KHUSUS buat nge-preview
-                  gimana hasilnya kalau di-stretch pas ngisi grid. */}
+              {/* Region clip: cuma waveform-nya doang (WaveformCanvas sama persis
+                  komponen yang dipakai di timeline) — stretchToFit selalu true
+                  di sini, karena lajur ini KHUSUS buat nge-preview gimana
+                  hasilnya kalau di-stretch pas ngisi grid. Sengaja TANPA
+                  kartu/background ungu & strip judul lagi (sebelumnya ada) —
+                  user minta cuma waveform-nya aja yang keliatan, gak dibungkus
+                  card apa pun. Warna waveform-nya (currentColor di
+                  WaveformCanvas) tetep dipatok ke regionInk biar konsisten
+                  sama warna track. */}
               <div
-                className="absolute inset-y-3 left-0 flex flex-col overflow-hidden rounded-[4px]"
-                style={{ width: Math.max(2, regionWidth), backgroundColor: regionFill, color: regionInk }}
+                className="absolute inset-y-3 left-0 overflow-hidden"
+                style={{ width: Math.max(2, regionWidth), color: regionInk }}
               >
-                <div
-                  className="shrink-0 truncate px-2 py-0.5 text-[11px] font-medium leading-none"
-                  style={{ backgroundColor: headerFill, color: regionInk }}
-                >
-                  {clip.label || clip.sampleName}
-                </div>
-                <div className="relative min-h-0 flex-1 pt-1 pb-1 pr-1">
-                  {clip.waveformPeaks ? (
-                    <WaveformCanvas
-                      peaks={clip.waveformPeaks}
-                      multiRes={clip.waveformMultiRes}
-                      lengthBars={effectiveLengthBars}
-                      nativeSpanBars={nativeSpanBars}
-                      loop={isLoopedClip}
-                      stretchToFit
-                    />
-                  ) : (
-                    <div className="flex h-full w-full items-center justify-center text-[11px] text-white/50">
-                      Sample belum ke-decode
-                    </div>
-                  )}
-                </div>
+                {clip.waveformPeaks ? (
+                  <WaveformCanvas
+                    peaks={clip.waveformPeaks}
+                    multiRes={clip.waveformMultiRes}
+                    lengthBars={effectiveLengthBars}
+                    nativeSpanBars={nativeSpanBars}
+                    loop={isLoopedClip}
+                    stretchToFit
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center text-[11px] text-white/50">
+                    Sample belum ke-decode
+                  </div>
+                )}
               </div>
 
               {/* Garis putus-putus penanda panjang ASLI sample (sebelum di-stretch) —
