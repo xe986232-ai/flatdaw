@@ -30,6 +30,9 @@ export function TrackRow({
   onRenameCommit,
   onBackgroundClick,
   onTrackClick,
+  onClipResizeLeft,
+  onClipResizeRight,
+  onClipStretch,
 }: {
   track: Track
   barWidth: number
@@ -49,6 +52,9 @@ export function TrackRow({
   onRenameCommit?: (clipId: string, label: string) => void
   onBackgroundClick?: (bar: number) => void
   onTrackClick?: () => void
+  onClipResizeLeft?: (clipId: string, newStartBar: number, newLengthBars: number) => void
+  onClipResizeRight?: (clipId: string, newLengthBars: number) => void
+  onClipStretch?: (clipId: string, newLengthBars: number) => void
 }) {
   const gridStyle = useMemo(() => buildArrangementGrid(barWidth), [barWidth])
   // Lebar total row (label + seluruh timeline) — dikasih EKSPLISIT di sini,
@@ -105,6 +111,9 @@ export function TrackRow({
             onClipClick={onClipClick}
             onMenuAction={onMenuAction}
             onRenameCommit={onRenameCommit}
+            onResizeLeft={onClipResizeLeft}
+            onResizeRight={onClipResizeRight}
+            onStretch={onClipStretch}
           />
         ))}
       </div>

@@ -239,6 +239,64 @@ export default function App() {
     )
   }
 
+  // Knob kiri: geser tepi kiri clip audio — startBar & lengthBars berubah
+  // bareng, tepi kanan tetep diem.
+  const handleClipResizeLeft = (trackId: string, clipId: string, newStartBar: number, newLengthBars: number) => {
+    setTrackList((prev) =>
+      prev.map((t) =>
+        t.id !== trackId
+          ? t
+          : {
+              ...t,
+              clips: t.clips.map((c) => (c.id === clipId ? { ...c, startBar: newStartBar, lengthBars: newLengthBars } : c)),
+            },
+      ),
+    )
+  }
+
+  // Knob kanan: geser tepi kanan clip audio — cuma manjangin/mendekin
+  // PENEMPATANNYA di playlist (startBar tetep). Kalau sample-nya lebih
+  // pendek dari penempatan baru, WaveformCanvas otomatis nge-tile ulang
+  // (loop) berdasar waveformNativeSpanBars yang udah ada — persis kayak
+  // drag "extend" sample drum loop di FL Studio Mobile asli.
+  const handleClipResizeRight = (trackId: string, clipId: string, newLengthBars: number) => {
+    setTrackList((prev) =>
+      prev.map((t) =>
+        t.id !== trackId ? t : { ...t, clips: t.clips.map((c) => (c.id === clipId ? { ...c, lengthBars: newLengthBars } : c)) },
+      ),
+    )
+  }
+
+  // Knob kanan-bawah: TIME-STRETCH beneran, beda dari resize kanan biasa.
+  // stretchRatio di-update proporsional (biar konsisten kalau nanti
+  // resolveWaveforms ke-jalanin ulang), dan waveformNativeSpanBars langsung
+  // disamain ke lengthBars baru — ini yang bikin WaveformCanvas berhenti
+  // nge-tile/nge-loop dan malah nge-resample seluruh gelombang biar mulus
+  // ngisi penuh durasi baru (hasView "di-mulur/dipadetin", bukan diulang
+  // atau dipotong). loopPoints lama juga dibuang karena udah gak relevan.
+  const handleClipStretch = (trackId: string, clipId: string, newLengthBars: number) => {
+    setTrackList((prev) =>
+      prev.map((t) =>
+        t.id !== trackId
+          ? t
+          : {
+              ...t,
+              clips: t.clips.map((c) => {
+                if (c.id !== clipId || c.lengthBars <= 0) return c
+                const ratioChange = newLengthBars / c.lengthBars
+                return {
+                  ...c,
+                  lengthBars: newLengthBars,
+                  stretchRatio: (c.stretchRatio ?? 1) * ratioChange,
+                  waveformNativeSpanBars: newLengthBars,
+                  loopPoints: undefined,
+                }
+              }),
+            },
+      ),
+    )
+  }
+
   const handleClipClick = (trackId: string, clipId: string) => {
     setEditingClip(null)
     setOpenMenu((prev) => (prev?.clipId === clipId ? null : { trackId, clipId }))
@@ -804,6 +862,11 @@ export default function App() {
                 onRenameCommit={(clipId, label) => handleRenameCommit(track.id, clipId, label)}
                 onBackgroundClick={(bar) => handleBackgroundClick(track.id, bar)}
                 onTrackClick={() => handleTrackClick(track.id)}
+                onClipResizeLeft={(clipId, newStartBar, newLengthBars) =>
+                  handleClipResizeLeft(track.id, clipId, newStartBar, newLengthBars)
+                }
+                onClipResizeRight={(clipId, newLengthBars) => handleClipResizeRight(track.id, clipId, newLengthBars)}
+                onClipStretch={(clipId, newLengthBars) => handleClipStretch(track.id, clipId, newLengthBars)}
               />
             ))}
 

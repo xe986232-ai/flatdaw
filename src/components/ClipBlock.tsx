@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { PointerEvent as ReactPointerEvent } from 'react'
+import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import { BEATS_PER_BAR, type Clip, type Note, type TrackKind } from '../tracks'
 import { AUDIO_REGION_BASE_HEX, AUDIO_REGION_COLOR, hexToRgba, lighten, type FlatColor } from '../colors'
 import { ClipMenu, type ClipMenuAction } from './ClipMenu'
@@ -150,6 +150,45 @@ function Pattern({ pattern, seed = 0 }: { pattern: Clip['pattern']; seed?: numbe
 
 const SNAP_BARS = 0.25 // snap to the beat subdivisions already drawn on the grid
 const CLICK_THRESHOLD_PX = 4 // pointer movement below this counts as a tap, not a drag
+const MIN_CLIP_LENGTH_BARS = 0.25 // clip can't be resized/stretched shorter than this
+
+function snapLength(bars: number) {
+  return Math.max(MIN_CLIP_LENGTH_BARS, Math.round(bars / SNAP_BARS) * SNAP_BARS)
+}
+
+type ResizeKind = 'left' | 'right' | 'stretch'
+
+// Knob bundar putih dipakai buat 3 handle resize/stretch di tepi clip audio
+// (lihat gambar referensi: kiri = panjangin ke kiri, kanan = panjangin ke
+// kanan, kanan-bawah = time-stretch). Bukan cuma dekorasi — tiap knob punya
+// pointer handler sendiri yang beneran ngubah startBar/lengthBars/
+// stretchRatio clip-nya (lihat handlePointerDown di bawah).
+function ResizeKnob({
+  className = '',
+  style,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+}: {
+  className?: string
+  style?: CSSProperties
+  onPointerDown: (e: ReactPointerEvent<HTMLDivElement>) => void
+  onPointerMove: (e: ReactPointerEvent<HTMLDivElement>) => void
+  onPointerUp: (e: ReactPointerEvent<HTMLDivElement>) => void
+}) {
+  return (
+    <div
+      data-clip-interactive="true"
+      className={`absolute z-40 h-7 w-7 shrink-0 cursor-ew-resize touch-none rounded-full border border-black/10 shadow-sm ${className}`}
+      style={{ backgroundColor: 'rgba(255,255,255,0.95)', ...style }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerUp}
+      onClick={(e) => e.stopPropagation()}
+    />
+  )
+}
 
 /** Format posisi (dalam bar, relatif ke timelineStart) jadi "bilah X ketukan Y". */
 function formatBarBeat(bar: number): string {
@@ -173,6 +212,9 @@ export function ClipBlock({
   onClipClick,
   onMenuAction,
   onRenameCommit,
+  onResizeLeft,
+  onResizeRight,
+  onStretch,
 }: {
   clip: Clip
   kind: TrackKind
@@ -188,9 +230,23 @@ export function ClipBlock({
   onClipClick?: (clipId: string) => void
   onMenuAction?: (clipId: string, action: ClipMenuAction) => void
   onRenameCommit?: (clipId: string, label: string) => void
+  // Knob kiri: geser tepi kiri clip (startBar berubah, tepi kanan diem).
+  onResizeLeft?: (clipId: string, newStartBar: number, newLengthBars: number) => void
+  // Knob kanan: geser tepi kanan clip (cuma lengthBars berubah).
+  onResizeRight?: (clipId: string, newLengthBars: number) => void
+  // Knob kanan-bawah: time-stretch beneran — bukan cuma manjangin
+  // penempatan, tapi juga ngubah stretchRatio clip-nya (lihat handleStretch
+  // di App.tsx) biar audio-nya "dimuluskan" ngisi penuh durasi baru.
+  onStretch?: (clipId: string, newLengthBars: number) => void
 }) {
   const [dragStartBar, setDragStartBar] = useState<number | null>(null)
   const dragInfo = useRef<{ originClientX: number; originStartBar: number; moved: boolean } | null>(null)
+
+  // Preview live selama knob resize/stretch lagi di-drag — dipisah dari
+  // dragStartBar (yang khusus buat drag-pindah posisi clip) biar dua gesture
+  // ini gak saling ganggu state satu sama lain.
+  const [resizePreview, setResizePreview] = useState<{ startBar: number; lengthBars: number } | null>(null)
+  const resizeInfo = useRef<{ kind: ResizeKind; originClientX: number; originStartBar: number; originLengthBars: number } | null>(null)
 
   const [labelDraft, setLabelDraft] = useState(clip.label)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -205,9 +261,10 @@ export function ClipBlock({
     return () => cancelAnimationFrame(id)
   }, [isEditing, clip.label])
 
-  const effectiveStartBar = dragStartBar ?? clip.startBar
+  const effectiveStartBar = dragStartBar ?? resizePreview?.startBar ?? clip.startBar
+  const effectiveLengthBars = resizePreview?.lengthBars ?? clip.lengthBars
   const left = (effectiveStartBar - timelineStart) * barWidth
-  const width = clip.lengthBars * barWidth
+  const width = effectiveLengthBars * barWidth
   const seed = clip.id.split('').reduce((acc, c) => acc + c.charCodeAt(0), 0)
 
   const minStart = timelineStart
@@ -257,6 +314,61 @@ export function ClipBlock({
     onRenameCommit?.(clip.id, trimmed || clip.label)
   }
 
+  // Handler bersama buat ketiga knob (left/right/stretch) — sengaja disatuin
+  // di sini (bukan 3 fungsi kepisah) karena matematikanya cuma beda di titik
+  // mana yang dianggap "tepi diem" (left knob: tepi kanan diem, right &
+  // stretch knob: tepi kiri/startBar diem).
+  function startResize(kind: ResizeKind) {
+    return (e: ReactPointerEvent<HTMLDivElement>) => {
+      e.stopPropagation()
+      e.currentTarget.setPointerCapture(e.pointerId)
+      resizeInfo.current = { kind, originClientX: e.clientX, originStartBar: clip.startBar, originLengthBars: clip.lengthBars }
+      setResizePreview({ startBar: clip.startBar, lengthBars: clip.lengthBars })
+    }
+  }
+
+  function handleResizeMove(e: ReactPointerEvent<HTMLDivElement>) {
+    const info = resizeInfo.current
+    if (!info) return
+    const deltaBars = (e.clientX - info.originClientX) / barWidth
+
+    if (info.kind === 'left') {
+      // Tepi kanan (originStartBar + originLengthBars) diem, tepi kiri yang
+      // gerak — geser knob ke kiri = clip manjang ke kiri, ke kanan = clip
+      // memendek dari kiri.
+      const rightEdge = info.originStartBar + info.originLengthBars
+      const rawStart = info.originStartBar + deltaBars
+      const clampedStart = Math.min(rightEdge - MIN_CLIP_LENGTH_BARS, Math.max(timelineStart, rawStart))
+      const snappedStart = Math.round(clampedStart / SNAP_BARS) * SNAP_BARS
+      const newStartBar = Math.min(rightEdge - MIN_CLIP_LENGTH_BARS, Math.max(timelineStart, snappedStart))
+      setResizePreview({ startBar: newStartBar, lengthBars: rightEdge - newStartBar })
+      return
+    }
+
+    // 'right' dan 'stretch' sama-sama cuma manjangin/mendekin dari tepi
+    // kanan — bedanya cuma di commit (lihat endResize / onStretch di
+    // App.tsx), bukan di gesture drag-nya.
+    const maxLength = timelineEnd - info.originStartBar
+    const rawLength = info.originLengthBars + deltaBars
+    const newLengthBars = snapLength(Math.min(maxLength, Math.max(MIN_CLIP_LENGTH_BARS, rawLength)))
+    setResizePreview({ startBar: info.originStartBar, lengthBars: newLengthBars })
+  }
+
+  function endResize(e: ReactPointerEvent<HTMLDivElement>) {
+    const info = resizeInfo.current
+    if (!info) return
+    e.currentTarget.releasePointerCapture(e.pointerId)
+    resizeInfo.current = null
+    setResizePreview((preview) => {
+      if (preview) {
+        if (info.kind === 'left') onResizeLeft?.(clip.id, preview.startBar, preview.lengthBars)
+        else if (info.kind === 'right') onResizeRight?.(clip.id, preview.lengthBars)
+        else onStretch?.(clip.id, preview.lengthBars)
+      }
+      return null
+    })
+  }
+
   const regionLabel = clip.label || 'Untitled'
   const ariaLabel = trackName ? `${regionLabel} region on track ${trackName}` : `${regionLabel} region`
 
@@ -296,7 +408,7 @@ export function ClipBlock({
       aria-valuemin={0}
       aria-valuemax={999}
       aria-valuenow={Math.round(effectiveStartBar - timelineStart)}
-      aria-valuetext={`Area dimulai pada ${formatBarBeat(effectiveStartBar - timelineStart)} dan berakhir pada ${formatBarBeat(effectiveStartBar - timelineStart + clip.lengthBars)}`}
+      aria-valuetext={`Area dimulai pada ${formatBarBeat(effectiveStartBar - timelineStart)} dan berakhir pada ${formatBarBeat(effectiveStartBar - timelineStart + effectiveLengthBars)}`}
       className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-visible rounded-[3px] ${
         effectiveColor ? '' : `${fillByKind[kind]} ${inkByKind[kind]}`
       } ${
@@ -324,7 +436,7 @@ export function ClipBlock({
               key={idx}
               className="absolute -translate-x-1/2"
               style={{
-                left: `${(bar / clip.lengthBars) * 100}%`,
+                left: `${(bar / effectiveLengthBars) * 100}%`,
                 top: 0,
                 width: 0,
                 height: 0,
@@ -391,18 +503,48 @@ export function ClipBlock({
           <WaveformCanvas
             peaks={clip.waveformPeaks}
             multiRes={clip.waveformMultiRes}
-            lengthBars={clip.lengthBars}
+            lengthBars={effectiveLengthBars}
             nativeSpanBars={clip.waveformNativeSpanBars}
             loop={!!clip.loopPoints && clip.loopPoints.length > 0}
           />
         ) : clip.notes && clip.notes.length > 0 ? (
-          <NotePreview notes={clip.notes} totalBeats={clip.lengthBars * BEATS_PER_BAR} />
+          <NotePreview notes={clip.notes} totalBeats={effectiveLengthBars * BEATS_PER_BAR} />
         ) : (
           <Pattern pattern={clip.pattern} seed={seed} />
         )}
       </div>
 
       {isMenuOpen && <ClipMenu flipDown={flipMenuDown} onAction={(action) => onMenuAction?.(clip.id, action)} />}
+
+      {isMenuOpen && isAudioClip && (
+        <>
+          {/* Knob kiri — geser buat manjangin/mendekin clip dari tepi kiri. */}
+          <ResizeKnob
+            style={{ left: 0, top: '50%', transform: 'translate(-50%, -50%)' }}
+            onPointerDown={startResize('left')}
+            onPointerMove={handleResizeMove}
+            onPointerUp={endResize}
+          />
+          {/* Knob kanan — geser buat manjangin/mendekin clip dari tepi kanan
+              (penempatan doang, sample-nya gak ikut di-stretch). */}
+          <ResizeKnob
+            style={{ left: '100%', top: '50%', transform: 'translate(-50%, -50%)' }}
+            onPointerDown={startResize('right')}
+            onPointerMove={handleResizeMove}
+            onPointerUp={endResize}
+          />
+          {/* Knob kanan-bawah — time-stretch beneran: nge-resample audio
+              biar pas ngisi penuh durasi baru (lihat onStretch di App.tsx),
+              bukan cuma manjangin penempatan kayak knob kanan. */}
+          <ResizeKnob
+            className="border-2 border-black/20"
+            style={{ left: '100%', top: 'calc(100% + 6px)', transform: 'translate(-50%, 0)' }}
+            onPointerDown={startResize('stretch')}
+            onPointerMove={handleResizeMove}
+            onPointerUp={endResize}
+          />
+        </>
+      )}
     </div>
   )
 }
