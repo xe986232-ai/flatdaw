@@ -228,10 +228,11 @@ export function AudioClipEditor({
                 )}
               </div>
 
-              {/* Garis putus-putus penanda panjang ASLI sample (sebelum di-stretch) —
-                  cuma ditampilin kalau bedanya beneran keliatan, biar user tau
-                  seberapa jauh dia narik knob dari ukuran natural sample-nya. */}
-              {hasNative && Math.abs(nativeSpanBars! - effectiveLengthBars) > 0.01 && nativeSpanBars! < viewBars && (
+              {/* Garis vertikal penanda akhir waveform ASLI (sebelum di-stretch) —
+                  SELALU tampil (bukan cuma pas bedanya kelihatan), jadi
+                  patokan/referensi visual yang nempel di grid buat lihat
+                  posisi akhir sample asli dibanding hasil stretch-nya. */}
+              {hasNative && nativeSpanBars! < viewBars && (
                 <div
                   className="pointer-events-none absolute top-3 bottom-3 border-l-2 border-dashed border-white/40"
                   style={{ left: nativeSpanBars! * BAR_WIDTH }}
