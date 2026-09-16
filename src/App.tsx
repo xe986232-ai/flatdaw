@@ -5,6 +5,7 @@ import { TrackRow } from './components/TrackRow'
 import { AutomationLane } from './components/AutomationLane'
 import { Playhead } from './components/Playhead'
 import { PianoRoll } from './components/PianoRoll'
+import { AudioClipEditor } from './components/AudioClipEditor'
 import type { ClipMenuAction } from './components/ClipMenu'
 import { tracks, TIMELINE_START, getTimelineEnd, BEATS_PER_BAR, type Clip, type Note } from './tracks'
 import { generateNotesForClip } from './notes'
@@ -90,6 +91,11 @@ export default function App() {
   // Which clip's piano roll is currently open — replaces the whole arrangement
   // view with an in-place note editor for that clip until closed.
   const [pianoRoll, setPianoRoll] = useState<{ trackId: string; clipId: string } | null>(null)
+  // Sama pola kayak pianoRoll di atas, tapi buat clip AUDIO (punya
+  // sampleName) — niru layar edit sample FL Studio Mobile (lihat
+  // AudioClipEditor.tsx), gantiin PianoRoll yang emang cuma masuk akal
+  // buat clip instrument/MIDI.
+  const [audioEditor, setAudioEditor] = useState<{ trackId: string; clipId: string } | null>(null)
 
   // Zoom: horizontal stretches bar width (clips get wider), vertical widens track row height.
   const [hZoom, setHZoom] = useState(1)
@@ -116,6 +122,9 @@ export default function App() {
 
   const pianoRollTrack = pianoRoll ? trackList.find((t) => t.id === pianoRoll.trackId) : undefined
   const pianoRollClip = pianoRollTrack?.clips.find((c) => c.id === pianoRoll?.clipId)
+
+  const audioEditorTrack = audioEditor ? trackList.find((t) => t.id === audioEditor.trackId) : undefined
+  const audioEditorClip = audioEditorTrack?.clips.find((c) => c.id === audioEditor?.clipId)
 
   // Close the floating menu on any pointer interaction outside a clip/menu.
   useEffect(() => {
@@ -322,6 +331,13 @@ export default function App() {
     if (!clip) return
 
     if (action === 'edit') {
+      // Clip audio (punya sampleName) masuk ke AudioClipEditor (layar
+      // edit sample ala FL Studio Mobile), bukan PianoRoll — notasi
+      // piano roll gak relevan buat sample audio.
+      if (clip.sampleName) {
+        setAudioEditor({ trackId, clipId })
+        return
+      }
       // Make sure the clip has note data before entering the piano roll —
       // clips authored without notes get a generated melody on first visit.
       const notes = clip.notes ?? generateNotesForClip(clip)
@@ -702,6 +718,7 @@ export default function App() {
       setOpenMenu(null)
       setEditingClip(null)
       setPianoRoll(null)
+      setAudioEditor(null)
       setClipboard(null)
       setIsPlaying(false)
       setProjectBpm(bpm)
@@ -922,6 +939,18 @@ export default function App() {
             onClose={() => setPianoRoll(null)}
             onNotesChange={(notes) => handleNotesChange(pianoRollTrack.id, pianoRollClip.id, notes)}
             onImportMidi={(notes, lengthBars) => handleImportMidi(pianoRollTrack.id, pianoRollClip.id, notes, lengthBars)}
+          />
+        )}
+
+        {audioEditor && audioEditorTrack && audioEditorClip && (
+          <AudioClipEditor
+            clip={audioEditorClip}
+            trackName={audioEditorTrack.name}
+            color={trackColors[audioEditorTrack.id]}
+            bpm={projectBpm}
+            snapEnabled={snapEnabled}
+            onClose={() => setAudioEditor(null)}
+            onStretch={(newLengthBars) => handleClipStretch(audioEditorTrack.id, audioEditorClip.id, newLengthBars)}
           />
         )}
       </div>
