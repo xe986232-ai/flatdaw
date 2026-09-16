@@ -140,13 +140,15 @@ export function WaveformCanvas({
       const drawWidthCss = hasNativeSpan ? Math.max(1, (nativeSpanBars! / lengthBars!) * cssW) : cssW
       const shouldTile = hasNativeSpan && !!loop
       // Kasus one-shot (gak loop) yang nyisa blank di kanan (hasNativeSpan
-      // true) DAN user eksplisit nyalain stretchToFit lewat menu clip: satu
-      // putaran sample digambar di-scale horizontal sampe cssW (mentok tepi
-      // kanan), bukan cuma sepanjang drawWidthCss. shouldTile (clip loop)
+      // true): default-nya SEKARANG selalu di-stretch (di-scale horizontal
+      // sampe cssW, mentok tepi kanan), gak nunggu di-toggle manual lagi —
+      // biar gak ada spasi kosong di kanan waveform-nya. stretchToFit cuma
+      // dicek eksplisit `=== false` (dari toggle "Fit Waveform" di menu
+      // clip) buat balikin ke tampilan lama (satu putaran sample doang,
+      // sisanya kosong) kalau user emang mau gitu. shouldTile (clip loop)
       // gak disentuh sama sekali — tileWidthCss-nya tetep drawWidthCss kayak
-      // sebelumnya — jadi cuma clip one-shot yang di-toggle ini doang yang
-      // berubah tampilannya.
-      const shouldStretchOneShot = hasNativeSpan && !shouldTile && !!stretchToFit
+      // sebelumnya.
+      const shouldStretchOneShot = hasNativeSpan && !shouldTile && stretchToFit !== false
       const tileWidthCss = shouldStretchOneShot ? cssW : drawWidthCss
       // Jumlah tile yang perlu digambar buat nutupin lebar clip penuh.
       // Math.ceil biar tile terakhir yang kepotong di tepi kanan clip tetep

@@ -552,7 +552,7 @@ export function ClipBlock({
             lengthBars={effectiveLengthBars}
             nativeSpanBars={clip.waveformNativeSpanBars}
             loop={isLoopedClip}
-            stretchToFit={!!clip.waveformStretchToFit}
+            stretchToFit={clip.waveformStretchToFit !== false}
           />
         ) : clip.notes && clip.notes.length > 0 ? (
           <NotePreview notes={clip.notes} totalBeats={effectiveLengthBars * BEATS_PER_BAR} />

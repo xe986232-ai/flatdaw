@@ -363,7 +363,12 @@ export default function App() {
     if (action === 'stretchFit') {
       // Toggle MURNI visual (lihat clip.waveformStretchToFit di tracks.ts &
       // WaveformCanvas.tsx) — cuma ngubah field ini di clip yang di-tap,
-      // clip lain di track manapun sama sekali gak disentuh.
+      // clip lain di track manapun sama sekali gak disentuh. Default
+      // sekarang udah "full/stretch" (lihat WaveformCanvas: cek `=== false`),
+      // jadi tombol ini di-toggle berdasar nilai efektifnya: kalau clip lagi
+      // full (waveformStretchToFit belum ke-set / true), tap ini eksplisit
+      // matiin jadi false (balik ke tampilan lama, ada celah kosong);
+      // ditap lagi -> balik ke true (full lagi).
       setTrackList((prev) =>
         prev.map((t) =>
           t.id !== trackId
@@ -371,7 +376,9 @@ export default function App() {
             : {
                 ...t,
                 clips: t.clips.map((c) =>
-                  c.id !== clipId ? c : { ...c, waveformStretchToFit: !c.waveformStretchToFit },
+                  c.id !== clipId
+                    ? c
+                    : { ...c, waveformStretchToFit: c.waveformStretchToFit === false ? true : false },
                 ),
               },
         ),
