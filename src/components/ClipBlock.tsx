@@ -414,6 +414,16 @@ export function ClipBlock({
   // (AUDIO_REGION_COLOR) cuma jadi fallback kalau track-nya belum pernah
   // di-random-in warnanya sama sekali (color masih undefined).
   const isAudioClip = !!clip.sampleName
+  // Sama persis logika `hasNativeSpan` di WaveformCanvas — dipakai di sini
+  // cuma buat nentuin apa item menu "Fit Waveform" perlu ditampilin (clip
+  // one-shot yang beneran nyisa celah blank), bukan buat gambar apa pun.
+  const isLoopedClip = !!clip.loopPoints && clip.loopPoints.length > 0
+  const hasWaveformGap =
+    isAudioClip &&
+    !isLoopedClip &&
+    !!clip.waveformNativeSpanBars &&
+    clip.waveformNativeSpanBars > 0.001 &&
+    effectiveLengthBars > clip.waveformNativeSpanBars + 0.001
   // Opacity clip audio sekarang disamain sama clip instrument (0.88) —
   // sebelumnya audio dipaksa lebih transparan (0.55), sekarang ngikutin
   // opacity track instrument biar konsisten.
@@ -541,7 +551,8 @@ export function ClipBlock({
             multiRes={clip.waveformMultiRes}
             lengthBars={effectiveLengthBars}
             nativeSpanBars={clip.waveformNativeSpanBars}
-            loop={!!clip.loopPoints && clip.loopPoints.length > 0}
+            loop={isLoopedClip}
+            stretchToFit={!!clip.waveformStretchToFit}
           />
         ) : clip.notes && clip.notes.length > 0 ? (
           <NotePreview notes={clip.notes} totalBeats={effectiveLengthBars * BEATS_PER_BAR} />
@@ -550,7 +561,13 @@ export function ClipBlock({
         )}
       </div>
 
-      {isMenuOpen && <ClipMenu flipDown={flipMenuDown} onAction={(action) => onMenuAction?.(clip.id, action)} />}
+      {isMenuOpen && (
+        <ClipMenu
+          flipDown={flipMenuDown}
+          onAction={(action) => onMenuAction?.(clip.id, action)}
+          showStretchFit={hasWaveformGap}
+        />
+      )}
 
       {isMenuOpen && isAudioClip && (
         <>

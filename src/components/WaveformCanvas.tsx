@@ -40,12 +40,18 @@ export function WaveformCanvas({
   lengthBars,
   nativeSpanBars,
   loop,
+  stretchToFit,
 }: {
   peaks: WaveformPeaksData
   multiRes?: MultiResPeaks
   lengthBars?: number
   nativeSpanBars?: number
   loop?: boolean
+  // Toggle per-clip (clip.waveformStretchToFit, lihat tracks.ts) — MURNI
+  // ubah lebar gambar di canvas, gak nyentuh tileCount/shouldTile buat clip
+  // yang loop=true, jadi clip lain (termasuk clip loop lain) gak kepengaruh
+  // sama sekali walau prop ini true di sini.
+  stretchToFit?: boolean
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -132,8 +138,16 @@ export function WaveformCanvas({
       const hasNativeSpan =
         !!nativeSpanBars && !!lengthBars && nativeSpanBars > 0.001 && lengthBars > nativeSpanBars + 0.001
       const drawWidthCss = hasNativeSpan ? Math.max(1, (nativeSpanBars! / lengthBars!) * cssW) : cssW
-      const tileWidthCss = drawWidthCss
       const shouldTile = hasNativeSpan && !!loop
+      // Kasus one-shot (gak loop) yang nyisa blank di kanan (hasNativeSpan
+      // true) DAN user eksplisit nyalain stretchToFit lewat menu clip: satu
+      // putaran sample digambar di-scale horizontal sampe cssW (mentok tepi
+      // kanan), bukan cuma sepanjang drawWidthCss. shouldTile (clip loop)
+      // gak disentuh sama sekali — tileWidthCss-nya tetep drawWidthCss kayak
+      // sebelumnya — jadi cuma clip one-shot yang di-toggle ini doang yang
+      // berubah tampilannya.
+      const shouldStretchOneShot = hasNativeSpan && !shouldTile && !!stretchToFit
+      const tileWidthCss = shouldStretchOneShot ? cssW : drawWidthCss
       // Jumlah tile yang perlu digambar buat nutupin lebar clip penuh.
       // Math.ceil biar tile terakhir yang kepotong di tepi kanan clip tetep
       // ke-render (bukan cuma sampe tile utuh terakhir).
@@ -186,7 +200,7 @@ export function WaveformCanvas({
     const ro = new ResizeObserver(draw)
     if (canvas.parentElement) ro.observe(canvas.parentElement)
     return () => ro.disconnect()
-  }, [peaks, multiRes, lengthBars, nativeSpanBars])
+  }, [peaks, multiRes, lengthBars, nativeSpanBars, loop, stretchToFit])
 
   return <canvas ref={canvasRef} className="block h-full w-full" style={{ color: 'currentColor' }} />
 }

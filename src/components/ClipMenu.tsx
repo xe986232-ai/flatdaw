@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-export type ClipMenuAction = 'copy' | 'delete' | 'snap' | 'edit' | 'cut' | 'duplicate' | 'rename'
+export type ClipMenuAction = 'copy' | 'delete' | 'snap' | 'edit' | 'cut' | 'duplicate' | 'rename' | 'stretchFit'
 
 const PRIMARY: { action: ClipMenuAction | 'more'; label: string }[] = [
   { action: 'copy', label: 'Copy' },
@@ -15,6 +15,16 @@ const SECONDARY: { action: ClipMenuAction; label: string }[] = [
   { action: 'duplicate', label: 'Duplicate' },
   { action: 'rename', label: 'Rename' },
 ]
+
+// Item tambahan yang cuma nongol buat clip audio (isAudioClip, lihat
+// ClipBlock) yang punya "celah" di kanan (nativeSpanBars < lengthBars,
+// one-shot) — toggle MURNI visual buat nge-scale gambar waveform-nya sampe
+// mentok tepi kanan clip, gak ngubah clip lain sama sekali (lihat
+// WaveformCanvas.tsx & clip.waveformStretchToFit di tracks.ts).
+const STRETCH_FIT_ITEM: { action: ClipMenuAction; label: string } = {
+  action: 'stretchFit',
+  label: 'Fit Waveform',
+}
 
 function Bubble({ label, onClick }: { label: string; onClick: () => void }) {
   return (
@@ -32,9 +42,16 @@ function Bubble({ label, onClick }: { label: string; onClick: () => void }) {
 export function ClipMenu({
   flipDown = false,
   onAction,
+  showStretchFit = false,
 }: {
   flipDown?: boolean
   onAction: (action: ClipMenuAction) => void
+  // true kalau clip pemilik menu ini adalah audio clip yang lagi nyisa
+  // celah blank (lihat ClipBlock: isAudioClip && punya nativeSpanBars <
+  // lengthBars) — nampilin item "Fit Waveform" di tab "More...". Default
+  // false biar clip non-audio (instrument/pattern) gak keliatan item yang
+  // gak relevan buat mereka.
+  showStretchFit?: boolean
 }) {
   // Small mount-in transition so the menu pops in rather than snapping into place.
   const [shown, setShown] = useState(false)
@@ -45,7 +62,8 @@ export function ClipMenu({
     return () => cancelAnimationFrame(id)
   }, [])
 
-  const items = expanded ? SECONDARY : PRIMARY
+  const secondaryItems = showStretchFit ? [...SECONDARY, STRETCH_FIT_ITEM] : SECONDARY
+  const items = expanded ? secondaryItems : PRIMARY
 
   return (
     <div

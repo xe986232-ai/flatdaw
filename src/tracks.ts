@@ -56,6 +56,15 @@ export interface Clip {
   // di App.tsx buat ngoreksi audioBuffer.duration sebelum dibandingin ke
   // lengthBars, biar klip yang di-stretch gak salah kedeteksi sebagai loop.
   stretchRatio?: number
+  // Toggle MURNI VISUAL lewat menu clip ("Fit Waveform") — kalau true DAN
+  // clip ini one-shot (loopPoints kosong) DAN nativeSpanBars < lengthBars
+  // (sample aslinya lebih pendek dari penempatan, biasanya nyisa blank di
+  // kanan), gambar satu putaran sample itu di-scale horizontal sampe nutup
+  // penuh lebar clip. Default undefined/false = perilaku lama (nyisa blank),
+  // dan clip lain sama sekali gak kepengaruh karena field ini per-clip serta
+  // gak dipakai buat apa pun selain WaveformCanvas (gak ngubah loopPoints,
+  // stretchRatio asli, atau durasi playback beneran).
+  waveformStretchToFit?: boolean
 }
 
 export interface Track {

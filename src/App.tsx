@@ -360,6 +360,24 @@ export default function App() {
       )
       return
     }
+    if (action === 'stretchFit') {
+      // Toggle MURNI visual (lihat clip.waveformStretchToFit di tracks.ts &
+      // WaveformCanvas.tsx) — cuma ngubah field ini di clip yang di-tap,
+      // clip lain di track manapun sama sekali gak disentuh.
+      setTrackList((prev) =>
+        prev.map((t) =>
+          t.id !== trackId
+            ? t
+            : {
+                ...t,
+                clips: t.clips.map((c) =>
+                  c.id !== clipId ? c : { ...c, waveformStretchToFit: !c.waveformStretchToFit },
+                ),
+              },
+        ),
+      )
+      return
+    }
     if (action === 'duplicate') {
       const maxStart = timelineEnd - clip.lengthBars
       const startBar = Math.min(maxStart, clip.startBar + clip.lengthBars)
