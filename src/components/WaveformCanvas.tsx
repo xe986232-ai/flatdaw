@@ -123,20 +123,26 @@ export function WaveformCanvas({
       ctx.clearRect(0, 0, cssW, cssH)
 
       // Lebar SATU PUTARAN sample (dalam px) = proporsi durasi asli sample
-      // terhadap penempatan clip di playlist. Kalau nativeSpanBars gak
-      // dikasih atau lebih panjang/sama dengan lengthBars, sample digambar
-      // penuh selebar cssW (perilaku lama, gak ada yang perlu dipotong/
-      // di-tile). Kalau clip ini loop (`loop` true), tileWidthCss diulang
-      // nempel-nempelan sampe ngisi cssW; kalau bukan (one-shot asli), cuma
-      // satu tile yang digambar terus sisanya dibiarin kosong/senyap.
+      // terhadap penempatan clip di playlist — tapi ITU CUMA DIPAKAI kalau
+      // clip-nya beneran di-loop (`loop` true). Kalau bukan loop (one-shot)
+      // dan penempatannya lebih panjang dari durasi asli sample, JANGAN
+      // digambar sepanjang durasi asli terus sisanya dibiarin kosong —
+      // sampleWaveformColumns() otomatis men-stretch data sample ke lebar
+      // piksel berapa pun yang dikasih (lihat unitsEachPixel di
+      // waveformPeaksMultiRes.ts), jadi di sini kita kasih dia lebar PENUH
+      // clip (cssW) biar waveform-nya kestretch ngisi abis ke tepi kanan,
+      // gak nyisain spasi kosong — tanpa motong/nge-trim datanya sama
+      // sekali, cuma direntangkan visualnya kayak time-stretch beneran.
       const hasNativeSpan =
         !!nativeSpanBars && !!lengthBars && nativeSpanBars > 0.001 && lengthBars > nativeSpanBars + 0.001
-      const drawWidthCss = hasNativeSpan ? Math.max(1, (nativeSpanBars! / lengthBars!) * cssW) : cssW
-      const tileWidthCss = drawWidthCss
       const shouldTile = hasNativeSpan && !!loop
+      const drawWidthCss = shouldTile ? Math.max(1, (nativeSpanBars! / lengthBars!) * cssW) : cssW
+      const tileWidthCss = drawWidthCss
       // Jumlah tile yang perlu digambar buat nutupin lebar clip penuh.
       // Math.ceil biar tile terakhir yang kepotong di tepi kanan clip tetep
-      // ke-render (bukan cuma sampe tile utuh terakhir).
+      // ke-render (bukan cuma sampe tile utuh terakhir). Cuma relevan kalau
+      // shouldTile true — one-shot (termasuk yang lebih panjang dari sample
+      // aslinya) selalu 1 tile yang udah di-stretch selebar cssW di atas.
       const tileCount = shouldTile ? Math.max(1, Math.ceil(cssW / tileWidthCss)) : 1
 
       const isStereo = !!multiRes && multiRes.stages.length > 0 && multiRes.numChannels >= 2
