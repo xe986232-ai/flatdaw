@@ -112,6 +112,17 @@ export default function App() {
     vZoomRef.current = vZoom
   }, [hZoom, vZoom])
 
+  // Wraps the header + all track/automation rows. During an active pinch or
+  // Ctrl+wheel zoom gesture we DON'T touch React state every frame anymore —
+  // that used to force a full re-render of every TrackRow/ClipBlock plus a
+  // full canvas redraw of every waveform AND the beat ruler on every single
+  // animation frame, which is what made continuous zooming feel heavy.
+  // Instead we scale this wrapper live with a CSS `transform` (a compositor-
+  // only operation, no layout/paint of the underlying DOM at all) and only
+  // commit the real hZoom/vZoom state — which triggers the one "real" re-
+  // render + canvas redraw at full fidelity — once the gesture goes idle.
+  const zoomPreviewRef = useRef<HTMLDivElement>(null)
+
   const playheadX = (playheadBar - TIMELINE_START) * barWidth
 
   const pianoRollTrack = pianoRoll ? trackList.find((t) => t.id === pianoRoll.trackId) : undefined
@@ -736,13 +747,58 @@ export default function App() {
     let pendingHZoom: number | null = null
     let pendingVZoom: number | null = null
 
-    const flush = () => {
-      rafId = null
+    // Debounced "real" commit: fires ~110ms after the last pinch/wheel tick
+    // (i.e. once the gesture actually goes idle — finger lifted, trackpad
+    // scroll settled), and is also forced immediately on touchend. This is
+    // the ONLY moment React state changes, so it's the only moment every
+    // TrackRow/ClipBlock/canvas actually re-renders — once per gesture,
+    // not once per frame.
+    let commitTimer: ReturnType<typeof setTimeout> | null = null
+    const GESTURE_IDLE_MS = 110
+
+    const clearPreview = () => {
+      const wrapper = zoomPreviewRef.current
+      if (wrapper) wrapper.style.transform = ''
+    }
+
+    const commitNow = () => {
+      if (commitTimer !== null) {
+        clearTimeout(commitTimer)
+        commitTimer = null
+      }
       if (pendingHZoom !== null) setHZoom(pendingHZoom)
       if (pendingVZoom !== null) setVZoom(pendingVZoom)
       pendingHZoom = null
       pendingVZoom = null
+      // The upcoming React re-render lays out the real, final pixel sizes —
+      // drop the temporary preview transform in the same tick so there's no
+      // one-frame flash of "real layout + old transform" stacked together.
+      clearPreview()
     }
+
+    const scheduleCommit = () => {
+      if (commitTimer !== null) clearTimeout(commitTimer)
+      commitTimer = setTimeout(commitNow, GESTURE_IDLE_MS)
+    }
+
+    // Cheap per-frame step: only updates a CSS transform on one wrapper
+    // element (GPU compositor, no reflow/repaint of the hundreds of clip/
+    // canvas nodes underneath) and (re)arms the idle-commit timer. Batched
+    // to one write per animation frame so a burst of raw touch/wheel events
+    // doesn't spam even that.
+    const applyPreview = () => {
+      rafId = null
+      const wrapper = zoomPreviewRef.current
+      if (wrapper) {
+        const scaleX = pendingHZoom !== null ? pendingHZoom / hZoomRef.current : 1
+        const scaleY = pendingVZoom !== null ? pendingVZoom / vZoomRef.current : 1
+        wrapper.style.transformOrigin = '0 0'
+        wrapper.style.transform = `scale(${scaleX}, ${scaleY})`
+      }
+      scheduleCommit()
+    }
+
+    const flush = applyPreview
 
     const schedule = (nextH: number | null, nextV: number | null) => {
       if (nextH !== null) pendingHZoom = nextH
@@ -783,6 +839,13 @@ export default function App() {
       if (e.touches.length < 2) {
         pinchStartDX = null
         pinchStartDY = null
+        // Fingers actually lifted — commit right away instead of waiting out
+        // the idle timer, so the pinch feels like it "lands" instantly.
+        if (rafId !== null) {
+          cancelAnimationFrame(rafId)
+          rafId = null
+        }
+        if (pendingHZoom !== null || pendingVZoom !== null) commitNow()
       }
     }
 
@@ -808,6 +871,7 @@ export default function App() {
 
     return () => {
       if (rafId !== null) cancelAnimationFrame(rafId)
+      if (commitTimer !== null) clearTimeout(commitTimer)
       el.removeEventListener('touchstart', onTouchStart)
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
@@ -820,6 +884,7 @@ export default function App() {
       {/* Landscape canvas — fixed 2292x1080, holds the whole playlist/arrangement view */}
       <div ref={canvasBoxRef} className="relative flex aspect-[2292/1080] w-full max-w-[2292px] flex-col overflow-hidden rounded-lg border border-surface-grid bg-surface-base text-white">
         <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
+        <div ref={zoomPreviewRef} className="w-fit">
           <TimelineControlsHeader
             startBar={TIMELINE_START}
             endBar={timelineEnd}
@@ -884,6 +949,7 @@ export default function App() {
               <Playhead x={playheadX} onDrag={handleDrag} />
             </div>
           </div>
+        </div>
         </div>
 
         {pianoRoll && pianoRollTrack && pianoRollClip && (
