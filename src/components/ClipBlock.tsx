@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import { BEATS_PER_BAR, type Clip, type Note, type TrackKind } from '../tracks'
+import { cellsPerBar, pickActiveLayer } from '../grid'
 import { AUDIO_REGION_BASE_HEX, AUDIO_REGION_COLOR, hexToRgba, lighten, type FlatColor } from '../colors'
 import { ClipMenu, type ClipMenuAction } from './ClipMenu'
 import { WaveformCanvas } from './WaveformCanvas'
@@ -148,12 +149,24 @@ function Pattern({ pattern, seed = 0 }: { pattern: Clip['pattern']; seed?: numbe
   return null
 }
 
-const SNAP_BARS = 0.25 // snap to the beat subdivisions already drawn on the grid
 const CLICK_THRESHOLD_PX = 4 // pointer movement below this counts as a tap, not a drag
 const MIN_CLIP_LENGTH_BARS = 0.25 // clip can't be resized/stretched shorter than this
 
-function snapLength(bars: number) {
-  return Math.max(MIN_CLIP_LENGTH_BARS, Math.round(bars / SNAP_BARS) * SNAP_BARS)
+// Snap size (in bars) for the grid layer that's ACTUALLY drawn on screen at
+// this barWidth — same pickActiveLayer/cellsPerBar the background grid lines
+// (buildArrangementGrid) and the loop/cycle marker (TimelineControlsHeader)
+// already use. Used to be a fixed 0.25 bar (1 beat) regardless of zoom, so
+// once you zoomed in far enough for the grid to show finer subdivisions
+// (1/8, 1/16, ...), dragging/trimming/stretching a clip still only snapped
+// to those 4 beat lines per bar instead of every line actually on screen.
+function activeSnapBars(barWidth: number) {
+  return 1 / cellsPerBar(pickActiveLayer(barWidth))
+}
+
+function snapLength(bars: number, barWidth: number, snapEnabled: boolean) {
+  if (!snapEnabled) return Math.max(MIN_CLIP_LENGTH_BARS, bars)
+  const snapBars = activeSnapBars(barWidth)
+  return Math.max(MIN_CLIP_LENGTH_BARS, Math.round(bars / snapBars) * snapBars)
 }
 
 type ResizeKind = 'left' | 'right' | 'stretch'
@@ -215,6 +228,7 @@ export function ClipBlock({
   onResizeLeft,
   onResizeRight,
   onStretch,
+  snapEnabled = true,
 }: {
   clip: Clip
   kind: TrackKind
@@ -238,6 +252,11 @@ export function ClipBlock({
   // penempatan, tapi juga ngubah stretchRatio clip-nya (lihat handleStretch
   // di App.tsx) biar audio-nya "dimuluskan" ngisi penuh durasi baru.
   onStretch?: (clipId: string, newLengthBars: number) => void
+  // Sama toggle "Snap" yang ada di header timeline (dipakai jg buat loop
+  // marker) — kalau false, drag/trim/stretch clip gerak bebas 1:1 sama
+  // pointer (cuma di-clamp batas kiri/kanan, gak dibulatkan ke grid sama
+  // sekali).
+  snapEnabled?: boolean
 }) {
   const [dragStartBar, setDragStartBar] = useState<number | null>(null)
   const dragInfo = useRef<{ originClientX: number; originStartBar: number; moved: boolean } | null>(null)
@@ -271,7 +290,9 @@ export function ClipBlock({
   const maxStart = timelineEnd - clip.lengthBars
 
   function snap(bar: number) {
-    const snapped = Math.round(bar / SNAP_BARS) * SNAP_BARS
+    if (!snapEnabled) return Math.min(maxStart, Math.max(minStart, bar))
+    const snapBars = activeSnapBars(barWidth)
+    const snapped = Math.round(bar / snapBars) * snapBars
     return Math.min(maxStart, Math.max(minStart, snapped))
   }
 
@@ -339,7 +360,8 @@ export function ClipBlock({
       const rightEdge = info.originStartBar + info.originLengthBars
       const rawStart = info.originStartBar + deltaBars
       const clampedStart = Math.min(rightEdge - MIN_CLIP_LENGTH_BARS, Math.max(timelineStart, rawStart))
-      const snappedStart = Math.round(clampedStart / SNAP_BARS) * SNAP_BARS
+      const snapBars = activeSnapBars(barWidth)
+      const snappedStart = snapEnabled ? Math.round(clampedStart / snapBars) * snapBars : clampedStart
       const newStartBar = Math.min(rightEdge - MIN_CLIP_LENGTH_BARS, Math.max(timelineStart, snappedStart))
       setResizePreview({ startBar: newStartBar, lengthBars: rightEdge - newStartBar })
       return
@@ -350,7 +372,7 @@ export function ClipBlock({
     // App.tsx), bukan di gesture drag-nya.
     const maxLength = timelineEnd - info.originStartBar
     const rawLength = info.originLengthBars + deltaBars
-    const newLengthBars = snapLength(Math.min(maxLength, Math.max(MIN_CLIP_LENGTH_BARS, rawLength)))
+    const newLengthBars = snapLength(Math.min(maxLength, Math.max(MIN_CLIP_LENGTH_BARS, rawLength)), barWidth, snapEnabled)
     setResizePreview({ startBar: info.originStartBar, lengthBars: newLengthBars })
   }
 

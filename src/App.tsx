@@ -867,6 +867,7 @@ export default function App() {
                 }
                 onClipResizeRight={(clipId, newLengthBars) => handleClipResizeRight(track.id, clipId, newLengthBars)}
                 onClipStretch={(clipId, newLengthBars) => handleClipStretch(track.id, clipId, newLengthBars)}
+                snapEnabled={snapEnabled}
               />
             ))}
 

@@ -33,6 +33,7 @@ export function TrackRow({
   onClipResizeLeft,
   onClipResizeRight,
   onClipStretch,
+  snapEnabled = true,
 }: {
   track: Track
   barWidth: number
@@ -55,6 +56,7 @@ export function TrackRow({
   onClipResizeLeft?: (clipId: string, newStartBar: number, newLengthBars: number) => void
   onClipResizeRight?: (clipId: string, newLengthBars: number) => void
   onClipStretch?: (clipId: string, newLengthBars: number) => void
+  snapEnabled?: boolean
 }) {
   const gridStyle = useMemo(() => buildArrangementGrid(barWidth), [barWidth])
   // Lebar total row (label + seluruh timeline) — dikasih EKSPLISIT di sini,
@@ -114,6 +116,7 @@ export function TrackRow({
             onResizeLeft={onClipResizeLeft}
             onResizeRight={onClipResizeRight}
             onStretch={onClipStretch}
+            snapEnabled={snapEnabled}
           />
         ))}
       </div>
