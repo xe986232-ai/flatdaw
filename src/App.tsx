@@ -598,27 +598,30 @@ export default function App() {
             }
           }
 
-          // Kalau bukan loop, lebar visual clip HARUS ngikutin durasi asli
-          // sample (nativeSpanBars), bukan penempatan/gap ke clip berikutnya
-          // yang dipakai sebagai lebar sementara di flmToTracks.ts. Tanpa ini,
-          // one-shot pendek (Kick ~0.12 bar, Claps ~0.25 bar) kegambar mulur
-          // sampe ke clip berikutnya walau bunyinya udah abis jauh sebelum
-          // itu — persis mismatch yang kelihatan dibanding tool FL Studio
-          // Mobile aslinya. Di-clamp max ke clip.lengthBars biar gak pernah
-          // MELEBIHI penempatan/gap yang udah dihitung sebelumnya (kasus
-          // sample udah ke-trim lebih pendek dari placement-nya sendiri).
-          const resolvedLengthBars =
-            !shouldLoop && nativeSpanBars > 0.001
-              ? Math.min(clip.lengthBars, Math.max(nativeSpanBars, 0.05))
-              : clip.lengthBars
-
+          // PENTING: clip.lengthBars (lebar penempatan/"pattern" asli dari
+          // flmToTracks.ts) TIDAK PERNAH dikecilin lagi di sini, sekalipun
+          // sample-nya (nativeSpanBars) lebih pendek dari penempatan itu.
+          // Dulu ada logic yang ngecilin boks clip biar pas sama durasi
+          // sample asli (shrink-to-native-duration) — niatnya biar one-shot
+          // pendek (Kick, Claps) gak kegambar mulur sampe clip berikutnya.
+          // Tapi efek sampingnya: begitu boks-nya udah dikecilin duluan di
+          // SINI, WaveformCanvas (yang men-stretch gambar waveform biar
+          // ngisi penuh lebar boks yang dikasih — lihat draw() di situ) gak
+          // punya apa-apa lagi buat di-stretch, karena boksnya udah persis
+          // seukuran sample-nya dari awal. Hasilnya: clip keliatan "mentok"
+          // padahal sebenernya cuma dipendekin sebelum sempet di-stretch,
+          // ninggalin celah grid kosong antara tepi boks dan akhir pattern
+          // yang sebenernya. Sekarang: boks SELALU tetep di lebar
+          // penempatan aslinya (= akhir pattern), dan WaveformCanvas yang
+          // tanggung jawab penuh buat men-stretch visual waveform-nya biar
+          // ngisi boks itu sampe mentok tepi kanan — bukan di-trim/
+          // dikecilin di level data clip-nya.
           found++
           patchClip(clip.id, {
             waveformPeaks: { min: Array.from(peaks.min), max: Array.from(peaks.max) },
             waveformMultiRes: multiRes,
             waveformStatus: 'found',
             waveformNativeSpanBars: nativeSpanBars,
-            lengthBars: resolvedLengthBars,
             loopPoints: loopPoints.length > 0 ? loopPoints : undefined,
           })
         } catch (err) {
