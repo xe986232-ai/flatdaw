@@ -75,8 +75,11 @@ export default function App() {
 
   // Cycle/loop marker — area loop dalam satuan bar, plus toggle aktif/nonaktif
   // dan toggle snap-to-grid yang dipakai bareng sama drag playhead di bawah.
-  const [loopStartBar, setLoopStartBar] = useState(TIMELINE_START)
-  const [loopEndBar, setLoopEndBar] = useState(TIMELINE_START + 8)
+  // Gak ada default lagi: null berarti belum ada area loop yang dibikin user.
+  // Area barunya cuma bisa dibikin lewat gesture tahan-lalu-drag di ruler
+  // (lihat onLoopCreate & TimelineControlsHeader).
+  const [loopStartBar, setLoopStartBar] = useState<number | null>(null)
+  const [loopEndBar, setLoopEndBar] = useState<number | null>(null)
   const [loopEnabled, setLoopEnabled] = useState(false)
   const [snapEnabled, setSnapEnabled] = useState(true)
   const [trackList, setTrackList] = useState(tracks)
@@ -183,7 +186,7 @@ export default function App() {
       if (next) {
         lastFrameTimeRef.current = null
         setPlayheadBar((bar) => {
-          if (loopEnabled) {
+          if (loopEnabled && loopStartBar !== null && loopEndBar !== null) {
             if (bar < loopStartBar || bar >= loopEndBar) return loopStartBar
             return bar
           }
@@ -216,8 +219,9 @@ export default function App() {
       lastFrameTimeRef.current = time
 
       let next = playheadBarRef.current + deltaSec * barsPerSecond
+      const hasLoopRegion = loopEnabled && loopStartBar !== null && loopEndBar !== null
 
-      if (loopEnabled) {
+      if (hasLoopRegion) {
         const len = loopEndBar - loopStartBar
         if (len > 0) {
           while (next >= loopEndBar) next -= len
@@ -243,7 +247,7 @@ export default function App() {
       // Smooth follow: cuma aktif selama mode loop nyala (sesuai permintaan
       // — klik tombol Loop yang mengaktifkan auto-scroll). Easing eksponensial
       // biar konsisten mulus di berbagai frame rate, bukan lerp tetap per frame.
-      if (loopEnabled) {
+      if (hasLoopRegion) {
         const container = scrollRef.current
         if (container) {
           const x = (next - TIMELINE_START) * barWidth + LABEL_WIDTH
@@ -1004,6 +1008,14 @@ export default function App() {
             onLoopChange={(start, end) => {
               setLoopStartBar(start)
               setLoopEndBar(end)
+            }}
+            onLoopCreate={(start, end) => {
+              // Area loop baru dibikin lewat gesture tahan-lalu-drag di ruler —
+              // begitu selesai, langsung aktifin loop-nya (gak perlu pencet
+              // toggle "Loop" lagi secara terpisah).
+              setLoopStartBar(start)
+              setLoopEndBar(end)
+              setLoopEnabled(true)
             }}
             onToggleLoop={() => setLoopEnabled((v) => !v)}
             onToggleSnap={() => setSnapEnabled((v) => !v)}
