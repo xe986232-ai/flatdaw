@@ -39,8 +39,8 @@ export const Playhead = forwardRef<
             (lihat App.tsx), jadi otomatis ikut gerak bareng garis. */}
         {isPlaying && (
           <div
-            className="absolute top-0 bottom-0 right-full w-4"
-            style={{ background: 'linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.45))' }}
+            className="absolute top-0 bottom-0 right-full w-2"
+            style={{ background: 'linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.28))' }}
           />
         )}
         <div className="h-full w-px bg-white/90" />
