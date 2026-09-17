@@ -1103,6 +1103,14 @@ export default function App() {
           {isColorPickerOpen ? 'Tutup Pengaturan Warna' : 'Pilih Warna'}
         </button>
 
+        <button
+          type="button"
+          onClick={handlePlayClick}
+          className="flex items-center justify-center gap-2 bg-track-accent px-4 py-2 text-sm font-medium text-white"
+        >
+          {isPlaying ? 'Pause' : 'Play'} Timeline — {projectBpm} BPM
+        </button>
+
         <div className="flex items-center gap-2 bg-[#2a2a2e] px-3 py-2">
           <span className="flex-1 text-sm font-medium text-white">Canvas</span>
           <button
