@@ -4,8 +4,6 @@ import { TimelineControlsHeader } from './components/TimelineControlsHeader'
 import { TrackRow } from './components/TrackRow'
 import { AutomationLane } from './components/AutomationLane'
 import { Playhead } from './components/Playhead'
-import { PositionReadout } from './components/PositionReadout'
-import { TimelineMinimap } from './components/TimelineMinimap'
 import { PianoRoll } from './components/PianoRoll'
 import { AudioClipEditor } from './components/AudioClipEditor'
 import type { ClipMenuAction } from './components/ClipMenu'
@@ -47,23 +45,6 @@ const DEFAULT_BPM = 120
 // keliru cuma berdasar rasio panjang doang.
 const MIN_LOOPABLE_NATIVE_SPAN_BARS = 0.4
 
-// Resolusi tick buat readout posisi ala FL Studio (Bar:Beat:Tick) — 96 PPQ
-// itu resolusi umum di banyak DAW, jadi dipakai di sini juga.
-const TICKS_PER_BEAT = 96
-
-/** Format posisi playhead (satuan bar, boleh pecahan) jadi "Bar:Beat:Tick"
- *  2-digit persis kayak transport display FL Studio (contoh: "19:01:06").
- *  Bar & beat ditampilin 1-indexed biar sama kayak yang keliatan di FL. */
-function formatBarBeatTick(bar: number, timelineStart: number): string {
-  const relative = Math.max(0, bar - timelineStart)
-  const wholeBar = Math.floor(relative)
-  const beatFraction = (relative - wholeBar) * BEATS_PER_BAR
-  const wholeBeat = Math.floor(beatFraction)
-  const tick = Math.min(TICKS_PER_BEAT - 1, Math.round((beatFraction - wholeBeat) * TICKS_PER_BEAT))
-  const pad2 = (n: number) => String(n).padStart(2, '0')
-  return `${pad2(wholeBar + 1)}:${pad2(wholeBeat + 1)}:${pad2(tick)}`
-}
-
 // Dua pilihan rasio canvas — cuma ngatur bentuk/ukuran bingkai luar
 // (canvasBoxRef), timeline/playlist di dalemnya nggak diubah sama sekali.
 // handleExportImage udah baca box.clientWidth/clientHeight secara dinamis,
@@ -84,9 +65,6 @@ export default function App() {
   const [canvasRatio, setCanvasRatio] = useState<CanvasRatioKey>('16:9')
   const [playheadBar, setPlayheadBar] = useState(207)
   const playheadElRef = useRef<HTMLDivElement>(null)
-  const positionReadoutRef = useRef<HTMLDivElement>(null)
-  const minimapViewportRef = useRef<HTMLDivElement>(null)
-  const minimapTickRef = useRef<HTMLDivElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [projectBpm, setProjectBpm] = useState(DEFAULT_BPM)
   const lastFrameTimeRef = useRef<number | null>(null)
@@ -124,7 +102,6 @@ export default function App() {
   const timelineEnd = useMemo(() => getTimelineEnd(trackList), [trackList])
   const totalBars = timelineEnd - TIMELINE_START
 
-
   // Import project .flm (FL Studio Mobile): parsing chunk EVN2 -> Track/Clip/Note flatdaw.
   const flmInputRef = useRef<HTMLInputElement>(null)
   const [flmStatus, setFlmStatus] = useState<string | null>(null)
@@ -155,61 +132,6 @@ export default function App() {
   // out and vanish well before the right edge — rounding once here keeps
   // every tile (and every clip/ruler position that uses barWidth) pixel-exact.
   const barWidth = Math.round(BASE_BAR_WIDTH * hZoom)
-
-  // Minimap/navigator — konversi posisi/lebar viewport scrollRef (piksel)
-  // ke rasio 0..1 relatif ke SELURUH panjang timeline (TIMELINE_START..
-  // timelineEnd), lalu di-mutate langsung ke style kotak/garis minimap lewat
-  // ref (bukan re-render React) tiap kali di-scroll, di-zoom, atau playhead
-  // jalan. Rumus offset -LABEL_WIDTH sama persis kayak yang dipakai
-  // handleDrag di bawah buat konsisten nentuin bar di bawah tepi viewport.
-  const updateMinimapViewport = () => {
-    const container = scrollRef.current
-    if (!container || totalBars <= 0) return
-    const startBar = TIMELINE_START + (container.scrollLeft - LABEL_WIDTH) / barWidth
-    const endBar = TIMELINE_START + (container.scrollLeft + container.clientWidth - LABEL_WIDTH) / barWidth
-    const startRatio = Math.min(1, Math.max(0, (startBar - TIMELINE_START) / totalBars))
-    const endRatio = Math.min(1, Math.max(0, (endBar - TIMELINE_START) / totalBars))
-    if (minimapViewportRef.current) {
-      minimapViewportRef.current.style.left = `${startRatio * 100}%`
-      minimapViewportRef.current.style.width = `${Math.max(0, endRatio - startRatio) * 100}%`
-    }
-  }
-
-  const updateMinimapTick = (bar: number) => {
-    if (!minimapTickRef.current || totalBars <= 0) return
-    const ratio = Math.min(1, Math.max(0, (bar - TIMELINE_START) / totalBars))
-    minimapTickRef.current.style.left = `${ratio * 100}%`
-  }
-
-  // Klik/drag di minimap → geser scrollRef biar bar yang diklik jadi tengah
-  // viewport (sama kayak nge-drag jendela viewport di FL Studio), plus
-  // pindahin playhead ke situ juga.
-  const handleMinimapSeek = (ratio: number) => {
-    const container = scrollRef.current
-    if (!container) return
-    const targetBar = TIMELINE_START + ratio * totalBars
-    const targetX = (targetBar - TIMELINE_START) * barWidth + LABEL_WIDTH
-    container.scrollLeft = Math.max(0, targetX - container.clientWidth / 2)
-    setPlayheadBar(Math.min(timelineEnd, Math.max(TIMELINE_START, Math.round(targetBar * 4) / 4)))
-  }
-
-  // Sinkronin kotak viewport minimap tiap kali scrollRef di-scroll (drag
-  // manual/trackpad), dan tiap kali total panjang timeline atau lebar bar
-  // (zoom H) berubah — dua hal itu ngubah rasio viewport walau gak ada
-  // event scroll baru.
-  useEffect(() => {
-    const container = scrollRef.current
-    if (!container) return
-    updateMinimapViewport()
-    container.addEventListener('scroll', updateMinimapViewport, { passive: true })
-    return () => container.removeEventListener('scroll', updateMinimapViewport)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [barWidth, totalBars])
-
-  useEffect(() => {
-    if (!isPlaying) updateMinimapTick(playheadBar)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playheadBar, totalBars, isPlaying])
   const rowHeight = BASE_ROW_HEIGHT * vZoom
   const automationHeight = BASE_AUTOMATION_HEIGHT * vZoom
 
@@ -316,13 +238,6 @@ export default function App() {
       const elX = (next - TIMELINE_START) * barWidth
       if (playheadElRef.current) {
         playheadElRef.current.style.transform = `translateX(${elX}px)`
-      }
-      if (positionReadoutRef.current) {
-        positionReadoutRef.current.textContent = formatBarBeatTick(next, TIMELINE_START)
-      }
-      if (minimapTickRef.current && totalBars > 0) {
-        const tickRatio = Math.min(1, Math.max(0, (next - TIMELINE_START) / totalBars))
-        minimapTickRef.current.style.left = `${tickRatio * 100}%`
       }
 
       // Smooth follow: cuma aktif selama mode loop nyala (sesuai permintaan
@@ -1074,24 +989,6 @@ export default function App() {
         className="relative flex w-full flex-col overflow-hidden rounded-lg border border-surface-grid bg-surface-base text-white"
         style={{ aspectRatio: CANVAS_RATIOS[canvasRatio].ratio, maxWidth: CANVAS_RATIOS[canvasRatio].maxWidth }}
       >
-        {/* Minimap/navigator — baris normal (bukan absolute), jadi beneran
-            paling atas & gak pernah ke-scroll/geser sama sekali, gak
-            peduli scroll horizontal, scroll vertikal, atau zoom. */}
-        <TimelineMinimap
-          viewportRef={minimapViewportRef}
-          tickRef={minimapTickRef}
-          initialViewportLeftPct={0}
-          initialViewportWidthPct={100}
-          initialTickLeftPct={totalBars > 0 ? ((playheadBar - TIMELINE_START) / totalBars) * 100 : 0}
-          onSeekRatio={handleMinimapSeek}
-        />
-
-        {/* Fixed di frame canvas (sibling scrollRef, BUKAN anak di dalemnya)
-            — jadi gak ikut ke-scroll/pan pas timeline digeser atau di-zoom,
-            selalu nempel di pojok kanan-atas persis kayak transport bar FL
-            Studio yang gak pernah kebawa scroll playlist di bawahnya. */}
-        <PositionReadout ref={positionReadoutRef} initialText={formatBarBeatTick(playheadBar, TIMELINE_START)} />
-
         <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
           <TimelineControlsHeader
             startBar={TIMELINE_START}
