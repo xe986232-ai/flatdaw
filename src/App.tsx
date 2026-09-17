@@ -1107,12 +1107,28 @@ export default function App() {
               <div>
                 <div className="mb-1.5 text-[11px] font-medium text-white/60">Custom (semua warna)</div>
                 <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={customColorHex}
-                    onChange={(e) => handlePickCustomColor(e.target.value)}
-                    className="h-9 w-9 shrink-0 cursor-pointer rounded border border-black/30 bg-transparent p-0"
-                  />
+                  <label
+                    className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded border border-black/30"
+                    style={{ backgroundColor: customColorHex }}
+                  >
+                    {/* Swatch keliatannya (backgroundColor di atas) SENGAJA
+                        ngikutin state customColorHex sendiri, gak ngandelin
+                        browser buat nge-render warna native <input
+                        type="color">-nya — beberapa browser/WebView render
+                        swatch bawaan elemen ini beda/gak akurat kalau ada
+                        style tambahan (bg-transparent, p-0, dst) numpuk di
+                        atasnya, jadi keliatannya "beda dari warna yang udah
+                        ditetapkan". Input aslinya ditumpuk transparan penuh
+                        (opacity-0) pas di atas label ini — cuma dipake buat
+                        nangkep tap-nya biar native color picker kebuka,
+                        visualnya 100% dari div ini. */}
+                    <input
+                      type="color"
+                      value={customColorHex}
+                      onChange={(e) => handlePickCustomColor(e.target.value)}
+                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                    />
+                  </label>
                   <span className="text-[11px] text-white/70">{customColorHex.toUpperCase()}</span>
                 </div>
               </div>
@@ -1125,12 +1141,17 @@ export default function App() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5">
-                    <input
-                      type="color"
-                      value={gradientTopHex}
-                      onChange={(e) => setGradientTopHex(e.target.value)}
-                      className="h-9 w-9 shrink-0 cursor-pointer rounded border border-black/30 bg-transparent p-0"
-                    />
+                    <label
+                      className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded border border-black/30"
+                      style={{ backgroundColor: gradientTopHex }}
+                    >
+                      <input
+                        type="color"
+                        value={gradientTopHex}
+                        onChange={(e) => setGradientTopHex(e.target.value)}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      />
+                    </label>
                     <span className="text-[10px] text-white/50">Atas</span>
                   </div>
                   <div
@@ -1138,12 +1159,17 @@ export default function App() {
                     style={{ background: `linear-gradient(90deg, ${gradientTopHex}, ${gradientBottomHex})` }}
                   />
                   <div className="flex items-center gap-1.5">
-                    <input
-                      type="color"
-                      value={gradientBottomHex}
-                      onChange={(e) => setGradientBottomHex(e.target.value)}
-                      className="h-9 w-9 shrink-0 cursor-pointer rounded border border-black/30 bg-transparent p-0"
-                    />
+                    <label
+                      className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded border border-black/30"
+                      style={{ backgroundColor: gradientBottomHex }}
+                    >
+                      <input
+                        type="color"
+                        value={gradientBottomHex}
+                        onChange={(e) => setGradientBottomHex(e.target.value)}
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                      />
+                    </label>
                     <span className="text-[10px] text-white/50">Bawah</span>
                   </div>
                 </div>
