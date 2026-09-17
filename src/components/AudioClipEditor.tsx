@@ -13,10 +13,19 @@ import { TrackIcon } from './TrackIcon'
 // clip instrument/MIDI) — ini murni buat clip yang punya sampleName/
 // waveformPeaks (lihat isAudioClip di ClipBlock).
 //
-// Knob stretch-nya manggil `onStretch` yang sama persis dipakai knob
-// kanan-bawah di ClipBlock/App.tsx (handleClipStretch) — beneran ngubah
-// stretchRatio & waveformNativeSpanBars clip-nya (bukan cuma preview CSS),
-// jadi hasilnya konsisten baik di-drag dari sini atau dari knob di timeline.
+// PENTING — stretch di sini BEDA dari stretch knob di timeline (ClipBlock):
+// - Knob di TIMELINE (handleClipStretch di App.tsx) ngubah lengthBars (card
+//   clip-nya) SEKALIGUS waveform-nya — card & isinya sama-sama ke-stretch.
+// - Knob DI DALAM EDITOR INI (onWaveformStretch → handleClipEditorStretch di
+//   App.tsx) CUMA ngubah waveformNativeSpanBars & stretchRatio. lengthBars
+//   (= ukuran card di timeline) SENGAJA gak disentuh sama sekali — jadi
+//   panjang/pendek berapa pun di-stretch dari sini, card clip di timeline
+//   diem, cuma isi waveform-nya yang menyesuaikan (bisa nyisain ruang kosong
+//   kalau di-pendekin, atau kepadetan kalau di-panjangin ngelewatin batas
+//   card). Makanya di layar ini ada dua ukuran yang digambar terpisah:
+//   `cardBars` (clip.lengthBars, FIXED, digambar sebagai kotak referensi
+//   redup) dan `effectiveSpanBars` (yang di-drag lewat knob, ini yang
+//   nentuin lebar waveform-nya).
 
 const BEAT_WIDTH = 64
 const BAR_WIDTH = BEAT_WIDTH * BEATS_PER_BAR
@@ -58,7 +67,7 @@ export function AudioClipEditor({
   bpm,
   snapEnabled = true,
   onClose,
-  onStretch,
+  onWaveformStretch,
 }: {
   clip: Clip
   trackName: string
@@ -66,11 +75,21 @@ export function AudioClipEditor({
   bpm?: number
   snapEnabled?: boolean
   onClose: () => void
-  // Commit time-stretch beneran (resample) — lihat handleClipStretch di App.tsx.
-  onStretch: (newLengthBars: number) => void
+  // Commit stretch waveform-nya doang (waveformNativeSpanBars & stretchRatio)
+  // — lihat handleClipEditorStretch di App.tsx. TIDAK ngubah lengthBars/card.
+  onWaveformStretch: (newNativeSpanBars: number) => void
 }) {
-  const [previewLength, setPreviewLength] = useState<number | null>(null)
-  const dragInfo = useRef<{ originClientX: number; originLength: number; moved: boolean } | null>(null)
+  // Ukuran card clip di timeline — FIXED, gak pernah di-preview/diubah dari
+  // layar ini (beda dari dulu, waktu regionWidth ikut kepencet drag).
+  const cardBars = clip.lengthBars
+  // Titik awal (sebelum drag) buat waveform: pakai native span yang udah
+  // ke-set kalau ada, jatuh balik ke cardBars kalau belum pernah di-stretch
+  // sama sekali (artinya waveform ngisi penuh card, 100%).
+  const hasNative = !!clip.waveformNativeSpanBars && clip.waveformNativeSpanBars > 0.001
+  const committedSpanBars = hasNative ? clip.waveformNativeSpanBars! : cardBars
+
+  const [previewSpan, setPreviewSpan] = useState<number | null>(null)
+  const dragInfo = useRef<{ originClientX: number; originSpan: number; moved: boolean } | null>(null)
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -80,21 +99,24 @@ export function AudioClipEditor({
     return () => document.removeEventListener('keydown', onKey)
   }, [onClose])
 
-  const effectiveLengthBars = previewLength ?? clip.lengthBars
-  const nativeSpanBars = clip.waveformNativeSpanBars
+  const effectiveSpanBars = previewSpan ?? committedSpanBars
   const isLoopedClip = !!clip.loopPoints && clip.loopPoints.length > 0
-  const hasNative = !!nativeSpanBars && nativeSpanBars > 0.001
 
-  const viewBars = Math.max(MIN_VIEW_BARS, Math.ceil(effectiveLengthBars) + TRAILING_BARS)
+  // Grid selalu nyakup dua-duanya: card (fixed) & span waveform yang lagi
+  // di-preview, mana pun yang lebih lebar — plus TRAILING_BARS di belakangnya.
+  const viewBars = Math.max(MIN_VIEW_BARS, Math.ceil(Math.max(effectiveSpanBars, cardBars)) + TRAILING_BARS)
   const laneWidth = viewBars * BAR_WIDTH
-  const regionWidth = effectiveLengthBars * BAR_WIDTH
+  const cardWidth = cardBars * BAR_WIDTH
+  const regionWidth = effectiveSpanBars * BAR_WIDTH
 
   const grid = buildArrangementGrid(BAR_WIDTH)
   // Cuma dipakai buat warna waveform-nya sendiri (currentColor di
   // WaveformCanvas) — gak ada lagi card/strip judul berwarna di belakangnya.
   const regionInk = color ? color.ink : AUDIO_REGION_COLOR.ink
 
-  const stretchPct = hasNative ? Math.round((effectiveLengthBars / nativeSpanBars!) * 100) : 100
+  // % relatif ke kondisi SEBELUM drag (committedSpanBars) — 100% pas baru
+  // dibuka (belum digeser sama sekali), naik/turun sesuai arah drag.
+  const stretchPct = committedSpanBars > 0 ? Math.round((effectiveSpanBars / committedSpanBars) * 100) : 100
 
   // Track palsu buat TrackIcon — cuma butuh kolom clips-nya keisi clip audio
   // ini biar isAudioTrack() (dipanggil di dalam TrackIcon) balikin true dan
@@ -104,8 +126,8 @@ export function AudioClipEditor({
   function handleKnobPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
     e.stopPropagation()
     e.currentTarget.setPointerCapture(e.pointerId)
-    dragInfo.current = { originClientX: e.clientX, originLength: clip.lengthBars, moved: false }
-    setPreviewLength(clip.lengthBars)
+    dragInfo.current = { originClientX: e.clientX, originSpan: committedSpanBars, moved: false }
+    setPreviewSpan(committedSpanBars)
   }
 
   function handleKnobPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
@@ -114,8 +136,8 @@ export function AudioClipEditor({
     const deltaPx = e.clientX - info.originClientX
     if (Math.abs(deltaPx) > CLICK_THRESHOLD_PX) info.moved = true
     const deltaBars = deltaPx / BAR_WIDTH
-    const rawLength = Math.max(MIN_LENGTH_BARS, info.originLength + deltaBars)
-    setPreviewLength(snapLength(rawLength, snapEnabled))
+    const rawSpan = Math.max(MIN_LENGTH_BARS, info.originSpan + deltaBars)
+    setPreviewSpan(snapLength(rawSpan, snapEnabled))
   }
 
   function endKnobDrag(e: ReactPointerEvent<HTMLDivElement>) {
@@ -123,8 +145,8 @@ export function AudioClipEditor({
     if (!info) return
     e.currentTarget.releasePointerCapture(e.pointerId)
     dragInfo.current = null
-    setPreviewLength((len) => {
-      if (info.moved && len != null && len !== clip.lengthBars) onStretch(len)
+    setPreviewSpan((span) => {
+      if (info.moved && span != null && span !== committedSpanBars) onWaveformStretch(span)
       return null
     })
   }
@@ -145,7 +167,7 @@ export function AudioClipEditor({
             {trackName} · Stretch {stretchPct}% {bpm ? `· ${bpm} BPM` : ''}
           </span>
         </div>
-        <span className="shrink-0 text-[11px] text-white/40">{formatDuration(effectiveLengthBars)}</span>
+        <span className="shrink-0 text-[11px] text-white/40">{formatDuration(effectiveSpanBars)}</span>
       </div>
 
       <div className="relative min-h-0 flex-1 overflow-auto p-4">
@@ -199,15 +221,24 @@ export function AudioClipEditor({
                 backgroundRepeat: grid.backgroundRepeat,
               }}
             >
-              {/* Region clip: cuma waveform-nya doang (WaveformCanvas sama persis
-                  komponen yang dipakai di timeline) — stretchToFit selalu true
-                  di sini, karena lajur ini KHUSUS buat nge-preview gimana
-                  hasilnya kalau di-stretch pas ngisi grid. Sengaja TANPA
-                  kartu/background ungu & strip judul lagi (sebelumnya ada) —
-                  user minta cuma waveform-nya aja yang keliatan, gak dibungkus
-                  card apa pun. Warna waveform-nya (currentColor di
-                  WaveformCanvas) tetep dipatok ke regionInk biar konsisten
-                  sama warna track. */}
+              {/* Kotak referensi CARD clip di timeline — FIXED di cardBars,
+                  gak ikut ke-drag sama sekali. Cuma tint redup + border putus,
+                  biar user bisa ngebandingin: ini batas card-nya di timeline,
+                  waveform boleh lebih pendek (nyisa ruang kosong) atau lebih
+                  panjang (kepadetan) dari batas ini tanpa card-nya ikut geser. */}
+              <div
+                className="pointer-events-none absolute inset-y-3 left-0 rounded-[4px] border border-dashed border-white/25 bg-white/[0.03]"
+                style={{ width: Math.max(2, cardWidth) }}
+              >
+                <span className="absolute -top-4 left-1 whitespace-nowrap text-[10px] text-white/35">
+                  card timeline
+                </span>
+              </div>
+
+              {/* Waveform-nya doang, TANPA card/background/strip judul yang
+                  bungkus (sesuai request sebelumnya) — lebarnya ngikutin
+                  effectiveSpanBars, yang ini yang di-drag lewat knob di
+                  bawah, terpisah dari cardWidth di atas. */}
               <div
                 className="absolute inset-y-3 left-0 overflow-hidden"
                 style={{ width: Math.max(2, regionWidth), color: regionInk }}
@@ -216,8 +247,8 @@ export function AudioClipEditor({
                   <WaveformCanvas
                     peaks={clip.waveformPeaks}
                     multiRes={clip.waveformMultiRes}
-                    lengthBars={effectiveLengthBars}
-                    nativeSpanBars={nativeSpanBars}
+                    lengthBars={effectiveSpanBars}
+                    nativeSpanBars={effectiveSpanBars}
                     loop={isLoopedClip}
                     stretchToFit
                   />
@@ -228,14 +259,14 @@ export function AudioClipEditor({
                 )}
               </div>
 
-              {/* Garis vertikal penanda akhir waveform ASLI (sebelum di-stretch) —
-                  SELALU tampil (bukan cuma pas bedanya kelihatan), jadi
-                  patokan/referensi visual yang nempel di grid buat lihat
-                  posisi akhir sample asli dibanding hasil stretch-nya. */}
-              {hasNative && nativeSpanBars! < viewBars && (
+              {/* Garis vertikal penanda posisi waveform SEBELUM di-drag
+                  (committedSpanBars) — SELALU tampil selama beda dari
+                  effectiveSpanBars, jadi patokan/referensi visual buat lihat
+                  seberapa jauh geseran knob dari kondisi sebelumnya. */}
+              {Math.abs(committedSpanBars - effectiveSpanBars) > 0.01 && committedSpanBars < viewBars && (
                 <div
                   className="pointer-events-none absolute top-3 bottom-3 border-l-2 border-dashed border-white/40"
-                  style={{ left: nativeSpanBars! * BAR_WIDTH }}
+                  style={{ left: committedSpanBars * BAR_WIDTH }}
                 >
                   <span className="absolute -top-4 left-1 whitespace-nowrap text-[10px] text-white/40">asli</span>
                 </div>
@@ -243,7 +274,8 @@ export function AudioClipEditor({
 
               {/* Knob Stretch — satu-satunya kontrol di sini, niru knob kanan-bawah
                   di FL Studio Mobile: geser kanan/kiri buat manjangin/mendekin
-                  clip, berpatok ke grid (snap sama persis kayak timeline). */}
+                  WAVEFORM-nya doang (card di atas diem), berpatok ke grid (snap
+                  sama persis kayak timeline). */}
               <div
                 data-clip-interactive="true"
                 className="absolute z-30 flex h-9 w-9 -translate-y-1/2 cursor-ew-resize touch-none items-center justify-center rounded-full border-2 border-black/20 shadow-md"
@@ -261,8 +293,8 @@ export function AudioClipEditor({
       </div>
 
       <div className="shrink-0 border-t border-surface-grid/40 bg-[#202024] px-4 py-2 text-[11px] text-white/50">
-        Tarik knob bundar di ujung kanan waveform buat stretch sample-nya biar pas ngisi grid — sama kayak knob
-        stretch di timeline, cuma di sini kebaca lebih detail.
+        Tarik knob bundar di ujung kanan waveform buat stretch sample-nya — ini cuma ngubah isi waveform-nya, ukuran
+        card clip di timeline tetap gak berubah. Kalau mau stretch card + waveform sekaligus, pakai knob di timeline.
       </div>
     </div>
   )

@@ -306,6 +306,42 @@ export default function App() {
     )
   }
 
+  // Stretch DARI DALAM EDITOR (AudioClipEditor) — beda dari handleClipStretch
+  // di atas: di sini CUMA waveform-nya yang di-stretch (waveformNativeSpanBars
+  // & stretchRatio), lengthBars (= ukuran card di timeline) SENGAJA gak
+  // disentuh sama sekali. Jadi kalau di-stretch panjang/pendek dari editor,
+  // card clip-nya di timeline diem gak ikut berubah — cuma isi waveform-nya
+  // doang yang keliatan lebih ngisi penuh atau nyisain ruang kosong di dalam
+  // card yang sama. waveformStretchToFit dipaksa false biar hasilnya beneran
+  // kebaca di timeline (default-nya kalau true, waveform selalu maksa ngisi
+  // penuh card, jadi nativeSpanBars-nya gak akan pernah keliatan bedanya).
+  // loopPoints SENGAJA gak dibuang (beda dari handleClipStretch) karena ini
+  // bukan resample penuh clip, cuma nyesuain tile/isi di dalam durasi yang
+  // tetap sama.
+  const handleClipEditorStretch = (trackId: string, clipId: string, newNativeSpanBars: number) => {
+    setTrackList((prev) =>
+      prev.map((t) =>
+        t.id !== trackId
+          ? t
+          : {
+              ...t,
+              clips: t.clips.map((c) => {
+                if (c.id !== clipId) return c
+                const prevSpan = c.waveformNativeSpanBars && c.waveformNativeSpanBars > 0.001 ? c.waveformNativeSpanBars : c.lengthBars
+                if (prevSpan <= 0) return c
+                const ratioChange = newNativeSpanBars / prevSpan
+                return {
+                  ...c,
+                  waveformNativeSpanBars: newNativeSpanBars,
+                  stretchRatio: (c.stretchRatio ?? 1) * ratioChange,
+                  waveformStretchToFit: false,
+                }
+              }),
+            },
+      ),
+    )
+  }
+
   const handleClipClick = (trackId: string, clipId: string) => {
     setEditingClip(null)
     setOpenMenu((prev) => (prev?.clipId === clipId ? null : { trackId, clipId }))
@@ -950,7 +986,9 @@ export default function App() {
             bpm={projectBpm}
             snapEnabled={snapEnabled}
             onClose={() => setAudioEditor(null)}
-            onStretch={(newLengthBars) => handleClipStretch(audioEditorTrack.id, audioEditorClip.id, newLengthBars)}
+            onWaveformStretch={(newNativeSpanBars) =>
+              handleClipEditorStretch(audioEditorTrack.id, audioEditorClip.id, newNativeSpanBars)
+            }
           />
         )}
       </div>
