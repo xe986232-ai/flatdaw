@@ -552,11 +552,13 @@ export function ClipBlock({
             lengthBars={effectiveLengthBars}
             nativeSpanBars={clip.waveformNativeSpanBars}
             // waveformTileFill (di-set handleClipEditorStretch pas stretch
-            // dari dalam AudioClipEditor) MAKSA mode tile nyala walau clip-nya
-            // bukan loop asli dari import (isLoopedClip false) — biar hasil
-            // stretch beneran kebaca berubah di timeline, bukan cuma
-            // ke-compress ke lebar card yang keliatan identik terus.
-            loop={isLoopedClip || !!clip.waveformTileFill}
+            // dari dalam AudioClipEditor) bikin waveform digambar SATU
+            // putaran di lebar proporsionalnya apa adanya (nyisa blank
+            // kalau native span dipendekin, ke-crop kalau dipanjangin) —
+            // niru persis squeeze yang keliatan di kotak preview editor.
+            // `loop` tetep dari data asli (loopPoints hasil import), gak
+            // dipaksa true buat tileFill.
+            loop={isLoopedClip}
             tileFill={!!clip.waveformTileFill}
             stretchToFit={clip.waveformStretchToFit !== false}
           />

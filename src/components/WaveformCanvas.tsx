@@ -55,15 +55,14 @@ export function WaveformCanvas({
   stretchToFit?: boolean
   // clip.waveformTileFill (lihat tracks.ts) — dipaksa true oleh
   // handleClipEditorStretch di App.tsx pas user stretch waveform dari dalam
-  // AudioClipEditor. Beda dari stretchToFit: stretchToFit cuma nge-scale
-  // SATU putaran sample biar nutup lebar card (hasilnya identik gak peduli
-  // nativeSpanBars berapa, makanya kemarin "kayak ga ke-stretch"). tileFill
-  // MAKSA mode tile nyala dua arah — native span boleh lebih PENDEK dari
-  // card (jadinya diulang lebih rapat/banyak) ATAU lebih PANJANG dari card
-  // (jadinya diulang lebih renggang, atau kalau lebih panjang dari cssW,
-  // cuma nampilin sebagian awal sample yang ke-crop otomatis oleh batas
-  // canvas). Ini yang bikin hasil stretch beneran kebaca berubah secara
-  // visual di timeline.
+  // AudioClipEditor. TIDAK bikin waveform di-tile/diulang (nama field ini
+  // kepake dari percobaan sebelumnya yang salah, dibiarin gak diganti biar
+  // gak mecah data lama) — efeknya justru MATIIN shouldTile & stretchToFit,
+  // jadi satu putaran sample digambar di lebar proporsionalnya apa adanya
+  // (drawWidthCss), niru PERSIS squeeze yang keliatan di kotak preview
+  // AudioClipEditor: makin pendek native span, makin sempit bagian yang
+  // tergambar (nyisa blank di kanan); makin panjang, makin lebar dari cssW
+  // (ke-crop otomatis sama batas canvas).
   tileFill?: boolean
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -153,15 +152,25 @@ export function WaveformCanvas({
         !!nativeSpanBars && !!lengthBars && nativeSpanBars > 0.001 && Math.abs(lengthBars - nativeSpanBars) > 0.001
       const drawWidthCss = hasNativeSpan ? Math.max(1, (nativeSpanBars! / lengthBars!) * cssW) : cssW
       // tileFill (clip.waveformTileFill, di-set pas stretch dari
-      // AudioClipEditor) MAKSA mode tile nyala dua arah, gak peduli `loop`
-      // dari loopPoints asli. Kalau nativeSpanBars < lengthBars,
-      // drawWidthCss < cssW jadi tileCount di bawah > 1 (diulang rapat).
-      // Kalau nativeSpanBars > lengthBars, drawWidthCss > cssW jadi
-      // tileCount = 1 tapi tile-nya lebih lebar dari canvas — bagian yang
-      // ngelewatin cssW otomatis ke-crop sama batas canvas, jadi cuma
-      // sebagian awal sample yang kelihatan (persis kayak drag sample jadi
-      // lebih panjang di FL Studio Mobile).
-      const shouldTile = hasNativeSpan && (!!loop || !!tileFill)
+      // AudioClipEditor) TIDAK bikin waveform diulang — itu percobaan
+      // sebelumnya dan ternyata salah baca maksud user: yang dimau adalah
+      // tampilan LUAR (timeline) beneran NGIKUT persis apa yang keliatan DI
+      // DALAM editor (waveform-nya ke-squeeze/stretch, bukan di-tile
+      // berulang), cuma card/kotak clip-nya yang sengaja tetap gak ikut
+      // resize. Di dalam editor, kotak preview-nya sendiri yang mengecil/
+      // membesar pas di-drag, sehingga sample yang sama ke-gambar padet
+      // (squeeze) di kotak yang lebih kecil. Di luar, kotaknya fixed, jadi
+      // biar keliatan SAMA, gambar SATU putaran sample itu di lebar
+      // proporsionalnya (drawWidthCss) apa adanya — TANPA di-tile & TANPA
+      // di-stretch-paksa ke penuh — jadi kalau native span dipendekin,
+      // bagian yang tergambar makin sempit (nyisa blank di kanan, sama
+      // kayak kotak preview di editor yang lebih kecil dari card
+      // referensinya), dan kalau dipanjangin, bagian yang tergambar makin
+      // lebar dari cssW (ke-crop otomatis sama batas canvas). tileFill di
+      // sini cuma dipakai buat MEMATIKAN shouldTile & shouldStretchOneShot
+      // (dua-duanya bikin hasilnya identik/gak nyambung sama editor), BUKAN
+      // buat nyalain tile.
+      const shouldTile = hasNativeSpan && !!loop && !tileFill
       // Kasus one-shot (gak loop, gak tileFill) yang nyisa blank di kanan
       // (hasNativeSpan true & nativeSpanBars < lengthBars): default-nya
       // SEKARANG selalu di-stretch (di-scale horizontal sampe cssW, mentok
@@ -169,16 +178,21 @@ export function WaveformCanvas({
       // kosong di kanan waveform-nya. stretchToFit cuma dicek eksplisit
       // `=== false` (dari toggle "Fit Waveform" di menu clip) buat balikin
       // ke tampilan lama (satu putaran sample doang, sisanya kosong) kalau
-      // user emang mau gitu. shouldTile (clip loop / tileFill) gak disentuh
-      // sama sekali — tileWidthCss-nya tetep drawWidthCss kayak sebelumnya,
-      // biar efek rapat/renggang-nya beneran kebaca.
-      const shouldStretchOneShot = hasNativeSpan && !shouldTile && stretchToFit !== false
+      // user emang mau gitu. shouldTile (clip loop) gak disentuh sama
+      // sekali — tileWidthCss-nya tetep drawWidthCss kayak sebelumnya, biar
+      // efek rapat/renggang-nya beneran kebaca. Kalau tileFill aktif,
+      // stretch-to-fit di-skip total (`!tileFill`) — soalnya nge-stretch
+      // paksa ke cssW itu yang bikin hasil stretch dari editor keliatan
+      // identik terus (gak nyambung sama squeeze yang keliatan di editor).
+      const shouldStretchOneShot = hasNativeSpan && !shouldTile && !tileFill && stretchToFit !== false
       const tileWidthCss = shouldStretchOneShot ? cssW : drawWidthCss
       // Jumlah tile yang perlu digambar buat nutupin lebar clip penuh.
       // Math.ceil biar tile terakhir yang kepotong di tepi kanan clip tetep
-      // ke-render (bukan cuma sampe tile utuh terakhir); kalau tileWidthCss
-      // sendiri udah lebih lebar dari cssW (native span kepanjangan), hasil
-      // ceil-nya 1 — cuma satu tile lebar yang ke-crop sama canvas.
+      // ke-render (bukan cuma sampe tile utuh terakhir). Kalau tileFill
+      // aktif, tileCount selalu 1 — SATU putaran sample digambar di
+      // drawWidthCss apa adanya: nyisa blank di kanan kalau native span
+      // dipendekin (persis kayak kotak preview yang mengecil di editor),
+      // atau ke-crop sama batas canvas kalau dipanjangin.
       const tileCount = shouldTile ? Math.max(1, Math.ceil(cssW / tileWidthCss)) : 1
 
       const isStereo = !!multiRes && multiRes.stages.length > 0 && multiRes.numChannels >= 2
