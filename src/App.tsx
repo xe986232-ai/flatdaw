@@ -311,10 +311,13 @@ export default function App() {
   // & stretchRatio), lengthBars (= ukuran card di timeline) SENGAJA gak
   // disentuh sama sekali. Jadi kalau di-stretch panjang/pendek dari editor,
   // card clip-nya di timeline diem gak ikut berubah — cuma isi waveform-nya
-  // doang yang keliatan lebih ngisi penuh atau nyisain ruang kosong di dalam
-  // card yang sama. waveformStretchToFit dipaksa false biar hasilnya beneran
-  // kebaca di timeline (default-nya kalau true, waveform selalu maksa ngisi
-  // penuh card, jadi nativeSpanBars-nya gak akan pernah keliatan bedanya).
+  // doang yang ke-stretch. waveformStretchToFit dipaksa TRUE (bukan false)
+  // biar di TIMELINE waveform-nya SELALU ngisi penuh card dari ujung ke
+  // ujung, gak peduli seberapa jauh nativeSpanBars digeser di editor — gak
+  // boleh ada sisa ruang kosong ("mentok separo") di timeline. Beda cerita
+  // di DALAM editor sendiri: di situ nativeSpanBars/effectiveSpanBars-nya
+  // yang dibandingin ke cardBars (lihat AudioClipEditor.tsx), jadi user
+  // masih bisa lihat efek stretch-nya di sana tanpa timeline ikut kepotong.
   // loopPoints SENGAJA gak dibuang (beda dari handleClipStretch) karena ini
   // bukan resample penuh clip, cuma nyesuain tile/isi di dalam durasi yang
   // tetap sama.
@@ -334,7 +337,7 @@ export default function App() {
                   ...c,
                   waveformNativeSpanBars: newNativeSpanBars,
                   stretchRatio: (c.stretchRatio ?? 1) * ratioChange,
-                  waveformStretchToFit: false,
+                  waveformStretchToFit: true,
                 }
               }),
             },
