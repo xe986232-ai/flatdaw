@@ -204,7 +204,13 @@ function BeatRulerCanvas({
       ctx.stroke()
 
       if (isBar4 && i < bars) {
-        ctx.fillText(String(startBar + i), x + 6, 14)
+        // Relatif 1-indexed (bar pertama = "1"), BUKAN startBar + i lagi.
+        // startBar (TIMELINE_START) cuma angka jangkar internal buat
+        // mockup — nampilinnya mentah-mentah bikin ruler nunjuk angka
+        // ganjil kayak "205, 209, 213..." yang salah dikira durasi asli.
+        // Disamain sama penomoran PositionReadout di App.tsx (juga
+        // relatif ke TIMELINE_START, 1-indexed) biar konsisten.
+        ctx.fillText(String(i + 1), x + 6, 14)
       }
 
       // Sub-beat tick di dalam bar, cuma kalau kolomnya masih cukup lega.
