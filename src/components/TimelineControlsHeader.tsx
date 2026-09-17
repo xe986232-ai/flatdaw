@@ -2,22 +2,6 @@ import { useEffect, useRef } from 'react'
 import { BEATS_PER_BAR } from '../tracks'
 import { MAX_LAYER, cellsPerBar, pickActiveLayer } from '../grid'
 
-function PlayIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4 translate-x-[1px]">
-      <path d="M6 4 L20 12 L6 20 Z" fill="currentColor" />
-    </svg>
-  )
-}
-
-function PauseIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4">
-      <path d="M6 4h4v16H6V4Zm8 0h4v16h-4V4Z" fill="currentColor" />
-    </svg>
-  )
-}
-
 function SnapIcon() {
   return (
     <svg viewBox="0 0 24 24" className="h-3.5 w-3.5">
@@ -262,8 +246,6 @@ export function TimelineControlsHeader({
   onLoopChange,
   onToggleLoop,
   onToggleSnap,
-  onPlayClick,
-  isPlaying = false,
   bpm,
 }: {
   startBar: number
@@ -277,25 +259,14 @@ export function TimelineControlsHeader({
   onLoopChange: (start: number, end: number) => void
   onToggleLoop: () => void
   onToggleSnap: () => void
-  onPlayClick?: () => void
-  isPlaying?: boolean
   bpm?: number
 }) {
   return (
     <div className="sticky top-0 z-20 box-border flex h-12 items-stretch border-b border-surface-grid/60 bg-surface-panel">
       <div
-        className="sticky left-0 z-10 flex shrink-0 items-center justify-center gap-1 border-r border-surface-grid/60 bg-surface-panel"
+        className="sticky left-0 z-10 flex shrink-0 items-center justify-center border-r border-surface-grid/60 bg-surface-panel"
         style={{ width: labelWidth }}
       >
-        <button
-          type="button"
-          aria-label={isPlaying ? 'Pause' : 'Play'}
-          aria-pressed={isPlaying}
-          onClick={onPlayClick}
-          className="flex h-8 w-8 items-center justify-center rounded-full bg-track-accent text-white"
-        >
-          {isPlaying ? <PauseIcon /> : <PlayIcon />}
-        </button>
         {typeof bpm === 'number' && (
           <span className="text-[10px] font-medium tabular-nums text-white/70">{bpm} BPM</span>
         )}

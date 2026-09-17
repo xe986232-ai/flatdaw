@@ -999,7 +999,6 @@ export default function App() {
             loopEndBar={loopEndBar}
             loopEnabled={loopEnabled}
             snapEnabled={snapEnabled}
-            isPlaying={isPlaying}
             bpm={projectBpm}
             onLoopChange={(start, end) => {
               setLoopStartBar(start)
@@ -1007,7 +1006,6 @@ export default function App() {
             }}
             onToggleLoop={() => setLoopEnabled((v) => !v)}
             onToggleSnap={() => setSnapEnabled((v) => !v)}
-            onPlayClick={handlePlayClick}
           />
 
           <div className="relative">
