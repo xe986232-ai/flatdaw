@@ -1075,134 +1075,16 @@ export default function App() {
           Random Color
         </button>
 
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => {
-              setIsColorPickerOpen((v) => !v)
-              setActiveColorTarget(null)
-            }}
-            className="bg-track-accent px-4 py-2 text-sm font-medium text-white"
-          >
-            Pilih Warna
-          </button>
-          {isColorPickerOpen && (
-            // Popover isinya 3 bagian: (1) swatch cepat dari FLAT_PALETTE yang
-            // sama persis dipake Random Color, (2) custom color picker bebas
-            // (native <input type="color">) buat milih warna APA AJA, gak
-            // dibatasi 10 warna preset, dan (3) tema gradient — 2 color input
-            // (atas/bawah) + tombol "Terapkan Gradient" yang nge-blend warna
-            // tiap track sesuai posisi vertikalnya (lihat handleApplyGradient).
-            <div className="absolute bottom-full left-0 z-40 mb-1 flex w-[300px] flex-col gap-3 rounded-sm bg-[#2a2a2e] p-3 shadow-lg">
-              <div>
-                <div className="mb-1.5 text-[11px] font-medium text-white/60">Warna cepat</div>
-                <div className="flex w-max max-w-[220px] flex-wrap gap-1.5">
-                  {FLAT_PALETTE.map((c) => (
-                    <button
-                      key={c.fill}
-                      type="button"
-                      title={c.fill}
-                      onClick={() => handlePickSingleColor(c)}
-                      className="h-7 w-7 rounded-full border border-black/30"
-                      style={{ backgroundColor: c.fill }}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="h-px bg-white/10" />
-
-              <div>
-                <div className="mb-1.5 text-[11px] font-medium text-white/60">Custom (semua warna)</div>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setActiveColorTarget((t) => (t === 'custom' ? null : 'custom'))}
-                    className="h-9 w-9 shrink-0 rounded border border-black/30"
-                    style={{ backgroundColor: customColorHex }}
-                  />
-                  <span className="text-[11px] text-white/70">{customColorHex.toUpperCase()}</span>
-                </div>
-              </div>
-
-              <div className="h-px bg-white/10" />
-
-              <div>
-                <div className="mb-1.5 text-[11px] font-medium text-white/60">
-                  Tema gradient (atas → bawah)
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setActiveColorTarget((t) => (t === 'gradientTop' ? null : 'gradientTop'))}
-                      className="h-9 w-9 shrink-0 rounded border border-black/30"
-                      style={{ backgroundColor: gradientTopHex }}
-                    />
-                    <span className="text-[10px] text-white/50">Atas</span>
-                  </div>
-                  <div
-                    className="h-6 flex-1 rounded-sm"
-                    style={{ background: `linear-gradient(90deg, ${gradientTopHex}, ${gradientBottomHex})` }}
-                  />
-                  <div className="flex items-center gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => setActiveColorTarget((t) => (t === 'gradientBottom' ? null : 'gradientBottom'))}
-                      className="h-9 w-9 shrink-0 rounded border border-black/30"
-                      style={{ backgroundColor: gradientBottomHex }}
-                    />
-                    <span className="text-[10px] text-white/50">Bawah</span>
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleApplyGradient}
-                  className="mt-2 w-full bg-track-accent px-3 py-1.5 text-[12px] font-medium text-white"
-                >
-                  Terapkan Gradient
-                </button>
-              </div>
-
-              {/* Picker gede-nya ditaruh di paling bawah sini (bukan
-                  nyempil di antara baris swatch) — ngedit warna mana pun
-                  yang lagi aktif (customColorHex / gradientTopHex /
-                  gradientBottomHex), lebih luas & enak buat drag jarinya. */}
-              {activeColorTarget && (
-                <>
-                  <div className="h-px bg-white/10" />
-                  <div>
-                    <div className="mb-1.5 text-[11px] font-medium text-white/60">
-                      {activeColorTarget === 'custom' && 'Atur warna custom'}
-                      {activeColorTarget === 'gradientTop' && 'Atur warna gradient (atas)'}
-                      {activeColorTarget === 'gradientBottom' && 'Atur warna gradient (bawah)'}
-                    </div>
-                    {activeColorTarget === 'custom' && (
-                      <ColorPicker value={customColorHex} onChange={handlePickCustomColor} />
-                    )}
-                    {activeColorTarget === 'gradientTop' && (
-                      <ColorPicker value={gradientTopHex} onChange={setGradientTopHex} />
-                    )}
-                    {activeColorTarget === 'gradientBottom' && (
-                      <ColorPicker value={gradientBottomHex} onChange={setGradientBottomHex} />
-                    )}
-                  </div>
-                </>
-              )}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsColorPickerOpen(false)
-                  setActiveColorTarget(null)
-                }}
-                className="text-[11px] text-white/50 underline"
-              >
-                Tutup
-              </button>
-            </div>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setIsColorPickerOpen((v) => !v)
+            setActiveColorTarget(null)
+          }}
+          className="bg-track-accent px-4 py-2 text-sm font-medium text-white"
+        >
+          {isColorPickerOpen ? 'Tutup Pengaturan Warna' : 'Pilih Warna'}
+        </button>
 
         <div className="flex gap-2">
           <div className="flex flex-1 items-center gap-2 bg-[#2a2a2e] px-3 py-2">
@@ -1266,6 +1148,112 @@ export default function App() {
                 style={{ width: `${exportProgress}%` }}
               />
             </div>
+          </div>
+        )}
+
+        {/* Pengaturan warna dipindah ke SINI (di bawah tombol Export) — ruang
+            kosong di bawah situ lebih luas dibanding popover kecil yang
+            nyembul dari tombol "Pilih Warna". Susunan 3 bagiannya (swatch
+            cepat, custom, gradient) HORIZONTAL berdampingan (flex-wrap biar
+            tetep rapi kalau space-nya sempit), dan picker gede-nya nongol di
+            bawah baris itu, full-width, pas salah satu swatch di-tap. */}
+        {isColorPickerOpen && (
+          <div className="flex flex-col gap-3 rounded-sm bg-[#2a2a2e] p-3">
+            <div className="flex flex-wrap gap-5">
+              <div>
+                <div className="mb-1.5 text-[11px] font-medium text-white/60">Warna cepat</div>
+                <div className="flex w-max max-w-[220px] flex-wrap gap-1.5">
+                  {FLAT_PALETTE.map((c) => (
+                    <button
+                      key={c.fill}
+                      type="button"
+                      title={c.fill}
+                      onClick={() => handlePickSingleColor(c)}
+                      className="h-7 w-7 rounded-full border border-black/30"
+                      style={{ backgroundColor: c.fill }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="w-px self-stretch bg-white/10" />
+
+              <div>
+                <div className="mb-1.5 text-[11px] font-medium text-white/60">Custom (semua warna)</div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setActiveColorTarget((t) => (t === 'custom' ? null : 'custom'))}
+                    className="h-9 w-9 shrink-0 rounded border border-black/30"
+                    style={{ backgroundColor: customColorHex }}
+                  />
+                  <span className="text-[11px] text-white/70">{customColorHex.toUpperCase()}</span>
+                </div>
+              </div>
+
+              <div className="w-px self-stretch bg-white/10" />
+
+              <div>
+                <div className="mb-1.5 text-[11px] font-medium text-white/60">
+                  Tema gradient (atas → bawah)
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveColorTarget((t) => (t === 'gradientTop' ? null : 'gradientTop'))}
+                      className="h-9 w-9 shrink-0 rounded border border-black/30"
+                      style={{ backgroundColor: gradientTopHex }}
+                    />
+                    <span className="text-[10px] text-white/50">Atas</span>
+                  </div>
+                  <div
+                    className="h-6 w-16 rounded-sm"
+                    style={{ background: `linear-gradient(90deg, ${gradientTopHex}, ${gradientBottomHex})` }}
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setActiveColorTarget((t) => (t === 'gradientBottom' ? null : 'gradientBottom'))}
+                      className="h-9 w-9 shrink-0 rounded border border-black/30"
+                      style={{ backgroundColor: gradientBottomHex }}
+                    />
+                    <span className="text-[10px] text-white/50">Bawah</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleApplyGradient}
+                    className="ml-1 bg-track-accent px-3 py-1.5 text-[12px] font-medium text-white"
+                  >
+                    Terapkan Gradient
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Picker gede-nya (SV square + hue slider + hex) — nongol full
+                lebar di bawah baris horizontal di atas, ngedit warna mana
+                pun yang lagi aktif. */}
+            {activeColorTarget && (
+              <div className="border-t border-white/10 pt-3">
+                <div className="mb-1.5 text-[11px] font-medium text-white/60">
+                  {activeColorTarget === 'custom' && 'Atur warna custom'}
+                  {activeColorTarget === 'gradientTop' && 'Atur warna gradient (atas)'}
+                  {activeColorTarget === 'gradientBottom' && 'Atur warna gradient (bawah)'}
+                </div>
+                <div className="max-w-[360px]">
+                  {activeColorTarget === 'custom' && (
+                    <ColorPicker value={customColorHex} onChange={handlePickCustomColor} />
+                  )}
+                  {activeColorTarget === 'gradientTop' && (
+                    <ColorPicker value={gradientTopHex} onChange={setGradientTopHex} />
+                  )}
+                  {activeColorTarget === 'gradientBottom' && (
+                    <ColorPicker value={gradientBottomHex} onChange={setGradientBottomHex} />
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>
