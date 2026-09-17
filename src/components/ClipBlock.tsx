@@ -455,7 +455,22 @@ export function ClipBlock({
       aria-valuemax={999}
       aria-valuenow={Math.round(effectiveStartBar - timelineStart)}
       aria-valuetext={`Area dimulai pada ${formatBarBeat(effectiveStartBar - timelineStart)} dan berakhir pada ${formatBarBeat(effectiveStartBar - timelineStart + effectiveLengthBars)}`}
-      className={`absolute top-0 bottom-0 flex touch-none select-none flex-col overflow-visible rounded-[3px] ${
+      className={`absolute top-0 bottom-0 flex touch-none select-none flex-col rounded-[3px] ${
+        // overflow-visible SEBELUMNYA selalu nyala gak peduli kondisi apa pun
+        // — niatnya biar 3 ResizeKnob di bawah (yang emang ditaro nongol
+        // separo keluar batas kiri/kanan/bawah clip, cuma dirender pas
+        // isMenuOpen && isAudioClip) tetep kelihatan penuh gak kepotong.
+        // Masalahnya: overflow-visible itu ngaruh ke SEMUA anak elemen
+        // sepanjang waktu, termasuk strip judul (header, px-2 + teks) yang
+        // harusnya nempel pas di batas clip — begitu clip-nya sempit banget
+        // (zoom H kecil / clip pendek), padding+teks header itu jadi nembus
+        // keluar batas box tanpa ke-potong, keliatan kayak "header-nya lebih
+        // lebar dari track-nya". Sekarang overflow cuma dilepas (visible)
+        // pas menu clip lagi kebuka (isMenuOpen) — itu-itu doang saat knob
+        // resize-nya beneran perlu nongol keluar — selain itu overflow-hidden,
+        // jadi header (dan apa pun di dalam) selalu ke-potong pas batas clip.
+        isMenuOpen ? 'overflow-visible' : 'overflow-hidden'
+      } ${
         effectiveColor ? '' : `${fillByKind[kind]} ${inkByKind[kind]}`
       } ${
         dragStartBar != null ? 'z-20 cursor-grabbing brightness-105' : isMenuOpen ? 'cursor-grab' : 'cursor-pointer'
