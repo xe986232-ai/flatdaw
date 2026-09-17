@@ -43,7 +43,7 @@ export const Playhead = forwardRef<
             style={{ background: 'linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.45))' }}
           />
         )}
-        <div className="h-full w-px bg-white/90" style={{ boxShadow: '0 0 6px 1px rgba(255,255,255,0.55)' }} />
+        <div className="h-full w-px bg-white/90" />
       </div>
     )
   },
