@@ -13,6 +13,7 @@
     "@tonejs/midi": "^2.0.28",
     "html-to-image": "^1.11.13",
     "jszip": "^3.10.2",
+    "mp4-muxer": "^5.2.2",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },

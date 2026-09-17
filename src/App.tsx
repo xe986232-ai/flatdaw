@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { toPng } from 'html-to-image'
+import { toPng, toCanvas } from 'html-to-image'
+import { Muxer, ArrayBufferTarget } from 'mp4-muxer'
 import { TimelineControlsHeader } from './components/TimelineControlsHeader'
 import { TrackRow } from './components/TrackRow'
 import { AutomationLane } from './components/AutomationLane'
@@ -55,6 +56,19 @@ const CANVAS_RATIOS = {
 } as const
 
 type CanvasRatioKey = keyof typeof CANVAS_RATIOS
+
+// Resolusi output video export — HD (tinggi ~1080px), dihitung dari rasio
+// yang sama kaya canvas di layar (CANVAS_RATIOS) biar gak ada distorsi/
+// stretch, tapi FIXED sebesar ini (independen dari ukuran layar HP yang
+// kecil) supaya kualitasnya konsisten "HD" di device apa pun.
+function getVideoExportDimensions(ratioKey: CanvasRatioKey): { width: number; height: number } {
+  const { ratio, maxWidth } = CANVAS_RATIOS[ratioKey]
+  const [wPart, hPart] = ratio.split('/').map((s) => parseFloat(s.trim()))
+  const width = maxWidth
+  let height = Math.round((width * hPart) / wPart)
+  if (height % 2 !== 0) height += 1 // codec H.264 butuh dimensi genap
+  return { width, height }
+}
 
 export default function App() {
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -679,6 +693,206 @@ export default function App() {
     }
   }
 
+  // Export video pakai WebCodecs (VideoEncoder) + mp4-muxer, murni di
+  // browser (gak ada server/ffmpeg). Rentang start/end videonya diambil dari
+  // AREA LOOP yang lagi diseleksi di ruler (loopStartBar/loopEndBar, lihat
+  // gesture tahan-lalu-drag di TimelineControlsHeader) — jadi user harus
+  // bikin seleksi loop dulu sebelum bisa export.
+  //
+  // Caranya: loop manual per-frame (60fps) dari loopStartBar ke loopEndBar,
+  // tiap frame kita:
+  //   1) geser posisi playhead & auto-scroll ke bar yang sesuai (persis kaya
+  //      logic live playback, tapi tanpa easing — langsung pas, soalnya ini
+  //      render offline per-frame bukan real-time)
+  //   2) capture tampilan canvas box jadi <canvas> lewat html-to-image
+  //      (toCanvas), di resolusi HD tetap (lihat getVideoExportDimensions)
+  //   3) bikin VideoFrame dari canvas itu, encode lewat VideoEncoder
+  //   4) chunk hasil encode-nya dialirkan ke Muxer (mp4-muxer) buat dijadiin
+  //      file .mp4 beneran
+  // Progress bar-nya asli (frame ke berapa dari total), bukan animasi palsu
+  // kaya punya export gambar (di situ toPng gak ngasih progress callback).
+  const handleExportVideo = async () => {
+    const box = canvasBoxRef.current
+    const scrollEl = scrollRef.current
+    const playheadEl = playheadElRef.current
+    if (!box || !scrollEl || !playheadEl || isExporting) return
+
+    if (loopStartBar === null || loopEndBar === null || loopEndBar - loopStartBar <= 0) {
+      setExportStage('Tahan lalu drag di ruler dulu buat milih area yang mau di-export.')
+      setTimeout(() => setExportStage(''), 2600)
+      return
+    }
+
+    if (typeof VideoEncoder === 'undefined') {
+      setExportStage('Browser ini belum dukung WebCodecs — coba pakai Chrome/Edge versi terbaru.')
+      setTimeout(() => setExportStage(''), 3200)
+      return
+    }
+
+    const FPS = 60
+    const { width: outWidth, height: outHeight } = getVideoExportDimensions(canvasRatio)
+    const BITRATE = 12_000_000 // ~12 Mbps, cukup buat HD 60fps kualitas bagus
+
+    // Coba beberapa level profil H.264 dari yang paling mumpuni buat 1080p60,
+    // turun ke yang lebih kompatibel kalau browser-nya gak dukung.
+    const codecCandidates = ['avc1.640033', 'avc1.640028', 'avc1.4d0028', 'avc1.42001f']
+    let chosenCodec: string | null = null
+    for (const codec of codecCandidates) {
+      try {
+        const support = await VideoEncoder.isConfigSupported({
+          codec,
+          width: outWidth,
+          height: outHeight,
+          framerate: FPS,
+          bitrate: BITRATE,
+        })
+        if (support.supported) {
+          chosenCodec = codec
+          break
+        }
+      } catch {
+        // lanjut coba kandidat berikutnya
+      }
+    }
+
+    if (!chosenCodec) {
+      setExportStage('Encoder video HD gak didukung di browser/device ini.')
+      setTimeout(() => setExportStage(''), 3200)
+      return
+    }
+
+    setIsExporting(true)
+    setExportProgress(0)
+    setExportStage('Menyiapkan export video…')
+
+    const wasPlaying = isPlaying
+    if (wasPlaying) setIsPlaying(false)
+
+    const prevTransform = scrollEl.style.transform
+    const prevOverflow = scrollEl.style.overflow
+    const prevScrollLeft = scrollEl.scrollLeft
+    const prevScrollTop = scrollEl.scrollTop
+    const prevPlayheadTransform = playheadEl.style.transform
+
+    const target = new ArrayBufferTarget()
+    const muxer = new Muxer({
+      target,
+      video: { codec: 'avc', width: outWidth, height: outHeight, frameRate: FPS },
+      fastStart: 'in-memory',
+    })
+
+    const encoder = new VideoEncoder({
+      output: (chunk, meta) => muxer.addVideoChunk(chunk, meta),
+      error: (err) => console.error('VideoEncoder error:', err),
+    })
+
+    encoder.configure({
+      codec: chosenCodec,
+      width: outWidth,
+      height: outHeight,
+      framerate: FPS,
+      bitrate: BITRATE,
+      latencyMode: 'quality',
+    })
+
+    try {
+      scrollEl.style.overflow = 'visible'
+
+      const barsPerSecond = projectBpm / 60 / BEATS_PER_BAR
+      const durationSec = (loopEndBar - loopStartBar) / barsPerSecond
+      const totalFrames = Math.max(1, Math.round(durationSec * FPS))
+      const frameDurationUs = 1_000_000 / FPS
+      const anchorRatio = 0.35
+
+      for (let i = 0; i < totalFrames; i++) {
+        const t = i / FPS
+        const bar = Math.min(loopStartBar + t * barsPerSecond, loopEndBar)
+
+        // Posisi playhead — sama teknik kaya animasi live (mutate ref
+        // langsung, gak lewat setState React tiap frame).
+        const elX = (bar - TIMELINE_START) * barWidth
+        playheadEl.style.transform = `translateX(${elX}px)`
+
+        // Auto-scroll ngikutin playhead (anchor ~35% dari kiri viewport),
+        // tapi langsung pas — gak perlu easing soalnya ini bukan real-time.
+        const xInContent = (bar - TIMELINE_START) * barWidth + LABEL_WIDTH
+        const targetScrollLeft = Math.max(0, xInContent - scrollEl.clientWidth * anchorRatio)
+        scrollEl.style.transform = `translate(${-targetScrollLeft}px, ${-prevScrollTop}px)`
+
+        // Kasih browser kesempatan beneran ngerender perubahan di atas
+        // sebelum di-capture, biar frame yang ke-capture gak "telat" satu
+        // langkah.
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+        const frameCanvas = await toCanvas(box, {
+          width: outWidth,
+          height: outHeight,
+          pixelRatio: 1,
+          cacheBust: false,
+        })
+
+        const videoFrame = new VideoFrame(frameCanvas, {
+          timestamp: Math.round(i * frameDurationUs),
+          duration: Math.round(frameDurationUs),
+        })
+        encoder.encode(videoFrame, { keyFrame: i % (FPS * 2) === 0 })
+        videoFrame.close()
+
+        setExportProgress(Math.round(((i + 1) / totalFrames) * 92))
+        setExportStage(`Merender frame ${i + 1} / ${totalFrames}…`)
+
+        // Jangan biarin antrean encoder numpuk kejauhan (bisa ngabisin
+        // memori) — kasih napas dikit kalau udah kepenuhan.
+        if (encoder.encodeQueueSize > 6) {
+          await new Promise<void>((resolve) => {
+            const check = () => {
+              if (encoder.encodeQueueSize <= 2) resolve()
+              else requestAnimationFrame(check)
+            }
+            check()
+          })
+        }
+      }
+
+      setExportStage('Menyelesaikan encoding…')
+      await encoder.flush()
+      muxer.finalize()
+
+      setExportProgress(97)
+      setExportStage('Menyimpan file…')
+
+      const blob = new Blob([target.buffer], { type: 'video/mp4' })
+      const url = URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `flatdaw-export-${Date.now()}.mp4`
+      link.click()
+      URL.revokeObjectURL(url)
+
+      setExportProgress(100)
+      setExportStage('Selesai!')
+    } catch (err) {
+      console.error('Export video gagal:', err)
+      setExportStage('Export video gagal, coba lagi.')
+    } finally {
+      try {
+        if (encoder.state !== 'closed') encoder.close()
+      } catch {
+        // encoder udah ketutup duluan / gagal — aman diabaikan
+      }
+      scrollEl.style.transform = prevTransform
+      scrollEl.style.overflow = prevOverflow
+      scrollEl.scrollLeft = prevScrollLeft
+      playheadEl.style.transform = prevPlayheadTransform
+      if (wasPlaying) setIsPlaying(true)
+      setTimeout(() => {
+        setIsExporting(false)
+        setExportProgress(0)
+        setExportStage('')
+      }, 700)
+    }
+  }
+
   // Update satu clip di trackList tanpa nyentuh yang lain — dipakai buat
   // nempelin hasil decode waveform belakangan (async), satu per satu, tanpa
   // nunggu semua sample kelar didekode dulu.
@@ -1209,6 +1423,22 @@ export default function App() {
         >
           {isExporting ? 'Mengekspor…' : 'Export Gambar (PNG)'}
         </button>
+
+        <button
+          type="button"
+          onClick={handleExportVideo}
+          disabled={isExporting}
+          className="bg-track-accent px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        >
+          {isExporting ? 'Mengekspor…' : 'Export Video HD 60fps (MP4)'}
+        </button>
+        {!isExporting && (
+          <p className="px-1 text-[11px] text-white/50">
+            {loopStartBar !== null && loopEndBar !== null
+              ? `Area video: bar ${Math.round(loopStartBar - TIMELINE_START) + 1}–${Math.round(loopEndBar - TIMELINE_START) + 1}. Tahan lalu drag di ruler buat ganti.`
+              : 'Belum ada area dipilih — tahan lalu drag di ruler timeline dulu buat nentuin bagian yang mau di-export.'}
+          </p>
+        )}
 
         {isExporting && (
           <div className="flex flex-col gap-1 bg-[#2a2a2e] px-3 py-2">
