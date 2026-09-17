@@ -50,7 +50,7 @@ const MIN_LOOPABLE_NATIVE_SPAN_BARS = 0.4
 // handleExportImage udah baca box.clientWidth/clientHeight secara dinamis,
 // jadi export PNG otomatis ngikutin rasio mana pun yang lagi aktif.
 const CANVAS_RATIOS = {
-  '16:9': { ratio: '16 / 9', maxWidth: 2292 },
+  '16:9': { ratio: '2292 / 1080', maxWidth: 2292 },
   '9:16': { ratio: '9 / 16', maxWidth: 608 },
 } as const
 
