@@ -77,7 +77,7 @@ export function TrackRow({
         tabIndex={0}
         aria-pressed={isSelected}
         onClick={onTrackClick}
-        className={`sticky left-0 z-10 box-border flex shrink-0 cursor-pointer items-center justify-center border-r border-surface-grid/60 bg-surface-panel ${
+        className={`sticky left-0 z-40 box-border flex shrink-0 cursor-pointer items-center justify-center border-r border-surface-grid/60 bg-surface-panel ${
           isSelected ? 'ring-2 ring-inset ring-white' : ''
         }`}
         style={{ width: labelWidth, height }}
