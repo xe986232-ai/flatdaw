@@ -301,7 +301,10 @@ export function TimelineControlsHeader({
         )}
       </div>
 
-      <div className="relative shrink-0" style={{ width: (endBar - startBar) * barWidth }}>
+      <div
+        className="sticky top-0 z-20 relative shrink-0 rounded-t-md border-b border-surface-grid/60 bg-surface-panel"
+        style={{ width: (endBar - startBar) * barWidth }}
+      >
         <CycleMarker
           loopStartBar={loopStartBar}
           loopEndBar={loopEndBar}
