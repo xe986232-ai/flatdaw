@@ -131,7 +131,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
       <div
         onPointerDown={handleSquareDown}
         onPointerMove={handleSquareMove}
-        className="relative h-[120px] w-full touch-none rounded-sm"
+        className="relative h-[220px] w-full touch-none rounded-md"
         style={{
           backgroundColor: hueColor,
           backgroundImage:
@@ -139,7 +139,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
         }}
       >
         <div
-          className="pointer-events-none absolute h-3.5 w-3.5 -translate-x-1/2 translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.4)]"
+          className="pointer-events-none absolute h-6 w-6 -translate-x-1/2 translate-y-1/2 rounded-full border-[3px] border-white shadow-[0_0_0_1px_rgba(0,0,0,0.4)]"
           style={{ left: `${s * 100}%`, bottom: `${v * 100}%` }}
         />
       </div>
@@ -147,21 +147,21 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
       <div
         onPointerDown={handleHueDown}
         onPointerMove={handleHueMove}
-        className="relative h-3.5 w-full touch-none rounded-full"
+        className="relative h-6 w-full touch-none rounded-full"
         style={{
           background:
             'linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00)',
         }}
       >
         <div
-          className="pointer-events-none absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.4)]"
+          className="pointer-events-none absolute top-1/2 h-7 w-7 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white shadow-[0_0_0_1px_rgba(0,0,0,0.4)]"
           style={{ left: `${(hue / 360) * 100}%`, backgroundColor: hueColor }}
         />
       </div>
 
       <div className="flex items-center gap-2">
         <div
-          className="h-7 w-7 shrink-0 rounded border border-black/30"
+          className="h-10 w-10 shrink-0 rounded border border-black/30"
           style={{ backgroundColor: isValidHex(hexInput) ? hexInput : value }}
         />
         <input
@@ -173,7 +173,7 @@ export function ColorPicker({ value, onChange }: ColorPickerProps) {
             if (e.key === 'Enter') e.currentTarget.blur()
           }}
           maxLength={7}
-          className="h-7 w-full rounded border border-white/15 bg-[#1a1a1d] px-2 text-[12px] text-white/85 outline-none focus:border-white/40"
+          className="h-10 w-full rounded border border-white/15 bg-[#1a1a1d] px-3 text-[14px] text-white/85 outline-none focus:border-white/40"
         />
       </div>
     </div>

@@ -1093,7 +1093,7 @@ export default function App() {
             // dibatasi 10 warna preset, dan (3) tema gradient — 2 color input
             // (atas/bawah) + tombol "Terapkan Gradient" yang nge-blend warna
             // tiap track sesuai posisi vertikalnya (lihat handleApplyGradient).
-            <div className="absolute bottom-full left-0 z-40 mb-1 flex w-[260px] flex-col gap-3 rounded-sm bg-[#2a2a2e] p-3 shadow-lg">
+            <div className="absolute bottom-full left-0 z-40 mb-1 flex w-[300px] flex-col gap-3 rounded-sm bg-[#2a2a2e] p-3 shadow-lg">
               <div>
                 <div className="mb-1.5 text-[11px] font-medium text-white/60">Warna cepat</div>
                 <div className="flex w-max max-w-[220px] flex-wrap gap-1.5">
@@ -1123,11 +1123,6 @@ export default function App() {
                   />
                   <span className="text-[11px] text-white/70">{customColorHex.toUpperCase()}</span>
                 </div>
-                {activeColorTarget === 'custom' && (
-                  <div className="mt-2">
-                    <ColorPicker value={customColorHex} onChange={handlePickCustomColor} />
-                  </div>
-                )}
               </div>
 
               <div className="h-px bg-white/10" />
@@ -1160,16 +1155,6 @@ export default function App() {
                     <span className="text-[10px] text-white/50">Bawah</span>
                   </div>
                 </div>
-                {activeColorTarget === 'gradientTop' && (
-                  <div className="mt-2">
-                    <ColorPicker value={gradientTopHex} onChange={setGradientTopHex} />
-                  </div>
-                )}
-                {activeColorTarget === 'gradientBottom' && (
-                  <div className="mt-2">
-                    <ColorPicker value={gradientBottomHex} onChange={setGradientBottomHex} />
-                  </div>
-                )}
                 <button
                   type="button"
                   onClick={handleApplyGradient}
@@ -1178,6 +1163,32 @@ export default function App() {
                   Terapkan Gradient
                 </button>
               </div>
+
+              {/* Picker gede-nya ditaruh di paling bawah sini (bukan
+                  nyempil di antara baris swatch) — ngedit warna mana pun
+                  yang lagi aktif (customColorHex / gradientTopHex /
+                  gradientBottomHex), lebih luas & enak buat drag jarinya. */}
+              {activeColorTarget && (
+                <>
+                  <div className="h-px bg-white/10" />
+                  <div>
+                    <div className="mb-1.5 text-[11px] font-medium text-white/60">
+                      {activeColorTarget === 'custom' && 'Atur warna custom'}
+                      {activeColorTarget === 'gradientTop' && 'Atur warna gradient (atas)'}
+                      {activeColorTarget === 'gradientBottom' && 'Atur warna gradient (bawah)'}
+                    </div>
+                    {activeColorTarget === 'custom' && (
+                      <ColorPicker value={customColorHex} onChange={handlePickCustomColor} />
+                    )}
+                    {activeColorTarget === 'gradientTop' && (
+                      <ColorPicker value={gradientTopHex} onChange={setGradientTopHex} />
+                    )}
+                    {activeColorTarget === 'gradientBottom' && (
+                      <ColorPicker value={gradientBottomHex} onChange={setGradientBottomHex} />
+                    )}
+                  </div>
+                </>
+              )}
 
               <button
                 type="button"
