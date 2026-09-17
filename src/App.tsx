@@ -64,6 +64,7 @@ export default function App() {
   const [exportStage, setExportStage] = useState('')
   const [canvasRatio, setCanvasRatio] = useState<CanvasRatioKey>('16:9')
   const [playheadBar, setPlayheadBar] = useState(207)
+  const playheadElRef = useRef<HTMLDivElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
   const [projectBpm, setProjectBpm] = useState(DEFAULT_BPM)
   const lastFrameTimeRef = useRef<number | null>(null)
@@ -228,7 +229,16 @@ export default function App() {
       }
 
       playheadBarRef.current = next
-      setPlayheadBar(next)
+      // Selama animasi jalan, JANGAN setState tiap frame — App ini punya 33+
+      // track & ratusan clip, jadi re-render React penuh tiap frame (60x/detik)
+      // bikin main-thread keteteran & playhead-nya keliatan patah-patah/glitch.
+      // Posisi visualnya sekarang di-mutate langsung ke DOM node Playhead lewat
+      // ref (translateX, GPU-composited), state React (playheadBar) cuma
+      // disinkronin lagi pas animasi berhenti (lihat effect cleanup di bawah).
+      const elX = (next - TIMELINE_START) * barWidth
+      if (playheadElRef.current) {
+        playheadElRef.current.style.transform = `translateX(${elX}px)`
+      }
 
       // Smooth follow: cuma aktif selama mode loop nyala (sesuai permintaan
       // — klik tombol Loop yang mengaktifkan auto-scroll). Easing eksponensial
@@ -250,6 +260,11 @@ export default function App() {
     return () => {
       cancelAnimationFrame(rafId)
       lastFrameTimeRef.current = null
+      // Sinkronin balik state React ke posisi terakhir pas animasi berhenti
+      // (pause, loop diubah, zoom H diubah, dll — semua ini masuk deps efek
+      // ini) — biar interaksi lain (drag playhead, klik background) mulai
+      // dari posisi yang bener, bukan posisi lama sebelum playback jalan.
+      setPlayheadBar(playheadBarRef.current)
     }
   }, [isPlaying, loopEnabled, loopStartBar, loopEndBar, timelineEnd, barWidth, projectBpm])
 
@@ -1037,7 +1052,7 @@ export default function App() {
             />
 
             <div className="pointer-events-none absolute inset-0" style={{ left: LABEL_WIDTH }}>
-              <Playhead x={playheadX} onDrag={handleDrag} />
+              <Playhead ref={playheadElRef} x={playheadX} onDrag={handleDrag} />
             </div>
           </div>
         </div>
