@@ -105,6 +105,7 @@ export function TrackRow({
             timelineStart={timelineStart}
             timelineEnd={timelineEnd}
             trackName={track.name}
+            labelWidth={labelWidth}
             color={color}
             onStartBarChange={onClipMove}
             isMenuOpen={openMenuClipId === clip.id}

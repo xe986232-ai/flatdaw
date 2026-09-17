@@ -231,6 +231,7 @@ export function ClipBlock({
   timelineStart,
   timelineEnd,
   trackName,
+  labelWidth = 0,
   color,
   isMenuOpen = false,
   isEditing = false,
@@ -250,6 +251,12 @@ export function ClipBlock({
   timelineStart: number
   timelineEnd: number
   trackName?: string
+  // Lebar kolom label/ikon track di kiri (sticky, lihat TrackRow) — dipakai
+  // biar strip judul clip (span sticky di bawah) ngerem pas di tepi kanan
+  // kolom itu, bukan di x=0 viewport. Tanpa ini, sticky-nya nempel ke
+  // x=0 scrollport (nggak tau ada kolom ikon di depannya) terus KEPOTONG
+  // / NEMBUS ketiban kolom ikon pas track-nya discroll ke kanan.
+  labelWidth?: number
   color?: FlatColor
   isMenuOpen?: boolean
   isEditing?: boolean
@@ -538,7 +545,9 @@ export function ClipBlock({
             }`}
             style={{ backgroundColor: headerFill, color: headerInk }}
           >
-            <span className="sticky left-0">{clip.label}</span>
+            <span className="sticky" style={{ left: labelWidth }}>
+              {clip.label}
+            </span>
           </div>
         )
       )}
