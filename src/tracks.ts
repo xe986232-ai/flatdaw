@@ -65,6 +65,18 @@ export interface Clip {
   // gak dipakai buat apa pun selain WaveformCanvas (gak ngubah loopPoints,
   // stretchRatio asli, atau durasi playback beneran).
   waveformStretchToFit?: boolean
+  // Toggle MURNI VISUAL, di-set otomatis oleh handleClipEditorStretch (App.tsx)
+  // pas user stretch waveform dari dalam AudioClipEditor. Beda dari
+  // waveformStretchToFit (yang cuma nge-scale SATU putaran sample biar nutup
+  // penuh lebar card tanpa peduli nativeSpanBars): field ini MAKSA
+  // WaveformCanvas masuk mode tile (diulang-ulang nempel-nempelan) walau
+  // clip-nya bukan loop asli dari import. Ini yang bikin efek stretch beneran
+  // kebaca visual — makin pendek nativeSpanBars, makin rapat/banyak
+  // pengulangannya; makin panjang, makin renggang (atau ke-crop kalau lebih
+  // panjang dari card). waveformStretchToFit tetep useless di kondisi ini
+  // karena nge-scale ke lebar card SELALU keliatan identik gak peduli
+  // nativeSpanBars-nya berapa.
+  waveformTileFill?: boolean
 }
 
 export interface Track {

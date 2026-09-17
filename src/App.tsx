@@ -337,7 +337,7 @@ export default function App() {
                   ...c,
                   waveformNativeSpanBars: newNativeSpanBars,
                   stretchRatio: (c.stretchRatio ?? 1) * ratioChange,
-                  waveformStretchToFit: true,
+                  waveformTileFill: true,
                 }
               }),
             },
@@ -421,7 +421,10 @@ export default function App() {
       // clip lain di track manapun sama sekali gak disentuh. Default
       // sekarang udah "full/stretch" (lihat WaveformCanvas: cek `=== false`),
       // jadi tombol ini di-toggle berdasar nilai efektifnya: kalau clip lagi
-      // full (waveformStretchToFit belum ke-set / true), tap ini eksplisit
+      // full (waveformStretchToFit belum ke-set / true) — kalau clip ini juga
+  // kena waveformTileFill (dari stretch di editor), toggle ini gak ngaruh
+  // apa-apa karena tileFill selalu menang di WaveformCanvas (lihat komentar
+  // di sana). tap ini eksplisit
       // matiin jadi false (balik ke tampilan lama, ada celah kosong);
       // ditap lagi -> balik ke true (full lagi).
       setTrackList((prev) =>

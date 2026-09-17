@@ -551,7 +551,13 @@ export function ClipBlock({
             multiRes={clip.waveformMultiRes}
             lengthBars={effectiveLengthBars}
             nativeSpanBars={clip.waveformNativeSpanBars}
-            loop={isLoopedClip}
+            // waveformTileFill (di-set handleClipEditorStretch pas stretch
+            // dari dalam AudioClipEditor) MAKSA mode tile nyala walau clip-nya
+            // bukan loop asli dari import (isLoopedClip false) — biar hasil
+            // stretch beneran kebaca berubah di timeline, bukan cuma
+            // ke-compress ke lebar card yang keliatan identik terus.
+            loop={isLoopedClip || !!clip.waveformTileFill}
+            tileFill={!!clip.waveformTileFill}
             stretchToFit={clip.waveformStretchToFit !== false}
           />
         ) : clip.notes && clip.notes.length > 0 ? (

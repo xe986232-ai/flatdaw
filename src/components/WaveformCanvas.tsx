@@ -41,6 +41,7 @@ export function WaveformCanvas({
   nativeSpanBars,
   loop,
   stretchToFit,
+  tileFill,
 }: {
   peaks: WaveformPeaksData
   multiRes?: MultiResPeaks
@@ -52,6 +53,18 @@ export function WaveformCanvas({
   // yang loop=true, jadi clip lain (termasuk clip loop lain) gak kepengaruh
   // sama sekali walau prop ini true di sini.
   stretchToFit?: boolean
+  // clip.waveformTileFill (lihat tracks.ts) — dipaksa true oleh
+  // handleClipEditorStretch di App.tsx pas user stretch waveform dari dalam
+  // AudioClipEditor. Beda dari stretchToFit: stretchToFit cuma nge-scale
+  // SATU putaran sample biar nutup lebar card (hasilnya identik gak peduli
+  // nativeSpanBars berapa, makanya kemarin "kayak ga ke-stretch"). tileFill
+  // MAKSA mode tile nyala dua arah — native span boleh lebih PENDEK dari
+  // card (jadinya diulang lebih rapat/banyak) ATAU lebih PANJANG dari card
+  // (jadinya diulang lebih renggang, atau kalau lebih panjang dari cssW,
+  // cuma nampilin sebagian awal sample yang ke-crop otomatis oleh batas
+  // canvas). Ini yang bikin hasil stretch beneran kebaca berubah secara
+  // visual di timeline.
+  tileFill?: boolean
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -129,30 +142,43 @@ export function WaveformCanvas({
       ctx.clearRect(0, 0, cssW, cssH)
 
       // Lebar SATU PUTARAN sample (dalam px) = proporsi durasi asli sample
-      // terhadap penempatan clip di playlist. Kalau nativeSpanBars gak
-      // dikasih atau lebih panjang/sama dengan lengthBars, sample digambar
-      // penuh selebar cssW (perilaku lama, gak ada yang perlu dipotong/
-      // di-tile). Kalau clip ini loop (`loop` true), tileWidthCss diulang
-      // nempel-nempelan sampe ngisi cssW; kalau bukan (one-shot asli), cuma
-      // satu tile yang digambar terus sisanya dibiarin kosong/senyap.
+      // terhadap penempatan clip di playlist. hasNativeSpan sekarang DUA
+      // ARAH — dulu cuma true kalau nativeSpanBars lebih PENDEK dari
+      // lengthBars (`lengthBars > nativeSpanBars + 0.001`), jadi kalau
+      // nativeSpanBars malah lebih PANJANG (kasus stretch dari editor yang
+      // manjangin span), drawWidthCss ke-force balik ke cssW dan hasilnya
+      // keliatan identik terus gak peduli seberapa jauh di-stretch. Sekarang
+      // cukup beda (bukan cuma lebih pendek) buat kepake.
       const hasNativeSpan =
-        !!nativeSpanBars && !!lengthBars && nativeSpanBars > 0.001 && lengthBars > nativeSpanBars + 0.001
+        !!nativeSpanBars && !!lengthBars && nativeSpanBars > 0.001 && Math.abs(lengthBars - nativeSpanBars) > 0.001
       const drawWidthCss = hasNativeSpan ? Math.max(1, (nativeSpanBars! / lengthBars!) * cssW) : cssW
-      const shouldTile = hasNativeSpan && !!loop
-      // Kasus one-shot (gak loop) yang nyisa blank di kanan (hasNativeSpan
-      // true): default-nya SEKARANG selalu di-stretch (di-scale horizontal
-      // sampe cssW, mentok tepi kanan), gak nunggu di-toggle manual lagi —
-      // biar gak ada spasi kosong di kanan waveform-nya. stretchToFit cuma
-      // dicek eksplisit `=== false` (dari toggle "Fit Waveform" di menu
-      // clip) buat balikin ke tampilan lama (satu putaran sample doang,
-      // sisanya kosong) kalau user emang mau gitu. shouldTile (clip loop)
-      // gak disentuh sama sekali — tileWidthCss-nya tetep drawWidthCss kayak
-      // sebelumnya.
+      // tileFill (clip.waveformTileFill, di-set pas stretch dari
+      // AudioClipEditor) MAKSA mode tile nyala dua arah, gak peduli `loop`
+      // dari loopPoints asli. Kalau nativeSpanBars < lengthBars,
+      // drawWidthCss < cssW jadi tileCount di bawah > 1 (diulang rapat).
+      // Kalau nativeSpanBars > lengthBars, drawWidthCss > cssW jadi
+      // tileCount = 1 tapi tile-nya lebih lebar dari canvas — bagian yang
+      // ngelewatin cssW otomatis ke-crop sama batas canvas, jadi cuma
+      // sebagian awal sample yang kelihatan (persis kayak drag sample jadi
+      // lebih panjang di FL Studio Mobile).
+      const shouldTile = hasNativeSpan && (!!loop || !!tileFill)
+      // Kasus one-shot (gak loop, gak tileFill) yang nyisa blank di kanan
+      // (hasNativeSpan true & nativeSpanBars < lengthBars): default-nya
+      // SEKARANG selalu di-stretch (di-scale horizontal sampe cssW, mentok
+      // tepi kanan), gak nunggu di-toggle manual lagi — biar gak ada spasi
+      // kosong di kanan waveform-nya. stretchToFit cuma dicek eksplisit
+      // `=== false` (dari toggle "Fit Waveform" di menu clip) buat balikin
+      // ke tampilan lama (satu putaran sample doang, sisanya kosong) kalau
+      // user emang mau gitu. shouldTile (clip loop / tileFill) gak disentuh
+      // sama sekali — tileWidthCss-nya tetep drawWidthCss kayak sebelumnya,
+      // biar efek rapat/renggang-nya beneran kebaca.
       const shouldStretchOneShot = hasNativeSpan && !shouldTile && stretchToFit !== false
       const tileWidthCss = shouldStretchOneShot ? cssW : drawWidthCss
       // Jumlah tile yang perlu digambar buat nutupin lebar clip penuh.
       // Math.ceil biar tile terakhir yang kepotong di tepi kanan clip tetep
-      // ke-render (bukan cuma sampe tile utuh terakhir).
+      // ke-render (bukan cuma sampe tile utuh terakhir); kalau tileWidthCss
+      // sendiri udah lebih lebar dari cssW (native span kepanjangan), hasil
+      // ceil-nya 1 — cuma satu tile lebar yang ke-crop sama canvas.
       const tileCount = shouldTile ? Math.max(1, Math.ceil(cssW / tileWidthCss)) : 1
 
       const isStereo = !!multiRes && multiRes.stages.length > 0 && multiRes.numChannels >= 2
@@ -202,7 +228,7 @@ export function WaveformCanvas({
     const ro = new ResizeObserver(draw)
     if (canvas.parentElement) ro.observe(canvas.parentElement)
     return () => ro.disconnect()
-  }, [peaks, multiRes, lengthBars, nativeSpanBars, loop, stretchToFit])
+  }, [peaks, multiRes, lengthBars, nativeSpanBars, loop, stretchToFit, tileFill])
 
   return <canvas ref={canvasRef} className="block h-full w-full" style={{ color: 'currentColor' }} />
 }
