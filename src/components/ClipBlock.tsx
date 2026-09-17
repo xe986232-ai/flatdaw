@@ -527,7 +527,7 @@ export function ClipBlock({
           </div>
         )
       )}
-      <div className={`relative min-h-0 flex-1 pt-1 pb-1 ${clip.waveformPeaks ? 'pl-0 pr-2' : 'px-2'}`}>
+      <div className={`relative min-h-0 flex-1 pt-1 pb-1 ${clip.waveformPeaks ? 'pl-0 pr-0' : 'px-2'}`}>
         {clip.waveformPeaks ? (
           // Sample-nya ketemu di dalam zip project & sudah didekode — gambar
           // waveform beneran, bukan pola dekoratif. lengthBars &
@@ -538,14 +538,18 @@ export function ClipBlock({
           // putaran itu di-tile berulang buat ngisi penuh lebar clip atau
           // cuma main sekali terus dibiarin senyap (one-shot asli).
           //
-          // Padding kiri sengaja DIHILANGKAN (pl-0) khusus buat waveform —
-          // beda dari NotePreview/Pattern yang tetep px-2 di kedua sisi.
-          // Awalnya waveform ikut px-2 kayak yang lain, tapi begitu clip
-          // audio jadi pendek banget (one-shot kick/clap hasil clamp
-          // panjang ke jarak antar hit), 8px padding kiri itu keliatan
+          // Padding kiri & kanan sengaja DIHILANGKAN (pl-0 pr-0) khusus buat
+          // waveform — beda dari NotePreview/Pattern yang tetep px-2 di
+          // kedua sisi. Awalnya waveform ikut px-2 kayak yang lain, tapi
+          // begitu clip audio jadi pendek banget (one-shot kick/clap hasil
+          // clamp panjang ke jarak antar hit), 8px padding kiri itu keliatan
           // sebagai jarak/spasi kosong yang jelas banget sebelum bunyinya
           // "mulai" — padahal harusnya nempel mentok ke tepi kiri clip
-          // (= titik clip itu beneran mulai main di timeline).
+          // (= titik clip itu beneran mulai main di timeline). Padding kanan
+          // (pr-2) awalnya dibiarin, tapi ternyata bikin SEMUA clip audio
+          // nyisa jarak kecil di kanan gak peduli hasil stretch/tile-nya —
+          // sekarang dihilangin juga (pr-0) biar waveform beneran mentok ke
+          // KEDUA tepi clip.
           <WaveformCanvas
             peaks={clip.waveformPeaks}
             multiRes={clip.waveformMultiRes}
