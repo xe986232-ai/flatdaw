@@ -7,6 +7,7 @@ import { Playhead } from './components/Playhead'
 import { PianoRoll } from './components/PianoRoll'
 import { AudioClipEditor } from './components/AudioClipEditor'
 import type { ClipMenuAction } from './components/ClipMenu'
+import { ColorPicker } from './components/ColorPicker'
 import { tracks, TIMELINE_START, getTimelineEnd, BEATS_PER_BAR, type Clip, type Note } from './tracks'
 import { generateNotesForClip } from './notes'
 import { randomFlatColor, FLAT_PALETTE, flatColorFromHex, lerpHex, type FlatColor } from './colors'
@@ -76,6 +77,10 @@ export default function App() {
   const [customColorHex, setCustomColorHex] = useState('#C25355')
   const [gradientTopHex, setGradientTopHex] = useState('#D63A2E')
   const [gradientBottomHex, setGradientBottomHex] = useState('#2E63D6')
+  // Swatch mana yang lagi buka custom color picker-nya (cuma satu yang
+  // kebuka dalam satu waktu, gantian dipake buat customColorHex /
+  // gradientTopHex / gradientBottomHex biar popovernya gak numpuk 3x).
+  const [activeColorTarget, setActiveColorTarget] = useState<'custom' | 'gradientTop' | 'gradientBottom' | null>(null)
 
   // Arrangement length now follows the actual content instead of a fixed
   // window — recomputed whenever trackList changes (e.g. right after an .flm
@@ -1073,7 +1078,10 @@ export default function App() {
         <div className="relative">
           <button
             type="button"
-            onClick={() => setIsColorPickerOpen((v) => !v)}
+            onClick={() => {
+              setIsColorPickerOpen((v) => !v)
+              setActiveColorTarget(null)
+            }}
             className="bg-track-accent px-4 py-2 text-sm font-medium text-white"
           >
             Pilih Warna
@@ -1107,30 +1115,19 @@ export default function App() {
               <div>
                 <div className="mb-1.5 text-[11px] font-medium text-white/60">Custom (semua warna)</div>
                 <div className="flex items-center gap-2">
-                  <label
-                    className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded border border-black/30"
+                  <button
+                    type="button"
+                    onClick={() => setActiveColorTarget((t) => (t === 'custom' ? null : 'custom'))}
+                    className="h-9 w-9 shrink-0 rounded border border-black/30"
                     style={{ backgroundColor: customColorHex }}
-                  >
-                    {/* Swatch keliatannya (backgroundColor di atas) SENGAJA
-                        ngikutin state customColorHex sendiri, gak ngandelin
-                        browser buat nge-render warna native <input
-                        type="color">-nya — beberapa browser/WebView render
-                        swatch bawaan elemen ini beda/gak akurat kalau ada
-                        style tambahan (bg-transparent, p-0, dst) numpuk di
-                        atasnya, jadi keliatannya "beda dari warna yang udah
-                        ditetapkan". Input aslinya ditumpuk transparan penuh
-                        (opacity-0) pas di atas label ini — cuma dipake buat
-                        nangkep tap-nya biar native color picker kebuka,
-                        visualnya 100% dari div ini. */}
-                    <input
-                      type="color"
-                      value={customColorHex}
-                      onChange={(e) => handlePickCustomColor(e.target.value)}
-                      className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                    />
-                  </label>
+                  />
                   <span className="text-[11px] text-white/70">{customColorHex.toUpperCase()}</span>
                 </div>
+                {activeColorTarget === 'custom' && (
+                  <div className="mt-2">
+                    <ColorPicker value={customColorHex} onChange={handlePickCustomColor} />
+                  </div>
+                )}
               </div>
 
               <div className="h-px bg-white/10" />
@@ -1141,17 +1138,12 @@ export default function App() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1.5">
-                    <label
-                      className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded border border-black/30"
+                    <button
+                      type="button"
+                      onClick={() => setActiveColorTarget((t) => (t === 'gradientTop' ? null : 'gradientTop'))}
+                      className="h-9 w-9 shrink-0 rounded border border-black/30"
                       style={{ backgroundColor: gradientTopHex }}
-                    >
-                      <input
-                        type="color"
-                        value={gradientTopHex}
-                        onChange={(e) => setGradientTopHex(e.target.value)}
-                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                      />
-                    </label>
+                    />
                     <span className="text-[10px] text-white/50">Atas</span>
                   </div>
                   <div
@@ -1159,20 +1151,25 @@ export default function App() {
                     style={{ background: `linear-gradient(90deg, ${gradientTopHex}, ${gradientBottomHex})` }}
                   />
                   <div className="flex items-center gap-1.5">
-                    <label
-                      className="relative h-9 w-9 shrink-0 cursor-pointer overflow-hidden rounded border border-black/30"
+                    <button
+                      type="button"
+                      onClick={() => setActiveColorTarget((t) => (t === 'gradientBottom' ? null : 'gradientBottom'))}
+                      className="h-9 w-9 shrink-0 rounded border border-black/30"
                       style={{ backgroundColor: gradientBottomHex }}
-                    >
-                      <input
-                        type="color"
-                        value={gradientBottomHex}
-                        onChange={(e) => setGradientBottomHex(e.target.value)}
-                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                      />
-                    </label>
+                    />
                     <span className="text-[10px] text-white/50">Bawah</span>
                   </div>
                 </div>
+                {activeColorTarget === 'gradientTop' && (
+                  <div className="mt-2">
+                    <ColorPicker value={gradientTopHex} onChange={setGradientTopHex} />
+                  </div>
+                )}
+                {activeColorTarget === 'gradientBottom' && (
+                  <div className="mt-2">
+                    <ColorPicker value={gradientBottomHex} onChange={setGradientBottomHex} />
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={handleApplyGradient}
@@ -1184,7 +1181,10 @@ export default function App() {
 
               <button
                 type="button"
-                onClick={() => setIsColorPickerOpen(false)}
+                onClick={() => {
+                  setIsColorPickerOpen(false)
+                  setActiveColorTarget(null)
+                }}
                 className="text-[11px] text-white/50 underline"
               >
                 Tutup
