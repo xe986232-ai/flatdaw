@@ -9,7 +9,7 @@ import { AudioClipEditor } from './components/AudioClipEditor'
 import type { ClipMenuAction } from './components/ClipMenu'
 import { tracks, TIMELINE_START, getTimelineEnd, BEATS_PER_BAR, type Clip, type Note } from './tracks'
 import { generateNotesForClip } from './notes'
-import { randomFlatColor, FLAT_PALETTE, type FlatColor } from './colors'
+import { randomFlatColor, FLAT_PALETTE, flatColorFromHex, lerpHex, type FlatColor } from './colors'
 import { parseFlmFile } from './flmParser'
 import { flmToTracks } from './flmToTracks'
 import { loadZipProject, matchSampleFile } from './zipProject'
@@ -68,6 +68,14 @@ export default function App() {
   const [trackList, setTrackList] = useState(tracks)
   const [trackColors, setTrackColors] = useState<Record<string, FlatColor>>({})
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
+  // Warna terakhir dipilih di custom picker (single color) & di dua ujung
+  // gradient (atas/bawah) — cuma buat nge-drive value <input type="color">
+  // di popover, gak dipake buat render clip mana pun sampe user beneran
+  // pencet "Terapkan Gradient" (atau berubah lewat picker single yang
+  // langsung ke-apply tiap ganti, lihat handlePickCustomColor).
+  const [customColorHex, setCustomColorHex] = useState('#C25355')
+  const [gradientTopHex, setGradientTopHex] = useState('#D63A2E')
+  const [gradientBottomHex, setGradientBottomHex] = useState('#2E63D6')
 
   // Arrangement length now follows the actual content instead of a fixed
   // window — recomputed whenever trackList changes (e.g. right after an .flm
@@ -501,6 +509,47 @@ export default function App() {
       return next
     })
     setIsColorPickerOpen(false)
+  }
+
+  // Custom color picker (bukan dari 10 warna FLAT_PALETTE) — dipanggil tiap
+  // <input type="color"> berubah, langsung nge-apply ke semua track (gak
+  // nunggu tombol "Terapkan" biar user bisa lihat hasilnya real-time sambil
+  // geser-geser di native color picker Android/Chrome). ink-nya dihitung
+  // otomatis (lihat flatColorFromHex) karena fill-nya bisa apa aja, gak ada
+  // pasangan ink yang udah ditentuin manual kayak FLAT_PALETTE.
+  const handlePickCustomColor = (hex: string) => {
+    setCustomColorHex(hex)
+    handlePickSingleColorRaw(flatColorFromHex(hex))
+  }
+
+  // Sama persis handlePickSingleColor, tapi TANPA nutup popover-nya (dipake
+  // internal buat custom picker & gradient yang popover-nya mesti tetep
+  // kebuka sambil user masih ngatur-ngatur warnanya).
+  const handlePickSingleColorRaw = (picked: FlatColor) => {
+    setTrackColors(() => {
+      const next: Record<string, FlatColor> = {}
+      for (const track of trackList) {
+        next[track.id] = picked
+      }
+      return next
+    })
+  }
+
+  // Tema gradient — track PERTAMA (paling atas di layar, lihat trackList.map
+  // di render) dapet gradientTopHex apa adanya, track TERAKHIR (paling
+  // bawah) dapet gradientBottomHex apa adanya, dan track di antaranya
+  // nge-blend proporsional sesuai posisi index-nya (lerpHex). Kalau cuma ada
+  // 1 track, dia dapet warna atas (t=0) biar gak ambigu bagi nol.
+  const handleApplyGradient = () => {
+    setTrackColors(() => {
+      const next: Record<string, FlatColor> = {}
+      const lastIndex = trackList.length - 1
+      trackList.forEach((track, i) => {
+        const t = lastIndex > 0 ? i / lastIndex : 0
+        next[track.id] = flatColorFromHex(lerpHex(gradientTopHex, gradientBottomHex, t))
+      })
+      return next
+    })
   }
 
   // Export the visible canvas box as a PNG. Note: WebCodecs (VideoEncoder/
@@ -1030,20 +1079,90 @@ export default function App() {
             Pilih Warna
           </button>
           {isColorPickerOpen && (
-            // Popover kecil isinya swatch dari FLAT_PALETTE yang sama persis
-            // dipake Random Color — klik salah satu buat nge-set SEMUA track
-            // ke satu warna itu sekaligus.
-            <div className="absolute bottom-full left-0 z-40 mb-1 flex w-max max-w-[220px] flex-wrap gap-1.5 rounded-sm bg-[#2a2a2e] p-2 shadow-lg">
-              {FLAT_PALETTE.map((c) => (
+            // Popover isinya 3 bagian: (1) swatch cepat dari FLAT_PALETTE yang
+            // sama persis dipake Random Color, (2) custom color picker bebas
+            // (native <input type="color">) buat milih warna APA AJA, gak
+            // dibatasi 10 warna preset, dan (3) tema gradient — 2 color input
+            // (atas/bawah) + tombol "Terapkan Gradient" yang nge-blend warna
+            // tiap track sesuai posisi vertikalnya (lihat handleApplyGradient).
+            <div className="absolute bottom-full left-0 z-40 mb-1 flex w-[260px] flex-col gap-3 rounded-sm bg-[#2a2a2e] p-3 shadow-lg">
+              <div>
+                <div className="mb-1.5 text-[11px] font-medium text-white/60">Warna cepat</div>
+                <div className="flex w-max max-w-[220px] flex-wrap gap-1.5">
+                  {FLAT_PALETTE.map((c) => (
+                    <button
+                      key={c.fill}
+                      type="button"
+                      title={c.fill}
+                      onClick={() => handlePickSingleColor(c)}
+                      className="h-7 w-7 rounded-full border border-black/30"
+                      style={{ backgroundColor: c.fill }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <div className="h-px bg-white/10" />
+
+              <div>
+                <div className="mb-1.5 text-[11px] font-medium text-white/60">Custom (semua warna)</div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="color"
+                    value={customColorHex}
+                    onChange={(e) => handlePickCustomColor(e.target.value)}
+                    className="h-9 w-9 shrink-0 cursor-pointer rounded border border-black/30 bg-transparent p-0"
+                  />
+                  <span className="text-[11px] text-white/70">{customColorHex.toUpperCase()}</span>
+                </div>
+              </div>
+
+              <div className="h-px bg-white/10" />
+
+              <div>
+                <div className="mb-1.5 text-[11px] font-medium text-white/60">
+                  Tema gradient (atas → bawah)
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="color"
+                      value={gradientTopHex}
+                      onChange={(e) => setGradientTopHex(e.target.value)}
+                      className="h-9 w-9 shrink-0 cursor-pointer rounded border border-black/30 bg-transparent p-0"
+                    />
+                    <span className="text-[10px] text-white/50">Atas</span>
+                  </div>
+                  <div
+                    className="h-6 flex-1 rounded-sm"
+                    style={{ background: `linear-gradient(90deg, ${gradientTopHex}, ${gradientBottomHex})` }}
+                  />
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="color"
+                      value={gradientBottomHex}
+                      onChange={(e) => setGradientBottomHex(e.target.value)}
+                      className="h-9 w-9 shrink-0 cursor-pointer rounded border border-black/30 bg-transparent p-0"
+                    />
+                    <span className="text-[10px] text-white/50">Bawah</span>
+                  </div>
+                </div>
                 <button
-                  key={c.fill}
                   type="button"
-                  title={c.fill}
-                  onClick={() => handlePickSingleColor(c)}
-                  className="h-7 w-7 rounded-full border border-black/30"
-                  style={{ backgroundColor: c.fill }}
-                />
-              ))}
+                  onClick={handleApplyGradient}
+                  className="mt-2 w-full bg-track-accent px-3 py-1.5 text-[12px] font-medium text-white"
+                >
+                  Terapkan Gradient
+                </button>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsColorPickerOpen(false)}
+                className="text-[11px] text-white/50 underline"
+              >
+                Tutup
+              </button>
             </div>
           )}
         </div>

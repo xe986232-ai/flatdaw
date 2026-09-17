@@ -53,6 +53,50 @@ export function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r}, ${g}, ${b}, ${alpha})`
 }
 
+// Dipake buat 2 fitur custom color (bukan cuma milih dari FLAT_PALETTE lagi):
+// (1) color picker bebas — user pilih SATU warna apa aja lewat <input
+// type="color"> (native picker Android/Chrome, ada full spectrum + input hex
+// manual), dipasang ke SEMUA track sekaligus (mirip handlePickSingleColor
+// tapi gak dibatasi 10 warna preset). (2) tema gradient — user pilih 2 warna
+// (atas & bawah), tiap track dapet warna hasil interpolasi linear berdasar
+// posisi vertikalnya di trackList (track pertama = warna atas, track
+// terakhir = warna bawah, yang di tengah nge-blend proporsional).
+//
+// Karena inputnya sekarang bebas (bukan dari 10 warna FLAT_PALETTE yang
+// ink-nya udah dipilih manual biar kontras bagus), ink (warna teks/waveform
+// di atas fill itu) dihitung otomatis dari luminance fill-nya — kalau
+// fill-nya terang, ink jadi gelap, dan sebaliknya. Rumus luminance relatif
+// standar WCAG (versi disederhanakan, tanpa gamma-correct penuh) — cukup
+// buat nentuin terang/gelap kasar, gak perlu presisi kontras AA/AAA.
+function relativeLuminance(hex: string): number {
+  const h = hex.replace('#', '')
+  const r = parseInt(h.substring(0, 2), 16) / 255
+  const g = parseInt(h.substring(2, 4), 16) / 255
+  const b = parseInt(h.substring(4, 6), 16) / 255
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+/** Bikin FlatColor dari hex bebas apa aja — ink-nya (teks/waveform ink)
+ * otomatis putih pucat kalau fill-nya gelap, atau nyaris hitam kalau fill-nya
+ * terang, biar tetep kebaca kontrasnya walau fill-nya dipilih user sendiri. */
+export function flatColorFromHex(hex: string): FlatColor {
+  return { fill: hex, ink: relativeLuminance(hex) > 0.5 ? '#14121B' : '#F5F2FF' }
+}
+
+/** Interpolasi linear dua warna hex, t dari 0 (persis colorA) sampe 1
+ * (persis colorB) — dipake buat nge-blend warna gradient antar track sesuai
+ * posisi vertikalnya. */
+export function lerpHex(colorA: string, colorB: string, t: number): string {
+  const a = colorA.replace('#', '')
+  const b = colorB.replace('#', '')
+  const clampT = Math.max(0, Math.min(1, t))
+  const lerpChannel = (start: number, end: number) => Math.round(start + (end - start) * clampT)
+  const rr = lerpChannel(parseInt(a.substring(0, 2), 16), parseInt(b.substring(0, 2), 16))
+  const gg = lerpChannel(parseInt(a.substring(2, 4), 16), parseInt(b.substring(2, 4), 16))
+  const bb = lerpChannel(parseInt(a.substring(4, 6), 16), parseInt(b.substring(4, 6), 16))
+  return `#${rr.toString(16).padStart(2, '0')}${gg.toString(16).padStart(2, '0')}${bb.toString(16).padStart(2, '0')}`
+}
+
 // Warna region audio — TETAP, gak ikut acakan Random Color/trackColors kayak
 // clip pattern/MIDI lain. Niru "st-purple-rain-set" di Soundtrap: klip audio
 // asli (punya sampleName/waveform) selalu ungu indigo, apapun warna track-nya,
