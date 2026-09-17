@@ -30,7 +30,16 @@ export const Playhead = forwardRef<HTMLDivElement, { x: number; onDrag: (clientX
           className="pointer-events-auto absolute -top-[1px] -left-2 h-3.5 w-4 cursor-ew-resize rounded-b-sm bg-white"
           style={{ clipPath: 'polygon(0 0, 100% 0, 100% 60%, 50% 100%, 0 60%)' }}
         />
-        <div className="h-full w-px bg-white/90" />
+        {/* Trail/glow di belakang garis playhead — warna sama (putih), makin
+            pudar makin ke belakang (kiri, arah kebalikan gerak). Nempel di
+            wrapper yang sama yang di-translate tiap frame (lihat App.tsx),
+            jadi trail-nya ikut gerak seiring garis tanpa perlu state/render
+            tambahan sendiri. */}
+        <div
+          className="absolute top-0 bottom-0 right-full w-9"
+          style={{ background: 'linear-gradient(to right, rgba(255,255,255,0), rgba(255,255,255,0.45))' }}
+        />
+        <div className="h-full w-px bg-white/90" style={{ boxShadow: '0 0 6px 1px rgba(255,255,255,0.55)' }} />
       </div>
     )
   },
