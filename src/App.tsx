@@ -1052,7 +1052,7 @@ export default function App() {
             />
 
             <div className="pointer-events-none absolute inset-0" style={{ left: LABEL_WIDTH }}>
-              <Playhead ref={playheadElRef} x={playheadX} onDrag={handleDrag} />
+              <Playhead ref={playheadElRef} x={playheadX} onDrag={handleDrag} isPlaying={isPlaying} />
             </div>
           </div>
         </div>
