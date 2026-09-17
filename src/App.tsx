@@ -45,12 +45,24 @@ const DEFAULT_BPM = 120
 // keliru cuma berdasar rasio panjang doang.
 const MIN_LOOPABLE_NATIVE_SPAN_BARS = 0.4
 
+// Dua pilihan rasio canvas — cuma ngatur bentuk/ukuran bingkai luar
+// (canvasBoxRef), timeline/playlist di dalemnya nggak diubah sama sekali.
+// handleExportImage udah baca box.clientWidth/clientHeight secara dinamis,
+// jadi export PNG otomatis ngikutin rasio mana pun yang lagi aktif.
+const CANVAS_RATIOS = {
+  '16:9': { ratio: '16 / 9', maxWidth: 2292 },
+  '9:16': { ratio: '9 / 16', maxWidth: 608 },
+} as const
+
+type CanvasRatioKey = keyof typeof CANVAS_RATIOS
+
 export default function App() {
   const scrollRef = useRef<HTMLDivElement>(null)
   const canvasBoxRef = useRef<HTMLDivElement>(null)
   const [isExporting, setIsExporting] = useState(false)
   const [exportProgress, setExportProgress] = useState(0)
   const [exportStage, setExportStage] = useState('')
+  const [canvasRatio, setCanvasRatio] = useState<CanvasRatioKey>('16:9')
   const [playheadBar, setPlayheadBar] = useState(207)
   const [isPlaying, setIsPlaying] = useState(false)
   const [projectBpm, setProjectBpm] = useState(DEFAULT_BPM)
@@ -955,8 +967,13 @@ export default function App() {
 
   return (
     <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#1a1a1d] p-4">
-      {/* Landscape canvas — fixed 2292x1080, holds the whole playlist/arrangement view */}
-      <div ref={canvasBoxRef} className="relative flex aspect-[2292/1080] w-full max-w-[2292px] flex-col overflow-hidden rounded-lg border border-surface-grid bg-surface-base text-white">
+      {/* Canvas — bentuk/ukuran bingkai luar ngikutin pilihan canvasRatio
+          (16:9 / 9:16), holds the whole playlist/arrangement view */}
+      <div
+        ref={canvasBoxRef}
+        className="relative flex w-full flex-col overflow-hidden rounded-lg border border-surface-grid bg-surface-base text-white"
+        style={{ aspectRatio: CANVAS_RATIOS[canvasRatio].ratio, maxWidth: CANVAS_RATIOS[canvasRatio].maxWidth }}
+      >
         <div ref={scrollRef} className="relative min-h-0 flex-1 overflow-auto">
           <TimelineControlsHeader
             startBar={TIMELINE_START}
@@ -1085,6 +1102,28 @@ export default function App() {
         >
           {isColorPickerOpen ? 'Tutup Pengaturan Warna' : 'Pilih Warna'}
         </button>
+
+        <div className="flex items-center gap-2 bg-[#2a2a2e] px-3 py-2">
+          <span className="flex-1 text-sm font-medium text-white">Canvas</span>
+          <button
+            type="button"
+            onClick={() => setCanvasRatio('16:9')}
+            className={`px-3 py-1.5 text-[12px] font-medium ${
+              canvasRatio === '16:9' ? 'bg-track-accent text-white' : 'bg-white/10 text-white/60'
+            }`}
+          >
+            16:9
+          </button>
+          <button
+            type="button"
+            onClick={() => setCanvasRatio('9:16')}
+            className={`px-3 py-1.5 text-[12px] font-medium ${
+              canvasRatio === '9:16' ? 'bg-track-accent text-white' : 'bg-white/10 text-white/60'
+            }`}
+          >
+            9:16
+          </button>
+        </div>
 
         <div className="flex gap-2">
           <div className="flex flex-1 items-center gap-2 bg-[#2a2a2e] px-3 py-2">
