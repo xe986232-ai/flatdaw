@@ -699,18 +699,31 @@ export default function App() {
   // gesture tahan-lalu-drag di TimelineControlsHeader) — jadi user harus
   // bikin seleksi loop dulu sebelum bisa export.
   //
-  // Caranya: loop manual per-frame (60fps) dari loopStartBar ke loopEndBar,
-  // tiap frame kita:
-  //   1) geser posisi playhead & auto-scroll ke bar yang sesuai (persis kaya
-  //      logic live playback, tapi tanpa easing — langsung pas, soalnya ini
-  //      render offline per-frame bukan real-time)
-  //   2) capture tampilan canvas box jadi <canvas> lewat html-to-image
-  //      (toCanvas), di resolusi HD tetap (lihat getVideoExportDimensions)
-  //   3) bikin VideoFrame dari canvas itu, encode lewat VideoEncoder
-  //   4) chunk hasil encode-nya dialirkan ke Muxer (mp4-muxer) buat dijadiin
-  //      file .mp4 beneran
-  // Progress bar-nya asli (frame ke berapa dari total), bukan animasi palsu
-  // kaya punya export gambar (di situ toPng gak ngasih progress callback).
+  // GANTI ARSITEKTUR (sebelumnya: toCanvas(box) dipanggil ULANG tiap frame,
+  // 60x/detik — ini yang bikin export lambat/berat, soalnya toCanvas
+  // serialize seluruh DOM jadi SVG lalu decode ulang jadi gambar tiap kali).
+  // Sekarang niru pola dari engine WebCodecs spneditz: layer yang STATIS
+  // selama durasi export (semua track/clip/waveform/automation — isinya
+  // gak berubah selama export, cuma SCROLL & PLAYHEAD yang gerak, lihat
+  // grep isPlaying di komponen lain, gak ada state visual lain yang ikut
+  // berubah per-frame) di-capture SEKALI di awal jadi satu <canvas> gede
+  // ("baked slice"), dipakai ulang tiap frame — bukan di-screenshot ulang.
+  //
+  // Caranya:
+  //   1) Hitung rentang scroll-X yang bakal kelewatan sepanjang loop
+  //      (dari targetScrollLeft di frame pertama sampai frame terakhir).
+  //   2) Sembunyiin playhead (biar gak ikut ke-bake statis), resize
+  //      scrollEl SEMENTARA supaya pas nutup rentang itu + overflow hidden,
+  //      lalu toCanvas SEKALI aja buat dapetin "baked slice" canvas.
+  //   3) Balikin scrollEl & playhead ke kondisi normal (biar UI asli di
+  //      layar gak keganggu selama loop frame berjalan).
+  //   4) Loop per-frame (60fps) TANPA toCanvas sama sekali — cuma:
+  //      a) ctx.drawImage buat crop bagian yang pas dari baked slice sesuai
+  //         posisi scroll frame itu (operasi canvas murni, sangat murah)
+  //      b) gambar ulang garis+bendera playhead manual di atas (posisinya
+  //         beda tiap frame, gak bisa ikut di-bake)
+  //      c) bikin VideoFrame dari hasil composite itu, encode ke H.264
+  //   Progress bar-nya asli (frame ke berapa dari total).
   const handleExportVideo = async () => {
     const box = canvasBoxRef.current
     const scrollEl = scrollRef.current
@@ -795,41 +808,125 @@ export default function App() {
       latencyMode: 'quality',
     })
 
-    try {
-      scrollEl.style.overflow = 'visible'
+    // Style asli scrollEl yang bakal di-override sementara buat proses
+    // "bake" satu-kalinya — semuanya dibalikin persis sebelum loop frame
+    // jalan, jadi UI asli di layar gak keliatan aneh selama export.
+    const prevScrollWidth = scrollEl.style.width
+    const prevScrollHeight = scrollEl.style.height
+    const prevPlayheadVisibility = playheadEl.style.visibility
 
+    try {
       const barsPerSecond = projectBpm / 60 / BEATS_PER_BAR
       const durationSec = (loopEndBar - loopStartBar) / barsPerSecond
       const totalFrames = Math.max(1, Math.round(durationSec * FPS))
       const frameDurationUs = 1_000_000 / FPS
       const anchorRatio = 0.35
+      const viewportWidthCss = box.clientWidth
+      const viewportHeightCss = box.clientHeight
+      const scaleX = outWidth / viewportWidthCss
+      const scaleY = outHeight / viewportHeightCss
 
+      // Posisi scroll target di bar TERTENTU (sama rumus kayak animasi live
+      // playback) — dipakai buat hitung rentang slice yang perlu di-bake,
+      // dan dipakai ulang lagi di dalam loop frame di bawah.
+      const scrollLeftForBar = (bar: number) => {
+        const xInContent = (bar - TIMELINE_START) * barWidth + LABEL_WIDTH
+        return Math.max(0, xInContent - viewportWidthCss * anchorRatio)
+      }
+
+      // scrollLeft monoton naik seiring bar naik (fungsi max(0, linear)),
+      // jadi cukup ambil titik awal & akhir buat dapetin rentang penuhnya —
+      // gak perlu sampling tiap frame.
+      const scrollLeftStart = scrollLeftForBar(loopStartBar)
+      const scrollLeftEnd = scrollLeftForBar(loopEndBar)
+      const sliceStartCss = Math.max(0, scrollLeftStart)
+      const sliceWidthCss = Math.max(viewportWidthCss, scrollLeftEnd - sliceStartCss + viewportWidthCss)
+
+      setExportStage('Merender tampilan timeline (sekali aja)…')
+
+      // --- TAHAP 1: bake konten statis (semua track/clip/waveform/
+      // automation) jadi SATU canvas, sekali doang — bukan tiap frame. ---
+      playheadEl.style.visibility = 'hidden'
+      scrollEl.style.overflow = 'hidden'
+      scrollEl.style.width = `${sliceWidthCss}px`
+      scrollEl.style.height = `${viewportHeightCss}px`
+      scrollEl.style.transform = `translate(${-sliceStartCss}px, ${-prevScrollTop}px)`
+
+      // Kasih browser kesempatan beneran ngerender resize+translate di atas
+      // sebelum di-capture.
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+      const bakedSlice = await toCanvas(scrollEl, {
+        width: Math.round(sliceWidthCss * scaleX),
+        height: outHeight,
+        pixelRatio: 1,
+        cacheBust: false,
+      })
+
+      // Langsung balikin scrollEl & playhead ke kondisi normal — sisa
+      // proses (loop frame) di bawah ini murni operasi canvas, gak
+      // nyentuh DOM asli lagi buat capture. UI di layar bisa tetep dianimasi
+      // biar user dapet feedback visual (opsional, murah, beda jauh dari
+      // toCanvas), tapi hasil video-nya diambil dari bakedSlice, bukan dari
+      // DOM real-time ini.
+      scrollEl.style.overflow = 'visible'
+      scrollEl.style.width = prevScrollWidth
+      scrollEl.style.height = prevScrollHeight
+      playheadEl.style.visibility = prevPlayheadVisibility
+
+      const maxCropX = Math.max(0, bakedSlice.width - outWidth)
+
+      // Warna & bentuk playhead niru persis Playhead.tsx: garis putih 90%
+      // opacity selebar 1 CSS px, plus "bendera" segi lima kecil (16x14px,
+      // clip-path polygon) di ujung atas — lihat komponen itu buat referensi
+      // bentuk/posisi persisnya. Ini digambar manual tiap frame karena
+      // posisinya beda-beda & gak bisa ikut di-bake statis.
+      const drawPlayhead = (ctx: CanvasRenderingContext2D, xCss: number) => {
+        const xPx = xCss * scaleX
+        const lineWidthPx = Math.max(1, scaleX)
+        ctx.fillStyle = 'rgba(255,255,255,0.9)'
+        ctx.fillRect(xPx, 0, lineWidthPx, outHeight)
+
+        const flagWidthPx = 16 * scaleX
+        const flagHeightPx = 14 * scaleY
+        const left = xPx - 8 * scaleX
+        const top = -1 * scaleY
+        ctx.fillStyle = '#ffffff'
+        ctx.beginPath()
+        ctx.moveTo(left, top)
+        ctx.lineTo(left + flagWidthPx, top)
+        ctx.lineTo(left + flagWidthPx, top + flagHeightPx * 0.6)
+        ctx.lineTo(left + flagWidthPx / 2, top + flagHeightPx)
+        ctx.lineTo(left, top + flagHeightPx * 0.6)
+        ctx.closePath()
+        ctx.fill()
+      }
+
+      const frameCanvas = document.createElement('canvas')
+      frameCanvas.width = outWidth
+      frameCanvas.height = outHeight
+      const ctx = frameCanvas.getContext('2d')
+      if (!ctx) throw new Error('Gagal bikin 2D context buat compose frame.')
+
+      // --- TAHAP 2: loop per-frame, MURNI operasi canvas (crop dari
+      // bakedSlice + gambar playhead) — tidak ada toCanvas/DOM di sini. ---
       for (let i = 0; i < totalFrames; i++) {
         const t = i / FPS
         const bar = Math.min(loopStartBar + t * barsPerSecond, loopEndBar)
+        const xInContent = (bar - TIMELINE_START) * barWidth + LABEL_WIDTH
+        const targetScrollLeft = scrollLeftForBar(bar)
 
-        // Posisi playhead — sama teknik kaya animasi live (mutate ref
-        // langsung, gak lewat setState React tiap frame).
+        // Opsional: tetep animasi DOM asli di layar (murah, cuma transform)
+        // biar user liat progress visual selama export — sama sekali gak
+        // dipakai buat hasil capture-nya.
         const elX = (bar - TIMELINE_START) * barWidth
         playheadEl.style.transform = `translateX(${elX}px)`
-
-        // Auto-scroll ngikutin playhead (anchor ~35% dari kiri viewport),
-        // tapi langsung pas — gak perlu easing soalnya ini bukan real-time.
-        const xInContent = (bar - TIMELINE_START) * barWidth + LABEL_WIDTH
-        const targetScrollLeft = Math.max(0, xInContent - scrollEl.clientWidth * anchorRatio)
         scrollEl.style.transform = `translate(${-targetScrollLeft}px, ${-prevScrollTop}px)`
 
-        // Kasih browser kesempatan beneran ngerender perubahan di atas
-        // sebelum di-capture, biar frame yang ke-capture gak "telat" satu
-        // langkah.
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-
-        const frameCanvas = await toCanvas(box, {
-          width: outWidth,
-          height: outHeight,
-          pixelRatio: 1,
-          cacheBust: false,
-        })
+        ctx.clearRect(0, 0, outWidth, outHeight)
+        const cropXPx = Math.min(maxCropX, Math.max(0, (targetScrollLeft - sliceStartCss) * scaleX))
+        ctx.drawImage(bakedSlice, cropXPx, 0, outWidth, outHeight, 0, 0, outWidth, outHeight)
+        drawPlayhead(ctx, xInContent - targetScrollLeft)
 
         const videoFrame = new VideoFrame(frameCanvas, {
           timestamp: Math.round(i * frameDurationUs),
@@ -882,8 +979,11 @@ export default function App() {
       }
       scrollEl.style.transform = prevTransform
       scrollEl.style.overflow = prevOverflow
+      scrollEl.style.width = prevScrollWidth
+      scrollEl.style.height = prevScrollHeight
       scrollEl.scrollLeft = prevScrollLeft
       playheadEl.style.transform = prevPlayheadTransform
+      playheadEl.style.visibility = prevPlayheadVisibility
       if (wasPlaying) setIsPlaying(true)
       setTimeout(() => {
         setIsExporting(false)
