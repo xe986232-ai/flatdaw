@@ -1,5 +1,4 @@
 import { tokens, SECTION_PALETTE } from '../designTokens'
-import { ThreeCircles } from '../components/ThreeCircles'
 
 type TemplatePageProps = {
   onSelectTheme: (themeId: string) => void
@@ -43,28 +42,26 @@ export default function TemplatePage({ onSelectTheme }: TemplatePageProps) {
       {/* HERO */}
       <section
         className="relative overflow-hidden px-6 pb-16 pt-14 sm:px-10"
-        style={{ backgroundColor: tokens.colors.background }}
+        style={{ backgroundColor: tokens.colors.pageBackground }}
       >
         <p
           className="text-xs font-bold uppercase tracking-widest sm:text-sm"
-          style={{ color: tokens.colors.accent, fontFamily: tokens.fonts.body }}
+          style={{ color: '#000000', fontFamily: tokens.fonts.body }}
         >
           (PILIH TEMPLATE)
         </p>
         <h1
           className="mt-3 text-[42px] font-bold leading-[1.05] sm:text-[72px]"
-          style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-1.5px' }}
+          style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-1.5px', color: '#000000' }}
         >
           FLATDAW
           <br />
           TEMPLATE HUB
         </h1>
-        <p className="mt-5 max-w-md text-sm leading-relaxed text-white/70 sm:text-base">
+        <p className="mt-5 max-w-md text-sm leading-relaxed text-black/70 sm:text-base">
           Pilih tampilan editor yang paling cocok buat project kamu. Tiap template punya gaya
           dan fitur sendiri — tinggal klik, langsung masuk ke editornya.
         </p>
-
-        <ThreeCircles color={tokens.colors.accent} size={54} className="mt-10" />
       </section>
 
       {/* SECTION PER TEMPLATE */}
@@ -145,12 +142,6 @@ export default function TemplatePage({ onSelectTheme }: TemplatePageProps) {
                 </span>
               )}
             </div>
-
-            <ThreeCircles
-              color={theme.available ? tokens.colors.background : '#ffffff20'}
-              size={38}
-              className="mt-10 opacity-80"
-            />
           </section>
         )
       })}

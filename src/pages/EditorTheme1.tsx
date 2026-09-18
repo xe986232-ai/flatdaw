@@ -1331,7 +1331,7 @@ export default function EditorTheme1({ onBackToTemplates }: { onBackToTemplates?
   }, [])
 
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#1a1a1d] p-4">
+    <div className="flex min-h-dvh flex-col items-center justify-center gap-3 bg-[#8b93f0] p-4">
       {onBackToTemplates && (
         <button
           type="button"

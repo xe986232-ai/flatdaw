@@ -8,6 +8,10 @@ export const tokens = {
     background: '#000000',
     text: '#ffffff',
     border: '#374151',
+    // Warna hero/page background sesuai referensi terbaru (periwinkle),
+    // dipakai bareng di TemplatePage (bagian atas) dan EditorTheme1
+    // supaya kedua halaman terasa satu kesatuan.
+    pageBackground: '#8b93f0',
   },
   fonts: {
     heading: '"Rubik", Arial, Helvetica, sans-serif',
