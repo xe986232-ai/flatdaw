@@ -842,39 +842,62 @@ export default function App() {
       const sliceStartCss = Math.max(0, scrollLeftStart)
       const sliceWidthCss = Math.max(viewportWidthCss, scrollLeftEnd - sliceStartCss + viewportWidthCss)
 
-      setExportStage('Merender tampilan timeline (sekali aja)…')
+      // PENTING (fix bug lambat): sebelumnya seluruh sliceWidthCss di-scale
+      // langsung ke resolusi HD dalam SATU canvas raksasa (sliceWidthCss *
+      // scaleX bisa puluhan ribu piksel lebar buat loop yang panjang atau
+      // scaleX yang besar) — itu yang bikin toCanvas "sekali doang" tetep
+      // lemot/nge-freeze, soalnya tetep harus rasterisasi SVG segede itu.
+      //
+      // Fix: potong slice jadi beberapa TILE, tiap tile ukurannya WAJAR
+      // (sama kayak satu capture per-frame biasa, cuma dilebarin dikit buat
+      // overlap) — jumlah tile jauh lebih sedikit drpd totalFrames (cuma
+      // sebanyak "berapa layar" yang kelewatan sepanjang loop, bukan
+      // sebanyak 60fps x durasi), tapi tiap tile ukurannya tetep kecil jadi
+      // toCanvas-nya cepet kayak biasa.
+      const TILE_SPAN = 3 // tiap tile lebarnya 3x viewport
+      const tileWidthCss = viewportWidthCss * TILE_SPAN
+      const tileStepCss = viewportWidthCss * (TILE_SPAN - 1) // overlap 1 viewport antar tile berurutan
+      const tileCount = Math.max(1, Math.ceil((sliceWidthCss - viewportWidthCss) / tileStepCss) + 1)
+
+      setExportStage(`Merender tampilan timeline (${tileCount} bagian, sekali aja)…`)
 
       // --- TAHAP 1: bake konten statis (semua track/clip/waveform/
-      // automation) jadi SATU canvas, sekali doang — bukan tiap frame. ---
+      // automation) jadi beberapa canvas kecil (tile), sekali doang per
+      // tile — bukan tiap frame. ---
       playheadEl.style.visibility = 'hidden'
       scrollEl.style.overflow = 'hidden'
-      scrollEl.style.width = `${sliceWidthCss}px`
+      scrollEl.style.width = `${tileWidthCss}px`
       scrollEl.style.height = `${viewportHeightCss}px`
-      scrollEl.style.transform = `translate(${-sliceStartCss}px, ${-prevScrollTop}px)`
 
-      // Kasih browser kesempatan beneran ngerender resize+translate di atas
-      // sebelum di-capture.
-      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+      const tiles: HTMLCanvasElement[] = []
+      for (let k = 0; k < tileCount; k++) {
+        const tileStartCss = sliceStartCss + k * tileStepCss
+        scrollEl.style.transform = `translate(${-tileStartCss}px, ${-prevScrollTop}px)`
 
-      const bakedSlice = await toCanvas(scrollEl, {
-        width: Math.round(sliceWidthCss * scaleX),
-        height: outHeight,
-        pixelRatio: 1,
-        cacheBust: false,
-      })
+        // Kasih browser kesempatan beneran ngerender translate di atas
+        // sebelum di-capture.
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+
+        const tileCanvas = await toCanvas(scrollEl, {
+          width: Math.round(tileWidthCss * scaleX),
+          height: outHeight,
+          pixelRatio: 1,
+          cacheBust: false,
+        })
+        tiles.push(tileCanvas)
+        setExportStage(`Merender tampilan timeline (${k + 1} / ${tileCount})…`)
+      }
 
       // Langsung balikin scrollEl & playhead ke kondisi normal — sisa
       // proses (loop frame) di bawah ini murni operasi canvas, gak
       // nyentuh DOM asli lagi buat capture. UI di layar bisa tetep dianimasi
       // biar user dapet feedback visual (opsional, murah, beda jauh dari
-      // toCanvas), tapi hasil video-nya diambil dari bakedSlice, bukan dari
-      // DOM real-time ini.
+      // toCanvas), tapi hasil video-nya diambil dari tile-tile ini, bukan
+      // dari DOM real-time ini.
       scrollEl.style.overflow = 'visible'
       scrollEl.style.width = prevScrollWidth
       scrollEl.style.height = prevScrollHeight
       playheadEl.style.visibility = prevPlayheadVisibility
-
-      const maxCropX = Math.max(0, bakedSlice.width - outWidth)
 
       // Warna & bentuk playhead niru persis Playhead.tsx: garis putih 90%
       // opacity selebar 1 CSS px, plus "bendera" segi lima kecil (16x14px,
@@ -908,8 +931,8 @@ export default function App() {
       const ctx = frameCanvas.getContext('2d')
       if (!ctx) throw new Error('Gagal bikin 2D context buat compose frame.')
 
-      // --- TAHAP 2: loop per-frame, MURNI operasi canvas (crop dari
-      // bakedSlice + gambar playhead) — tidak ada toCanvas/DOM di sini. ---
+      // --- TAHAP 2: loop per-frame, MURNI operasi canvas (crop dari tile
+      // yang relevan + gambar playhead) — tidak ada toCanvas/DOM di sini. ---
       for (let i = 0; i < totalFrames; i++) {
         const t = i / FPS
         const bar = Math.min(loopStartBar + t * barsPerSecond, loopEndBar)
@@ -924,8 +947,17 @@ export default function App() {
         scrollEl.style.transform = `translate(${-targetScrollLeft}px, ${-prevScrollTop}px)`
 
         ctx.clearRect(0, 0, outWidth, outHeight)
-        const cropXPx = Math.min(maxCropX, Math.max(0, (targetScrollLeft - sliceStartCss) * scaleX))
-        ctx.drawImage(bakedSlice, cropXPx, 0, outWidth, outHeight, 0, 0, outWidth, outHeight)
+        // Pilih tile yang SELURUHNYA nutup jendela crop frame ini (lihat
+        // perhitungan tileStepCss/TILE_SPAN di atas — dengan overlap 1
+        // viewport antar tile, tile hasil floor() ini selalu cukup lebar
+        // buat nutup seluruh jendela crop tanpa perlu nyambung 2 tile).
+        const posCss = Math.max(0, targetScrollLeft - sliceStartCss)
+        const tileIndex = Math.min(tiles.length - 1, Math.max(0, Math.floor(posCss / tileStepCss)))
+        const tile = tiles[tileIndex]
+        const tileStartCss = sliceStartCss + tileIndex * tileStepCss
+        const maxCropXForTile = Math.max(0, tile.width - outWidth)
+        const cropXPx = Math.min(maxCropXForTile, Math.max(0, (targetScrollLeft - tileStartCss) * scaleX))
+        ctx.drawImage(tile, cropXPx, 0, outWidth, outHeight, 0, 0, outWidth, outHeight)
         drawPlayhead(ctx, xInContent - targetScrollLeft)
 
         const videoFrame = new VideoFrame(frameCanvas, {
