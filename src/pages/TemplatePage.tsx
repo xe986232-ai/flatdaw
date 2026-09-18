@@ -1,57 +1,167 @@
+import { tokens, SECTION_PALETTE } from '../designTokens'
+import { ThreeCircles } from '../components/ThreeCircles'
+
 type TemplatePageProps = {
   onSelectTheme: (themeId: string) => void
 }
 
-const THEMES = [
+type ThemeDef = {
+  id: string
+  eyebrow: string
+  name: string
+  tagline: string
+  description: string
+  features: string[]
+  available: boolean
+}
+
+const THEMES: ThemeDef[] = [
   {
     id: 'theme1',
-    name: 'Theme 1',
-    description: 'Tampilan DAW klasik — playlist horizontal, piano roll, dan export video/gambar.',
+    eyebrow: '(TEMPLATE 01)',
+    name: 'CLASSIC DAW',
+    tagline: 'Buat kamu yang mau tampilan editor lengkap & rapi',
+    description:
+      'Playlist horizontal ala DAW asli, lengkap dengan piano roll, automation lane, waveform, dan export ke gambar atau video langsung dari browser.',
+    features: ['Playlist & piano roll', 'Automation lane', 'Export PNG & MP4', 'Rasio 16:9 & 9:16'],
     available: true,
   },
-  // Slot untuk theme berikutnya — tinggal tambahin object baru di sini,
-  // set available: false selama halaman editornya belum dibikin.
+  {
+    id: 'theme2',
+    eyebrow: '(TEMPLATE 02)',
+    name: 'SEGERA HADIR',
+    tagline: 'Template berikutnya lagi disiapin',
+    description: 'Slot template baru bisa ditambahin di sini kapan aja — tinggal susulin desain & editornya.',
+    features: [],
+    available: false,
+  },
 ]
 
 export default function TemplatePage({ onSelectTheme }: TemplatePageProps) {
   return (
-    <div className="flex min-h-dvh flex-col items-center gap-6 bg-[#1a1a1d] p-6 text-white">
-      <div className="mt-4 flex flex-col items-center gap-1 text-center">
-        <h1 className="text-xl font-semibold">Pilih Template</h1>
-        <p className="text-sm text-white/60">Pilih tampilan editor yang mau dipakai</p>
-      </div>
+    <div style={{ fontFamily: tokens.fonts.body, backgroundColor: tokens.colors.background, color: tokens.colors.text }}>
+      {/* HERO */}
+      <section
+        className="relative overflow-hidden px-6 pb-16 pt-14 sm:px-10"
+        style={{ backgroundColor: tokens.colors.background }}
+      >
+        <p
+          className="text-xs font-bold uppercase tracking-widest sm:text-sm"
+          style={{ color: tokens.colors.accent, fontFamily: tokens.fonts.body }}
+        >
+          (PILIH TEMPLATE)
+        </p>
+        <h1
+          className="mt-3 text-[42px] font-bold leading-[1.05] sm:text-[72px]"
+          style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-1.5px' }}
+        >
+          FLATDAW
+          <br />
+          TEMPLATE HUB
+        </h1>
+        <p className="mt-5 max-w-md text-sm leading-relaxed text-white/70 sm:text-base">
+          Pilih tampilan editor yang paling cocok buat project kamu. Tiap template punya gaya
+          dan fitur sendiri — tinggal klik, langsung masuk ke editornya.
+        </p>
 
-      <div className="grid w-full max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
-        {THEMES.map((theme) => (
-          <button
+        <ThreeCircles color={tokens.colors.accent} size={54} className="mt-10" />
+      </section>
+
+      {/* SECTION PER TEMPLATE */}
+      {THEMES.map((theme, i) => {
+        const palette = SECTION_PALETTE[i % SECTION_PALETTE.length]
+        return (
+          <section
             key={theme.id}
-            type="button"
-            disabled={!theme.available}
-            onClick={() => theme.available && onSelectTheme(theme.id)}
-            className={`flex flex-col items-start gap-3 rounded-lg border p-4 text-left transition ${
-              theme.available
-                ? 'border-surface-grid bg-surface-base hover:border-white/40 cursor-pointer'
-                : 'border-surface-grid/50 bg-surface-base/50 cursor-not-allowed opacity-50'
-            }`}
+            className="relative overflow-hidden px-6 py-14 sm:px-10 sm:py-20"
+            style={{ backgroundColor: theme.available ? palette.bg : '#111111' }}
           >
-            <div
-              className="flex h-32 w-full items-center justify-center rounded-md border border-surface-grid bg-[#101012] text-xs text-white/40"
-              style={{ aspectRatio: '16 / 9' }}
+            <p
+              className="text-xs font-bold uppercase tracking-widest sm:text-sm"
+              style={{ color: theme.available ? palette.fg : '#ffffff80' }}
             >
-              Preview
-            </div>
-            <div className="flex w-full items-center justify-between">
-              <span className="font-medium">{theme.name}</span>
-              {!theme.available && (
-                <span className="rounded bg-white/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-white/50">
-                  Segera
+              {theme.eyebrow}
+            </p>
+            <h2
+              className="mt-3 text-[34px] font-bold leading-[1.05] sm:text-[52px]"
+              style={{
+                fontFamily: tokens.fonts.heading,
+                letterSpacing: '-1px',
+                color: theme.available ? palette.fg : '#ffffff90',
+              }}
+            >
+              {theme.name}
+            </h2>
+            <p
+              className="mt-2 text-sm font-semibold sm:text-base"
+              style={{ color: theme.available ? palette.fg : '#ffffff70' }}
+            >
+              {theme.tagline}
+            </p>
+            <p
+              className="mt-5 max-w-lg text-sm leading-relaxed sm:text-base"
+              style={{ color: theme.available ? `${palette.fg}cc` : '#ffffff60' }}
+            >
+              {theme.description}
+            </p>
+
+            {theme.features.length > 0 && (
+              <ul className="mt-6 flex flex-wrap gap-2">
+                {theme.features.map((f) => (
+                  <li
+                    key={f}
+                    className="rounded-full border px-3 py-1 text-xs font-medium sm:text-sm"
+                    style={{ borderColor: palette.fg, color: palette.fg }}
+                  >
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            <div className="mt-8">
+              {theme.available ? (
+                <button
+                  type="button"
+                  onClick={() => onSelectTheme(theme.id)}
+                  className="inline-flex min-h-[40px] min-w-[120px] items-center justify-center rounded"
+                  style={{
+                    backgroundColor: tokens.colors.background,
+                    color: tokens.colors.text,
+                    fontFamily: tokens.fonts.body,
+                    padding: '8px 20px',
+                    fontWeight: 400,
+                    border: '1px solid transparent',
+                  }}
+                >
+                  Pilih Template →
+                </button>
+              ) : (
+                <span
+                  className="inline-flex min-h-[40px] min-w-[120px] cursor-not-allowed items-center justify-center rounded border"
+                  style={{ borderColor: '#ffffff40', color: '#ffffff50', padding: '8px 20px' }}
+                >
+                  Segera Hadir
                 </span>
               )}
             </div>
-            <p className="text-xs text-white/60">{theme.description}</p>
-          </button>
-        ))}
-      </div>
+
+            <ThreeCircles
+              color={theme.available ? tokens.colors.background : '#ffffff20'}
+              size={38}
+              className="mt-10 opacity-80"
+            />
+          </section>
+        )
+      })}
+
+      {/* FOOTER */}
+      <footer
+        className="border-t px-6 py-8 text-center text-xs sm:text-sm"
+        style={{ borderColor: tokens.colors.border, color: '#ffffff50' }}
+      >
+        flatdaw — dibikin buat proyek pribadi
+      </footer>
     </div>
   )
 }
