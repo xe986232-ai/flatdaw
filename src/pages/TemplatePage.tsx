@@ -28,11 +28,12 @@ const THEMES: ThemeDef[] = [
   {
     id: 'theme2',
     eyebrow: '(TEMPLATE 02)',
-    name: 'SEGERA HADIR',
-    tagline: 'Template berikutnya lagi disiapin',
-    description: 'Slot template baru bisa ditambahin di sini kapan aja — tinggal susulin desain & editornya.',
-    features: [],
-    available: false,
+    name: 'FL PLAYLIST',
+    tagline: 'Buat kamu yang suka tampilan playlist ala FL Studio',
+    description:
+      'Mock-up playlist dengan track berwarna, clip pattern, audio, dan automation, playhead menyala, plus mini-map lagu di bagian atas. Masih tampilan aja, belum fungsional.',
+    features: ['Track berwarna', 'Pattern, audio & automation', 'Mini-map lagu', 'Mock-up visual'],
+    available: true,
   },
 ]
 

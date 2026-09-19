@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import TemplatePage from './pages/TemplatePage'
 import EditorTheme1 from './pages/EditorTheme1'
+import EditorTheme2 from './pages/EditorTheme2'
 
 type Page = { name: 'template' } | { name: 'editor'; theme: string }
 
@@ -11,7 +12,10 @@ export default function App() {
     return <TemplatePage onSelectTheme={(themeId) => setPage({ name: 'editor', theme: themeId })} />
   }
 
-  // Untuk sekarang cuma ada theme1 — begitu ada theme baru, tinggal
-  // tambahin percabangan berdasarkan page.theme di sini.
+  // Tiap template berdiri sendiri (komponen & datanya terpisah). Template baru
+  // tinggal ditambahin sebagai percabangan lagi di sini.
+  if (page.theme === 'theme2') {
+    return <EditorTheme2 onBackToTemplates={() => setPage({ name: 'template' })} />
+  }
   return <EditorTheme1 onBackToTemplates={() => setPage({ name: 'template' })} />
 }
