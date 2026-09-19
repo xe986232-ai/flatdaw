@@ -463,20 +463,23 @@ export function ClipBlock({
       aria-valuenow={Math.round(effectiveStartBar - timelineStart)}
       aria-valuetext={`Area dimulai pada ${formatBarBeat(effectiveStartBar - timelineStart)} dan berakhir pada ${formatBarBeat(effectiveStartBar - timelineStart + effectiveLengthBars)}`}
       className={`absolute top-0 bottom-0 flex touch-none select-none flex-col rounded-[3px] ${
-        // overflow-visible SEBELUMNYA selalu nyala gak peduli kondisi apa pun
-        // — niatnya biar 3 ResizeKnob di bawah (yang emang ditaro nongol
-        // separo keluar batas kiri/kanan/bawah clip, cuma dirender pas
-        // isMenuOpen && isAudioClip) tetep kelihatan penuh gak kepotong.
-        // Masalahnya: overflow-visible itu ngaruh ke SEMUA anak elemen
-        // sepanjang waktu, termasuk strip judul (header, px-2 + teks) yang
-        // harusnya nempel pas di batas clip — begitu clip-nya sempit banget
-        // (zoom H kecil / clip pendek), padding+teks header itu jadi nembus
-        // keluar batas box tanpa ke-potong, keliatan kayak "header-nya lebih
-        // lebar dari track-nya". Sekarang overflow cuma dilepas (visible)
-        // pas menu clip lagi kebuka (isMenuOpen) — itu-itu doang saat knob
-        // resize-nya beneran perlu nongol keluar — selain itu overflow-hidden,
-        // jadi header (dan apa pun di dalam) selalu ke-potong pas batas clip.
-        isMenuOpen ? 'overflow-visible' : 'overflow-hidden'
+        // overflow-hidden SEKARANG dipindah ke div konten (waveform/pattern)
+        // di bawah, BUKAN di root ini lagi. Alasannya: strip judul (header)
+        // punya teks <span className="sticky" style={{ left: labelWidth }}>
+        // yang niatnya nempel di tepi kiri VIEWPORT pas clip-nya kegeser
+        // separo keluar layar ke kiri (biar judulnya tetep kebaca). Supaya
+        // position:sticky itu ngitung relatif ke scrollRef (area scroll
+        // horizontal beneran di App.tsx), gak ada ancestor DI ANTARA span
+        // itu sama scrollRef yang boleh punya overflow selain visible —
+        // root ini termasuk salah satunya. Root ini overflow-hidden bikin
+        // dia sendiri jadi "containing block" buat sticky, jadi label cuma
+        // bisa geser sejauh lebar clip-nya sendiri (= sticky-nya defacto
+        // gak ngefek, ini yang bikin judul kelihatan ga pernah "mentok
+        // kiri" walau layar udah di-scroll jauh). Div konten (baris di
+        // bawah) yang sekarang dikasih overflow-hidden sendiri, jadi
+        // waveform/pattern/piano-preview tetep ke-crop rapi pas clip-nya
+        // sempit, tapi strip judul di atasnya bebas nempel ke kiri viewport.
+        isMenuOpen ? 'overflow-visible' : ''
       } ${
         effectiveColor ? '' : `${fillByKind[kind]} ${inkByKind[kind]}`
       } ${
@@ -540,18 +543,26 @@ export function ClipBlock({
           // semi-transparan. Teksnya sendiri sticky biar tetep kebaca pas
           // clip-nya lebar dan track discroll horizontal.
           <div
-            className={`z-10 block w-full shrink-0 truncate rounded-t-[3px] px-2 py-0.5 text-[11px] font-medium leading-none opacity-100 ${
+            className={`z-10 block w-full shrink-0 rounded-t-[3px] px-2 py-0.5 text-[11px] font-medium leading-none opacity-100 ${
               headerFill ? '' : `${fillByKind[kind]} ${inkByKind[kind]} brightness-125`
             }`}
             style={{ backgroundColor: headerFill, color: headerInk }}
           >
-            <span className="sticky" style={{ left: labelWidth }}>
+            {/* truncate DIPINDAH ke span ini sendiri (bukan lagi di div
+                pembungkus) — overflow-hidden dari `truncate` di div luar
+                jadi "batas scroll" sendiri buat position:sticky di bawah
+                ini, jadi stickynya keitung relatif ke div ini (yang gak
+                pernah scroll sendiri) bukan ke scrollRef beneran, alhasil
+                keliatan diem aja gak pernah "nempel kiri" pas di-scroll.
+                Taro truncate langsung di span (elemen yang sticky itu
+                sendiri) gak ganggu perhitungan ancestor scroll-nya. */}
+            <span className="sticky block max-w-full truncate" style={{ left: labelWidth }}>
               {clip.label}
             </span>
           </div>
         )
       )}
-      <div className={`relative min-h-0 flex-1 pt-1 pb-1 ${clip.waveformPeaks ? 'pl-0 pr-0' : 'px-2'}`}>
+      <div className={`relative min-h-0 flex-1 overflow-hidden rounded-b-[3px] pt-1 pb-1 ${clip.waveformPeaks ? 'pl-0 pr-0' : 'px-2'}`}>
         {clip.waveformPeaks ? (
           // Sample-nya ketemu di dalam zip project & sudah didekode — gambar
           // waveform beneran, bukan pola dekoratif. lengthBars &
