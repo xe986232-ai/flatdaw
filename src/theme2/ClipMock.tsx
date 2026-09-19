@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { BAR_W, VIEW_START_BAR, type MockClip, type PatternStyle, type WaveStyle } from './mockData'
+import { BAR_W, type MockClip, type PatternStyle, type WaveStyle } from './mockData'
 import { fitLabel, makeRng, mix, rgba } from './utils'
 import { ClipAudioIcon, ClipAutomationIcon, ClipPatternIcon } from './icons'
 
@@ -136,8 +136,8 @@ function AutoSvg({ w, h, seed, color }: { w: number; h: number; seed: number; co
 
 /* ---------- Clip ---------- */
 
-export function ClipMock({ clip, color, trackHeight, collapsed }: { clip: MockClip; color: string; trackHeight: number; collapsed?: boolean }) {
-  const left = (clip.startBar - VIEW_START_BAR) * BAR_W + 1
+export function ClipMock({ clip, color, trackHeight, collapsed, viewStartBar }: { clip: MockClip; color: string; trackHeight: number; collapsed?: boolean; viewStartBar: number }) {
+  const left = (clip.startBar - viewStartBar) * BAR_W + 1
   const width = clip.lengthBars * BAR_W - 2
   const height = trackHeight - 4
   const light = mix(color, '#ffffff', 0.5)

@@ -18,7 +18,7 @@ import {
   VIEW_START_BAR,
   type MockTrack,
 } from './mockData'
-import { makeRng, mix, rgba } from './utils'
+import { mix, rgba } from './utils'
 import { ClipMock } from './ClipMock'
 import {
   IconDelete,
@@ -63,7 +63,6 @@ const C = {
 } as const
 
 const GRID_W = VIEW_BARS * BAR_W
-const PLAYHEAD_X = (PLAYHEAD_BAR - VIEW_START_BAR) * BAR_W
 
 // Latar grid: garis bar, garis beat, dan blok 4-bar selang-seling.
 const gridBackground: CSSProperties = {
@@ -217,7 +216,7 @@ function Toolbar() {
 
 /* ---------- Panel kiri: daftar pattern ---------- */
 
-function BrowserPanel() {
+function BrowserPanel({ items }: { items: { name: string; color: string; active?: boolean }[] }) {
   const tabs = [TabPatternIcon, TabAudioIcon, TabAutomationIcon]
   return (
     <div
@@ -242,7 +241,7 @@ function BrowserPanel() {
         ))}
       </div>
       <div className="flex min-h-0 flex-1 flex-col gap-[2px] overflow-hidden pl-2 pr-4 pt-1">
-        {BROWSER_ITEMS.map((item) => (
+        {items.map((item) => (
           <div
             key={item.name}
             className="relative flex shrink-0 items-center truncate text-[11.5px]"
@@ -271,32 +270,31 @@ function BrowserPanel() {
 
 /* ---------- Overview (mini-map seluruh lagu) ---------- */
 
-const OVERVIEW_TRACKS = MOCK_TRACKS.filter((t) => t.clips.length > 0)
-
-function Overview() {
-  const rows = OVERVIEW_TRACKS.length
+// Dulu blok minimap ini di-generate acak (RNG per-track), gak nyambung ke
+// clip beneran — cukup buat mock visual. Sekarang blok digambar dari posisi
+// clip asli (track.clips[].startBar/lengthBars, dinormalisasi ke originBar),
+// jadi minimap ini beneran nunjukin di mana isi lagu numpuk, termasuk buat
+// hasil import .flm yang panjangnya variatif.
+function Overview({ tracks, songBars, originBar, viewStartBar, viewBars }: { tracks: MockTrack[]; songBars: number; originBar: number; viewStartBar: number; viewBars: number }) {
+  const overviewTracks = tracks.filter((t) => t.clips.length > 0)
+  const rows = Math.max(1, overviewTracks.length)
   const blocks: ReactNode[] = []
-  OVERVIEW_TRACKS.forEach((track, i) => {
-    const rng = makeRng(i * 131 + 7)
-    let bar = 0
-    while (bar < SONG_BARS) {
-      const len = 2 + Math.floor(rng() * 6)
-      const thinning = bar < 8 || bar > SONG_BARS - 10 ? 0.6 : 0.22
-      if (rng() > thinning) {
-        blocks.push(
-          <rect
-            key={`${track.id}-${bar}`}
-            x={bar}
-            y={i + 0.14}
-            width={Math.min(len, SONG_BARS - bar) - 0.2}
-            height={0.72}
-            fill={track.color}
-            fillOpacity={0.85}
-          />,
-        )
-      }
-      bar += len
-    }
+  overviewTracks.forEach((track, i) => {
+    track.clips.forEach((clip) => {
+      const x = clip.startBar - originBar
+      if (x + clip.lengthBars < 0 || x > songBars) return
+      blocks.push(
+        <rect
+          key={clip.id}
+          x={Math.max(0, x)}
+          y={i + 0.14}
+          width={Math.max(0.3, Math.min(clip.lengthBars, songBars - x) - 0.1)}
+          height={0.72}
+          fill={track.color}
+          fillOpacity={0.85}
+        />,
+      )
+    })
   })
 
   return (
@@ -304,7 +302,7 @@ function Overview() {
       <svg
         className="absolute"
         style={{ left: 8, right: 8, top: 5, bottom: 5, width: 'calc(100% - 16px)', height: OVERVIEW_H - 10 }}
-        viewBox={`0 0 ${SONG_BARS} ${rows}`}
+        viewBox={`0 0 ${songBars} ${rows}`}
         preserveAspectRatio="none"
         aria-hidden="true"
       >
@@ -314,8 +312,8 @@ function Overview() {
       <div
         className="absolute"
         style={{
-          left: `calc(8px + (100% - 16px) * ${(VIEW_START_BAR - 1) / SONG_BARS})`,
-          width: `calc((100% - 16px) * ${VIEW_BARS / SONG_BARS})`,
+          left: `calc(8px + (100% - 16px) * ${(viewStartBar - originBar) / songBars})`,
+          width: `calc((100% - 16px) * ${viewBars / songBars})`,
           top: 2,
           bottom: 2,
           borderRadius: 3,
@@ -329,8 +327,8 @@ function Overview() {
 
 /* ---------- Ruler ---------- */
 
-function RulerRow() {
-  const bars = Array.from({ length: VIEW_BARS }, (_, i) => VIEW_START_BAR + i)
+function RulerRow({ viewStartBar, originBar, playheadX }: { viewStartBar: number; originBar: number; playheadX: number }) {
+  const bars = Array.from({ length: VIEW_BARS }, (_, i) => viewStartBar + i)
   return (
     <div className="flex shrink-0" style={{ height: RULER_H, borderBottom: `1px solid ${C.edge}` }}>
       <div
@@ -342,7 +340,7 @@ function RulerRow() {
       </div>
       <div className="relative shrink-0 overflow-hidden" style={{ width: GRID_W, background: C.ruler }}>
         {bars.map((b, i) => {
-          const strong = (b - 1) % 4 === 0
+          const strong = (b - originBar) % 4 === 0
           return (
             <div key={b} className="absolute top-0 bottom-0" style={{ left: i * BAR_W, width: BAR_W }}>
               <span
@@ -359,7 +357,7 @@ function RulerRow() {
           )
         })}
         {/* Penanda playhead di ruler */}
-        <svg className="absolute top-0" style={{ left: PLAYHEAD_X - 7 }} width="14" height="12" viewBox="0 0 14 12" aria-hidden="true">
+        <svg className="absolute top-0" style={{ left: playheadX - 7 }} width="14" height="12" viewBox="0 0 14 12" aria-hidden="true">
           <path d="M1 1h12L7 11z" fill={LIME} stroke="#3f6a0f" strokeWidth="1" strokeLinejoin="round" />
         </svg>
       </div>
@@ -414,22 +412,29 @@ function TrackHeader({ track }: { track: MockTrack }) {
 
 /* ---------- Baris track + playhead ---------- */
 
-function TrackRows() {
+function TrackRows({ tracks, playheadX, viewStartBar }: { tracks: MockTrack[]; playheadX: number; viewStartBar: number }) {
   return (
     <div className="relative min-h-0 flex-1 overflow-hidden" style={{ background: C.toolbar }}>
       {/* Latar grid yang juga nutup area kosong di bawah track terakhir */}
       <div className="absolute inset-y-0" style={{ left: HEADER_W, width: GRID_W, ...gridBackground }} />
 
       <div className="relative">
-        {MOCK_TRACKS.map((track) => (
+        {tracks.map((track) => (
           <div key={track.id} className="box-border flex" style={{ height: track.height, borderBottom: `1px solid ${C.rowLine}` }}>
             <TrackHeader track={track} />
             <div
-              className="relative shrink-0"
+              className="relative shrink-0 overflow-hidden"
               style={{ width: GRID_W, background: track.selected ? 'rgba(255,255,255,0.035)' : undefined }}
             >
               {track.clips.map((clip) => (
-                <ClipMock key={clip.id} clip={clip} color={track.color} trackHeight={track.height - 1} collapsed={track.collapsed} />
+                <ClipMock
+                  key={clip.id}
+                  clip={clip}
+                  color={track.color}
+                  trackHeight={track.height - 1}
+                  collapsed={track.collapsed}
+                  viewStartBar={viewStartBar}
+                />
               ))}
             </div>
           </div>
@@ -437,10 +442,10 @@ function TrackRows() {
       </div>
 
       {/* Playhead: garis lime tebal dengan glow */}
-      <div className="pointer-events-none absolute inset-y-0" style={{ left: HEADER_W + PLAYHEAD_X - 26, width: 26, background: `linear-gradient(to right, transparent, ${rgba(LIME, 0.13)})` }} />
+      <div className="pointer-events-none absolute inset-y-0" style={{ left: HEADER_W + playheadX - 26, width: 26, background: `linear-gradient(to right, transparent, ${rgba(LIME, 0.13)})` }} />
       <div
         className="pointer-events-none absolute inset-y-0"
-        style={{ left: HEADER_W + PLAYHEAD_X - 1.5, width: 3, background: LIME, boxShadow: `0 0 12px 2px ${rgba(LIME, 0.55)}` }}
+        style={{ left: HEADER_W + playheadX - 1.5, width: 3, background: LIME, boxShadow: `0 0 12px 2px ${rgba(LIME, 0.55)}` }}
       />
     </div>
   )
@@ -448,7 +453,29 @@ function TrackRows() {
 
 /* ---------- Frame ---------- */
 
-export function PlaylistFrame() {
+export type PlaylistFrameProps = {
+  // Semua opsional — kalau kosong, tampilannya balik ke mock-up statis
+  // (MOCK_TRACKS/BROWSER_ITEMS) kayak sebelumnya. Diisi (lewat
+  // theme2/fromTracks.ts) begitu ada project .flm yang di-import.
+  tracks?: MockTrack[]
+  browserItems?: { name: string; color: string; active?: boolean }[]
+  originBar?: number
+  viewStartBar?: number
+  viewBars?: number
+  songBars?: number
+  playheadBar?: number
+}
+
+export function PlaylistFrame({
+  tracks = MOCK_TRACKS,
+  browserItems = BROWSER_ITEMS,
+  originBar = 1,
+  viewStartBar = VIEW_START_BAR,
+  viewBars = VIEW_BARS,
+  songBars = SONG_BARS,
+  playheadBar = PLAYHEAD_BAR,
+}: PlaylistFrameProps) {
+  const playheadX = (playheadBar - viewStartBar) * BAR_W
   return (
     <div
       className="flex flex-col overflow-hidden"
@@ -464,11 +491,11 @@ export function PlaylistFrame() {
       <TitleBar />
       <Toolbar />
       <div className="flex min-h-0 flex-1">
-        <BrowserPanel />
+        <BrowserPanel items={browserItems} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <Overview />
-          <RulerRow />
-          <TrackRows />
+          <Overview tracks={tracks} songBars={songBars} originBar={originBar} viewStartBar={viewStartBar} viewBars={viewBars} />
+          <RulerRow viewStartBar={viewStartBar} originBar={originBar} playheadX={playheadX} />
+          <TrackRows tracks={tracks} playheadX={playheadX} viewStartBar={viewStartBar} />
         </div>
       </div>
     </div>
