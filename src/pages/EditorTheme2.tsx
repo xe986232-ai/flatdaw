@@ -1,66 +1,36 @@
-import { useLayoutEffect, useRef, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { PlaylistFrame } from '../theme2/PlaylistFrame'
 import { DESIGN_H, DESIGN_W } from '../theme2/mockData'
-import { tracksToTheme2, type Theme2Data } from '../theme2/fromTracks'
-import { parseFlmFile } from '../flmParser'
-import { flmToTracks } from '../flmToTracks'
-import { loadZipProject } from '../zipProject'
+import { tracksToTheme2 } from '../theme2/fromTracks'
+import type { FlmProject } from '../useFlmProject'
 
-// Template 02 — tampilan playlist ala FL Studio. Awalnya murni mock-up,
-// sekarang bisa diisi hasil parsing .flm/.zip (dipakai ulang dari parser
-// Template 01: flmParser.ts + flmToTracks.ts -> dikonversi ke format
-// MockTrack/MockClip lewat theme2/fromTracks.ts). Kalau belum ada yang
-// di-import, tetap tampil mock-up statis kayak semula.
+// Template 02 — tampilan playlist ala FL Studio. Cuma beda TAMPILAN dari
+// Template 01: data project (trackList) dan logic import .flm/.zip-nya sama
+// persis, satu implementasi di useFlmProject.ts (dipegang App.tsx, dikirim
+// ke sini lewat props) — di sini tinggal dikonversi ke bentuk MockTrack lewat
+// theme2/fromTracks.ts buat digambar PlaylistFrame. Belum ada project yang
+// di-import -> tetap tampil mock-up statis kayak semula.
 
 const MIN_SCALE = 0.55
 
-export default function EditorTheme2({ onBackToTemplates }: { onBackToTemplates?: () => void }) {
+type EditorTheme2Props = FlmProject & { onBackToTemplates?: () => void }
+
+export default function EditorTheme2({
+  onBackToTemplates,
+  trackList,
+  flmStatus,
+  flmError,
+  isImportingFlm,
+  handleImportFlm,
+}: EditorTheme2Props) {
   const wrapRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(1)
-  const [data, setData] = useState<Theme2Data | null>(null)
-  const [isImporting, setIsImporting] = useState(false)
-  const [status, setStatus] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const handleImportFlm = async (file: File) => {
-    setIsImporting(true)
-    setError(null)
-    setStatus(null)
-    try {
-      const isZip = /\.zip$/i.test(file.name)
-      let flmBytes: Uint8Array
-      let flmName = file.name
-
-      if (isZip) {
-        const zipResult = await loadZipProject(file)
-        if (!zipResult.ok) {
-          setError(zipResult.error)
-          return
-        }
-        flmBytes = zipResult.data.flmBytes
-        flmName = zipResult.data.flmName
-      } else {
-        const buffer = await file.arrayBuffer()
-        flmBytes = new Uint8Array(buffer)
-      }
-
-      const result = parseFlmFile(flmBytes, flmName)
-      if (!result.ok) {
-        setError(result.error)
-        return
-      }
-
-      const mappedTracks = flmToTracks(result.data)
-      setData(tracksToTheme2(mappedTracks))
-      setStatus(`${flmName} · ${mappedTracks.length} track masuk playlist · ${result.data.bpm} BPM`)
-    } catch (err) {
-      console.error('Gagal membaca file project:', err)
-      setError('File gak bisa dibaca. Pastikan ini .flm (FL Studio Mobile) atau .zip berisi project + folder sample.')
-    } finally {
-      setIsImporting(false)
-    }
-  }
+  // Belum ada project ke-import -> trackList masih array kosong (default di
+  // useFlmProject.ts) -> biarin `data` null biar PlaylistFrame jatuh balik
+  // ke mock-up statisnya sendiri.
+  const data = useMemo(() => (trackList.length > 0 ? tracksToTheme2(trackList) : null), [trackList])
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -98,22 +68,22 @@ export default function EditorTheme2({ onBackToTemplates }: { onBackToTemplates?
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          disabled={isImporting}
+          disabled={isImportingFlm}
           className="rounded-md border border-black/20 bg-[#3B6FA0] px-3 py-1.5 text-xs font-medium text-white disabled:opacity-50"
         >
-          {isImporting ? 'Mem-parsing project…' : 'Import Project (.zip / .flm)'}
+          {isImportingFlm ? 'Mem-parsing project…' : 'Import Project (.zip / .flm)'}
         </button>
         <input ref={fileInputRef} type="file" accept=".zip,.flm" className="hidden" onChange={handleFileInputChange} />
       </div>
 
-      {status && (
+      {flmStatus && (
         <div className="w-full rounded-md bg-[#1d3a2a] px-3 py-1.5 text-[12px] text-white/85" style={{ maxWidth: DESIGN_W }}>
-          {status}
+          {flmStatus}
         </div>
       )}
-      {error && (
+      {flmError && (
         <div className="w-full rounded-md bg-[#5A2A2A] px-3 py-1.5 text-[12px] text-white/90" style={{ maxWidth: DESIGN_W }}>
-          {error}
+          {flmError}
         </div>
       )}
 

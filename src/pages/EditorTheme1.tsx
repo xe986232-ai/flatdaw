@@ -9,14 +9,10 @@ import { PianoRoll } from '../components/PianoRoll'
 import { AudioClipEditor } from '../components/AudioClipEditor'
 import type { ClipMenuAction } from '../components/ClipMenu'
 import { ColorPicker } from '../components/ColorPicker'
-import { tracks, TIMELINE_START, getTimelineEnd, BEATS_PER_BAR, type Clip, type Note } from '../tracks'
+import { TIMELINE_START, getTimelineEnd, BEATS_PER_BAR, type Clip, type Note } from '../tracks'
 import { generateNotesForClip } from '../notes'
 import { randomFlatColor, FLAT_PALETTE, flatColorFromHex, lerpHex, type FlatColor } from '../colors'
-import { parseFlmFile } from '../flmParser'
-import { flmToTracks } from '../flmToTracks'
-import { loadZipProject, matchSampleFile } from '../zipProject'
-import { decodeAudioBytes, computePeaks } from '../waveform'
-import { generateMultiResPeaks } from '../waveformPeaksMultiRes'
+import type { FlmProject } from '../useFlmProject'
 
 const BASE_BAR_WIDTH = 96
 const BASE_ROW_HEIGHT = 56
@@ -29,22 +25,6 @@ const H_ZOOM_MAX = 3
 const V_ZOOM_MIN = 0.6
 const V_ZOOM_MAX = 2.5
 const ZOOM_STEP = 0.2
-
-// Dipakai selama belum ada project ke-import (playlist kosong) — begitu file
-// .flm/.zip di-import, projectBpm di-update ke BPM asli hasil parsing chunk
-// HEAD (lihat parseProjectBpm di flmParser.ts), bukan hardcoded lagi.
-const DEFAULT_BPM = 120
-
-// Ambang minimal durasi asli sample (dalam bar, sudah dikoreksi stretchRatio)
-// buat dianggap "genuinely loopable" di resolveWaveforms(). Ketemu dari cek
-// distribusi ke 169 clip di project asli: transient one-shot pendek (Kick
-// ~0.12 bar, Claps ~0.25 bar) semuanya di bawah ini, sample yang beneran
-// loop (LANA RMX-CHOP ~0.5 bar, FREE UP WOOD LOOP ~1 bar, Hi Hats Loop 28
-// ~2 bar) semuanya di atas — ada jarak yang jelas di angka 0.4. Tanpa
-// ambang ini, one-shot pendek yang penempatannya lebih lebar dari sample-
-// nya cuma karena ada gap/jeda sebelum hit berikutnya bisa ke-flag loop
-// keliru cuma berdasar rasio panjang doang.
-const MIN_LOOPABLE_NATIVE_SPAN_BARS = 0.4
 
 // Dua pilihan rasio canvas — cuma ngatur bentuk/ukuran bingkai luar
 // (canvasBoxRef), timeline/playlist di dalemnya nggak diubah sama sekali.
@@ -70,7 +50,21 @@ function getVideoExportDimensions(ratioKey: CanvasRatioKey): { width: number; he
   return { width, height }
 }
 
-export default function EditorTheme1({ onBackToTemplates }: { onBackToTemplates?: () => void }) {
+type EditorTheme1Props = FlmProject & { onBackToTemplates?: () => void }
+
+export default function EditorTheme1({
+  onBackToTemplates,
+  trackList,
+  setTrackList,
+  trackColors,
+  setTrackColors,
+  projectBpm,
+  flmStatus,
+  flmError,
+  isImportingFlm,
+  handleImportFlm,
+  importVersion,
+}: EditorTheme1Props) {
   const scrollRef = useRef<HTMLDivElement>(null)
   const canvasBoxRef = useRef<HTMLDivElement>(null)
   const [isExporting, setIsExporting] = useState(false)
@@ -80,7 +74,6 @@ export default function EditorTheme1({ onBackToTemplates }: { onBackToTemplates?
   const [playheadBar, setPlayheadBar] = useState(207)
   const playheadElRef = useRef<HTMLDivElement>(null)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [projectBpm, setProjectBpm] = useState(DEFAULT_BPM)
   const lastFrameTimeRef = useRef<number | null>(null)
   const playheadBarRef = useRef(playheadBar)
   useEffect(() => {
@@ -96,8 +89,6 @@ export default function EditorTheme1({ onBackToTemplates }: { onBackToTemplates?
   const [loopEndBar, setLoopEndBar] = useState<number | null>(null)
   const [loopEnabled, setLoopEnabled] = useState(false)
   const [snapEnabled, setSnapEnabled] = useState(true)
-  const [trackList, setTrackList] = useState(tracks)
-  const [trackColors, setTrackColors] = useState<Record<string, FlatColor>>({})
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false)
   // Warna terakhir dipilih di custom picker (single color) & di dua ujung
   // gradient (atas/bawah) — cuma buat nge-drive value <input type="color">
@@ -119,11 +110,11 @@ export default function EditorTheme1({ onBackToTemplates }: { onBackToTemplates?
   const timelineEnd = useMemo(() => getTimelineEnd(trackList), [trackList])
   const totalBars = timelineEnd - TIMELINE_START
 
-  // Import project .flm (FL Studio Mobile): parsing chunk EVN2 -> Track/Clip/Note flatdaw.
+  // Import project .flm (FL Studio Mobile): logic parsing-nya (parseFlmFile
+  // -> flmToTracks) sekarang hidup di useFlmProject.ts, dipegang App.tsx dan
+  // dikirim ke sini lewat props (trackList, handleImportFlm, dst) — biar
+  // Template 02 makan hasil yang SAMA, bukan parsing ulang sendiri.
   const flmInputRef = useRef<HTMLInputElement>(null)
-  const [flmStatus, setFlmStatus] = useState<string | null>(null)
-  const [flmError, setFlmError] = useState<string | null>(null)
-  const [isImportingFlm, setIsImportingFlm] = useState(false)
 
   // Clip context menu: which clip's menu/edit state is open, plus a one-slot clipboard for cut/copy → paste.
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null)
@@ -139,6 +130,20 @@ export default function EditorTheme1({ onBackToTemplates }: { onBackToTemplates?
   // AudioClipEditor.tsx), gantiin PianoRoll yang emang cuma masuk akal
   // buat clip instrument/MIDI.
   const [audioEditor, setAudioEditor] = useState<{ trackId: string; clipId: string } | null>(null)
+
+  // Import baru (importVersion naik) nutup piano roll/menu/clipboard yang
+  // lagi kebuka & reset transport — trackList sendiri gak bisa dipakai buat
+  // sinyal ini soalnya juga berubah tiap edit note biasa.
+  useEffect(() => {
+    if (importVersion === 0) return
+    setOpenMenu(null)
+    setEditingClip(null)
+    setPianoRoll(null)
+    setAudioEditor(null)
+    setClipboard(null)
+    setIsPlaying(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [importVersion])
 
   // Zoom: horizontal stretches bar width (clips get wider), vertical widens track row height.
   const [hZoom, setHZoom] = useState(1)
@@ -1025,201 +1030,13 @@ export default function EditorTheme1({ onBackToTemplates }: { onBackToTemplates?
     }
   }
 
-  // Update satu clip di trackList tanpa nyentuh yang lain — dipakai buat
-  // nempelin hasil decode waveform belakangan (async), satu per satu, tanpa
-  // nunggu semua sample kelar didekode dulu.
-  const patchClip = (clipId: string, patch: Partial<Clip>) => {
-    setTrackList((prev) =>
-      prev.map((t) => ({
-        ...t,
-        clips: t.clips.map((c) => (c.id === clipId ? { ...c, ...patch } : c)),
-      })),
-    )
-  }
-
-  // Setelah tracks ke-render, jalanin pass async: buat tiap klip audio yang
-  // punya sampleName, cari file-nya di dalam zip project, decode
-  // (decodeAudioData — cuma dekode, GAK diputer/gak nyambung ke speaker),
-  // ringkas jadi peaks, terus tempelin ke clip itu biar ClipBlock gambar
-  // waveform aslinya. Kalau sample-nya gak ketemu di zip, klip itu tetep
-  // jatuh ke pattern 'dense' dekoratif seperti sebelumnya.
-  const resolveWaveforms = async (mappedTracks: typeof tracks, audioFiles: Map<string, import('jszip').JSZipObject>, bpm: number) => {
-    const audioClips = mappedTracks.flatMap((t) => t.clips).filter((c) => c.pattern === 'dense' && c.sampleName)
-
-    let found = 0
-    let missing = 0
-    await Promise.all(
-      audioClips.map(async (clip) => {
-        const entry = matchSampleFile(clip.sampleName!, audioFiles)
-        if (!entry) {
-          missing++
-          patchClip(clip.id, { waveformStatus: 'missing' })
-          return
-        }
-        try {
-          const arrayBuf = await entry.async('arraybuffer')
-          const audioBuffer = await decodeAudioBytes(arrayBuf)
-          const bucketCount = Math.max(120, Math.min(2400, Math.round(clip.lengthBars * 80)))
-          const peaks = computePeaks(audioBuffer, bucketCount)
-          // Peak multi-resolusi ("mipmap"): dibangun sekali di sini dari
-          // audioBuffer (gak perlu di-generate ulang tiap re-render), lalu
-          // WaveformCanvas otomatis milih tingkat resolusi paling pas tiap
-          // kali barWidth berubah karena Zoom H — jadi waveform tetep tajam
-          // pas di-zoom in, bukan stuck di resolusi bucket saat import.
-          // targetWidth dihitung dari lebar klip di piksel pada Zoom H
-          // maksimum (H_ZOOM_MAX), biar stage paling detail-nya cukup buat
-          // seluruh rentang zoom yang tersedia di UI.
-          const targetWidth = Math.max(300, Math.round(clip.lengthBars * BASE_BAR_WIDTH * H_ZOOM_MAX))
-          // Peak per channel dipisah (gak di-mixdown ke mono kayak sebelumnya)
-          // — biar file stereo bisa digambar sebagai dua lane kiri/kanan
-          // (lihat WaveformCanvas). File mono otomatis tetap 1 channel aja.
-          const channels: Float32Array[] = []
-          for (let c = 0; c < audioBuffer.numberOfChannels; c++) channels.push(audioBuffer.getChannelData(c))
-          const multiRes = generateMultiResPeaks(channels, audioBuffer.length, targetWidth)
-
-          // Durasi asli sample (dalam bar, di BPM project), dari audio yang
-          // beneran ke-decode — sumber ini jauh lebih dipercaya dibanding
-          // field binary apa pun di .flm (LINk sudah pernah dicek KELIRU,
-          // lihat flmParser.ts). Dikoreksi dulu pakai stretchRatio (STRC)
-          // biar klip yang user SENGAJA time-stretch gak salah kehitung
-          // durasi native-nya (durasi_hasil_stretch = audioBuffer.duration
-          // * stretchRatio — lihat extractStretchRatio di flmParser.ts).
-          const correctedDurationSec = audioBuffer.duration * (clip.stretchRatio ?? 1)
-          const nativeSpanBars = (correctedDurationSec * (bpm / 60)) / BEATS_PER_BAR
-
-          // shouldLoop: sama pola kayak shouldLoop buat pattern MIDI di
-          // flmToTracks.ts (penempatan lebih panjang dari konten asli ->
-          // di-loop, bukan dibiarin kosong), cuma DUA syarat sekarang,
-          // gabungan:
-          // 1. Penempatan (lengthBars) harus lebih panjang dari durasi
-          //    asli sample yang udah dikoreksi stretchRatio.
-          // 2. DAN durasi asli sample itu minimal
-          //    MIN_LOOPABLE_NATIVE_SPAN_BARS — nyaring transient pendek
-          //    kayak kick/klap yang emang gak pernah dimaksudkan buat
-          //    di-loop meskipun placement-nya lebih lebar dari durasi
-          //    bunyinya (ada gap/jeda sebelum hit berikutnya).
-          const shouldLoop =
-            nativeSpanBars > 0.001 &&
-            clip.lengthBars > nativeSpanBars + 0.001 &&
-            nativeSpanBars >= MIN_LOOPABLE_NATIVE_SPAN_BARS
-
-          const loopPoints: number[] = []
-          if (shouldLoop) {
-            let offsetBars = nativeSpanBars
-            while (offsetBars < clip.lengthBars - 0.001) {
-              loopPoints.push(offsetBars)
-              offsetBars += nativeSpanBars
-            }
-          }
-
-          // Kalau bukan loop, lebar visual clip HARUS ngikutin durasi asli
-          // sample (nativeSpanBars), bukan penempatan/gap ke clip berikutnya
-          // yang dipakai sebagai lebar sementara di flmToTracks.ts. Tanpa ini,
-          // one-shot pendek (Kick ~0.12 bar, Claps ~0.25 bar) kegambar mulur
-          // sampe ke clip berikutnya walau bunyinya udah abis jauh sebelum
-          // itu — persis mismatch yang kelihatan dibanding tool FL Studio
-          // Mobile aslinya. Di-clamp max ke clip.lengthBars biar gak pernah
-          // MELEBIHI penempatan/gap yang udah dihitung sebelumnya (kasus
-          // sample udah ke-trim lebih pendek dari placement-nya sendiri).
-          const resolvedLengthBars =
-            !shouldLoop && nativeSpanBars > 0.001
-              ? Math.min(clip.lengthBars, Math.max(nativeSpanBars, 0.05))
-              : clip.lengthBars
-
-          found++
-          patchClip(clip.id, {
-            waveformPeaks: { min: Array.from(peaks.min), max: Array.from(peaks.max) },
-            waveformMultiRes: multiRes,
-            waveformStatus: 'found',
-            waveformNativeSpanBars: nativeSpanBars,
-            lengthBars: resolvedLengthBars,
-            loopPoints: loopPoints.length > 0 ? loopPoints : undefined,
-          })
-        } catch (err) {
-          console.error(`Gagal decode sample "${clip.sampleName}":`, err)
-          missing++
-          patchClip(clip.id, { waveformStatus: 'missing' })
-        }
-      }),
-    )
-
-    if (audioClips.length > 0) {
-      setFlmStatus(
-        (prev) => `${prev ?? ''} · waveform: ${found} sample ketemu & ke-render${missing ? `, ${missing} gak ketemu di zip` : ''}`,
-      )
-    }
-  }
-
-  // Baca file .flm ATAU .zip (project + folder sample-nya) -> parseFlmFile
-  // (logic EVN2 parser gak diubah sama sekali) -> flmToTracks -> ganti isi
-  // playlist dengan hasil parsing. Kalau yang di-import .zip dan ada file
-  // audio yang cocok sama sample klip, waveform asli ikut di-decode & digambar.
-  const handleImportFlm = async (file: File) => {
-    setIsImportingFlm(true)
-    setFlmError(null)
-    setFlmStatus(null)
-    try {
-      const isZip = /\.zip$/i.test(file.name)
-      let flmBytes: Uint8Array
-      let flmName = file.name
-      let audioFiles: Map<string, import('jszip').JSZipObject> | null = null
-
-      if (isZip) {
-        const zipResult = await loadZipProject(file)
-        if (!zipResult.ok) {
-          setFlmError(zipResult.error)
-          return
-        }
-        flmBytes = zipResult.data.flmBytes
-        flmName = zipResult.data.flmName
-        audioFiles = zipResult.data.audioFiles
-      } else {
-        const buffer = await file.arrayBuffer()
-        flmBytes = new Uint8Array(buffer)
-      }
-
-      const result = parseFlmFile(flmBytes, flmName)
-      if (!result.ok) {
-        setFlmError(result.error)
-        return
-      }
-      const { chunkResults, timelineClips, namedCount, audioClipCount, bpm } = result.data
-      const mappedTracks = flmToTracks(result.data)
-
-      setTrackList(mappedTracks)
-      setTrackColors({})
-      setOpenMenu(null)
-      setEditingClip(null)
-      setPianoRoll(null)
-      setAudioEditor(null)
-      setClipboard(null)
-      setIsPlaying(false)
-      setProjectBpm(bpm)
-
-      setFlmStatus(
-        `${flmName} · ${chunkResults.length} pattern` +
-          (namedCount ? ` · ${namedCount} instrumen dikenali` : '') +
-          (audioClipCount ? ` · ${audioClipCount} klip audio (sample) ikut kebaca` : '') +
-          ` · ${timelineClips.length} clip masuk playlist` +
-          ` · ${bpm} BPM` +
-          (isZip ? ` · zip: ${audioFiles?.size ?? 0} file audio ditemukan` : ''),
-      )
-
-      if (audioFiles && audioFiles.size > 0) {
-        void resolveWaveforms(mappedTracks, audioFiles, bpm)
-      }
-    } catch (err) {
-      console.error('Gagal membaca file project:', err)
-      setFlmError('File gak bisa dibaca. Pastikan ini .flm (FL Studio Mobile) atau .zip berisi project + folder sample.')
-    } finally {
-      setIsImportingFlm(false)
-    }
-  }
-
+  // parseFlmFile/flmToTracks/resolveWaveforms-nya sendiri sekarang di
+  // useFlmProject.ts (satu implementasi dipakai bareng Template 02) —
+  // di sini tinggal masangin ke <input type="file">.
   const handleFlmInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     e.target.value = '' // biar bisa pilih file yang sama lagi
-    if (file) handleImportFlm(file)
+    if (file) void handleImportFlm(file)
   }
 
   const handleZoomH = (delta: number) => {
