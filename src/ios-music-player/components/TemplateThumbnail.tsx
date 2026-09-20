@@ -35,17 +35,22 @@ export default function TemplateThumbnail({
   template,
   className,
   alt,
+  instant = false,
 }: {
   template: Template;
   className?: string;
   alt: string;
+  /** true = lewati durasi minimum skeleton (MIN_SKELETON_MS) — dipakai di
+   *  halaman preview, di mana thumbnail-nya biasanya udah ada di cache
+   *  dari kartu galeri, jadi gak perlu nunggu 2 detik lagi. */
+  instant?: boolean;
 }) {
   const cachedSrc = thumbnailCache.get(template.id);
   const [src, setSrc] = useState<string | null>(cachedSrc ?? null);
   // Skeleton default nyala TERUS di render pertama, meskipun sebenarnya
   // udah ada di thumbnailCache — biar transisi tetap konsisten (nggak
   // langsung "lompat" ke gambar final tanpa animasi loading sama sekali).
-  const [showSkeleton, setShowSkeleton] = useState(true);
+  const [showSkeleton, setShowSkeleton] = useState(!(instant && cachedSrc));
   const cancelledRef = useRef(false);
 
   useEffect(() => {
@@ -53,6 +58,10 @@ export default function TemplateThumbnail({
     const startedAt = Date.now();
 
     function revealAfterMinimum() {
+      if (instant) {
+        setShowSkeleton(false);
+        return;
+      }
       const elapsed = Date.now() - startedAt;
       const remaining = Math.max(0, MIN_SKELETON_MS - elapsed);
       window.setTimeout(() => {
@@ -85,7 +94,7 @@ export default function TemplateThumbnail({
     return () => {
       cancelledRef.current = true;
     };
-  }, [template]);
+  }, [template, instant]);
 
   const finalSrc = src ?? template.previewImage;
 

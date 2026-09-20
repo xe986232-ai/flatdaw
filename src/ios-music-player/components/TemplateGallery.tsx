@@ -20,6 +20,7 @@ import type { Template } from "../types";
 import { subscribeTemplateUsage } from "../lib/exportLog";
 import { subscribeTemplateEnabled } from "../lib/templateFlags";
 import TemplateThumbnail, { ThumbnailSkeleton } from "./TemplateThumbnail";
+import TemplatePreview from "./TemplatePreview";
 import { renderTemplateThumbnail } from "../lib/thumbnail";
 import {
   listDrafts,
@@ -416,6 +417,10 @@ export default function TemplateGallery({
   const [activeTab, setActiveTab] = useState<"draft" | "template">(
     "draft",
   );
+  // Template yang lagi di-preview (user tap kartu di grid) — halaman
+  // TemplatePreview nutup seluruh galeri sampai user tekan "Gunakan
+  // template" (baru lanjut ke Editor) atau kembali.
+  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);
   const [draftsLoading, setDraftsLoading] = useState(false);
   const [draftBusyId, setDraftBusyId] = useState<string | null>(null);
@@ -623,7 +628,7 @@ export default function TemplateGallery({
             <TemplateCard
               key={template.id}
               template={template}
-              onSelect={onSelect}
+              onSelect={setPreviewTemplate}
             />
           ))}
         </div>
@@ -718,6 +723,33 @@ export default function TemplateGallery({
           Template
         </button>
       </div>
+
+      {/* Halaman preview template — muncul pas kartu template di-tap,
+          baru masuk Editor lewat tombol "Gunakan template". */}
+      {previewTemplate && (
+        <TemplatePreview
+          template={previewTemplate}
+          badge={
+            COLLAGE_TEMPLATE_IDS.has(previewTemplate.id)
+              ? "2 Gaya Progress"
+              : undefined
+          }
+          preview={
+            COLLAGE_TEMPLATE_IDS.has(previewTemplate.id) ? (
+              <CollageThumbnail template={previewTemplate} />
+            ) : (
+              <TemplateThumbnail
+                template={previewTemplate}
+                alt={`Preview ${previewTemplate.name}`}
+                className="absolute inset-0 h-full w-full object-cover"
+                instant
+              />
+            )
+          }
+          onBack={() => setPreviewTemplate(null)}
+          onUse={() => onSelect(previewTemplate)}
+        />
+      )}
 
       {/* Modal alert "Template belum bisa dipakai" udah dibuang — sekarang
           template yang lagi off langsung di-hide total dari grid di atas,
