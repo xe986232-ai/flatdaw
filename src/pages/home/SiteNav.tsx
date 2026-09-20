@@ -157,8 +157,7 @@ export default function SiteNav() {
           aria-expanded={menuOpen}
           aria-label="Menu"
           onClick={() => setMenuOpen((v) => !v)}
-          data-ripple
-          className="relative flex h-11 w-11 items-center justify-center rounded-full bg-[#ffacff] transition-transform duration-200 active:scale-90 xl:hidden"
+          className="relative flex h-11 w-11 items-center justify-center transition-transform duration-200 active:scale-90 xl:hidden"
         >
           <span
             className={`bar bar-1 absolute h-0.5 w-[18px] bg-black transition-transform duration-300 ease-out ${

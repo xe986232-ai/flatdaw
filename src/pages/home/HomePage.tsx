@@ -55,7 +55,7 @@ const CATEGORIES: Category[] = [
     visual: 'ios',
     color: { bg: tokens.colors.accent, fg: '#000000' },
     href: '/template/ios-music-player',
-    hrefLabel: 'See all iOS Music Player templates →',
+    hrefLabel: 'Use template',
   },
   {
     id: 'daw-mockup',
@@ -269,9 +269,9 @@ function CategoryRow({ c }: { c: Category }) {
             <Link
               to={c.href}
               data-ripple
-              className={`${dark ? pillLight : pillButton} w-full text-center md:w-auto`}
+              className={`${dark ? pillLight : pillButton} w-full whitespace-nowrap text-center md:w-auto`}
             >
-              {c.hrefLabel ?? 'See all DAW templates →'}
+              {c.hrefLabel ?? 'Use template'}
             </Link>
           </div>
         )}
