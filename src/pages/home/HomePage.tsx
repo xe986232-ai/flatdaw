@@ -226,11 +226,11 @@ function CategoryRow({ c }: { c: Category }) {
         ) : (
           <img
             src={iosMusicMockup}
-            alt="iPhone showing an iOS-style music player, a preview of the iOS Music Playlist template"
-            width={553}
-            height={1100}
+            alt="Phone showing an iOS-style music player, a preview of the iOS Music Playlist template"
+            width={761}
+            height={1200}
             loading="lazy"
-            className="h-[440px] w-auto drop-shadow-[0_18px_30px_rgba(0,0,0,0.25)] sm:h-[520px]"
+            className="h-[400px] w-auto drop-shadow-[0_18px_30px_rgba(0,0,0,0.3)] sm:h-[500px]"
           />
         )}
       </div>
