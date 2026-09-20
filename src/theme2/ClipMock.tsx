@@ -2,13 +2,93 @@ import type { ReactNode } from 'react'
 import { BAR_W, type MockClip, type PatternStyle, type WaveStyle } from './mockData'
 import { fitLabel, makeRng, mix, rgba } from './utils'
 import { ClipAudioIcon, ClipAutomationIcon, ClipPatternIcon } from './icons'
+import type { WaveformPeaksData } from '../tracks'
+import { sampleWaveformColumns, type MultiResPeaks } from '../waveformPeaksMultiRes'
 
 const LABEL_H = 14
 const INK = '#161d22'
 const BEAT_W = BAR_W / 4
 const STEP_W = BAR_W / 16
 
-/* ---------- Waveform ---------- */
+/* ---------- Waveform ASLI (dari data peak audio beneran) ---------- */
+
+// Sampel-sampel (per lane/channel) jadi satu path SVG solid tertutup, niru
+// gaya gambar drawLane() di WaveformCanvas.tsx (Template 01) tapi keluarannya
+// path SVG, bukan langsung fill ke <canvas> -- biar konsisten sama komponen
+// SVG lain di ClipMock. n kolom = n titik horizontal, 1 kolom pas w kecil
+// (clip pendek) sampe w piksel pas gede, sampleWaveformColumns yang milih
+// resolusi mipmap paling pas otomatis.
+function laneSvgPath(maxs: ArrayLike<number>, mins: ArrayLike<number>, w: number, midY: number, amp: number): string {
+  const n = maxs.length
+  if (n === 0) return ''
+  const slotW = w / n
+  let d = ''
+  for (let i = 0; i < n; i++) {
+    const x = i * slotW
+    const y = midY - maxs[i] * amp
+    d += i === 0 ? `M${x.toFixed(1)} ${y.toFixed(1)}` : ` L${x.toFixed(1)} ${y.toFixed(1)}`
+  }
+  for (let i = n - 1; i >= 0; i--) {
+    const x = i * slotW
+    const y = midY + Math.abs(mins[i]) * amp
+    d += ` L${x.toFixed(1)} ${y.toFixed(1)}`
+  }
+  return d + ' Z'
+}
+
+function RealWaveSvg({
+  w,
+  h,
+  color,
+  multiRes,
+  peaks,
+}: {
+  w: number
+  h: number
+  color: string
+  multiRes?: MultiResPeaks
+  peaks?: WaveformPeaksData
+}) {
+  const isStereo = !!multiRes && multiRes.stages.length > 0 && multiRes.numChannels >= 2
+
+  if (isStereo && multiRes) {
+    const laneH = h / 2
+    const laneAmp = (laneH / 2) * 0.92
+    const left = sampleWaveformColumns(multiRes, 0, { x0: 0, x1: w, u0: 0, u1: multiRes.numFrames })
+    const right = sampleWaveformColumns(multiRes, 1, { x0: 0, x1: w, u0: 0, u1: multiRes.numFrames })
+    return (
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block" aria-hidden="true">
+        <path d={laneSvgPath(left.maxs, left.mins, w, laneH / 2, laneAmp)} fill={color} fillOpacity="0.95" />
+        <path d={laneSvgPath(right.maxs, right.mins, w, laneH + laneH / 2, laneAmp)} fill={color} fillOpacity="0.95" />
+      </svg>
+    )
+  }
+
+  const midY = h / 2
+  const amp = midY * 0.92
+
+  if (multiRes && multiRes.stages.length > 0) {
+    const sampled = sampleWaveformColumns(multiRes, 0, { x0: 0, x1: w, u0: 0, u1: multiRes.numFrames })
+    return (
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block" aria-hidden="true">
+        <path d={laneSvgPath(sampled.maxs, sampled.mins, w, midY, amp)} fill={color} fillOpacity="0.95" />
+      </svg>
+    )
+  }
+
+  // Fallback terakhir: bucket tetap dari peaks (belum ada multiRes).
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} className="block" aria-hidden="true">
+      <path d={laneSvgPath(peaks!.max, peaks!.min, w, midY, amp)} fill={color} fillOpacity="0.95" />
+    </svg>
+  )
+}
+
+function hasRealWaveform(clip: MockClip): boolean {
+  return !!(clip.waveformMultiRes && clip.waveformMultiRes.stages.length > 0) || !!clip.waveformPeaks
+}
+
+/* ---------- Waveform MOCK (fallback, dipakai kalau data asli belum ada) ---------- */
 
 function WaveSvg({ w, h, style, seed, color }: { w: number; h: number; style: WaveStyle; seed: number; color: string }) {
   const rng = makeRng(seed)
@@ -190,7 +270,12 @@ export function ClipMock({ clip, color, trackHeight, collapsed, viewStartBar }: 
         <span>{fitLabel(clip.label, maxChars)}</span>
       </div>
       <div className="absolute inset-x-0 bottom-0" style={{ top: LABEL_H }}>
-        {clip.kind === 'audio' && <WaveSvg w={width} h={bodyH} style={clip.wave ?? 'swell'} seed={clip.seed} color={light} />}
+        {clip.kind === 'audio' &&
+          (hasRealWaveform(clip) ? (
+            <RealWaveSvg w={width} h={bodyH} color={light} multiRes={clip.waveformMultiRes} peaks={clip.waveformPeaks} />
+          ) : (
+            <WaveSvg w={width} h={bodyH} style={clip.wave ?? 'swell'} seed={clip.seed} color={light} />
+          ))}
         {clip.kind === 'pattern' && <PatternSvg w={width} h={bodyH} style={clip.pattern ?? 'steps'} seed={clip.seed} color={light} />}
         {clip.kind === 'automation' && <AutoSvg w={width} h={bodyH} seed={clip.seed} color={light} />}
       </div>

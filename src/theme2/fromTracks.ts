@@ -40,8 +40,13 @@ export function tracksToTheme2(tracks: Track[]): Theme2Data {
         startBar: clip.startBar,
         lengthBars: clip.lengthBars,
         pattern: isAudioClip ? undefined : 'notes',
+        // wave style cuma dipakai sebagai FALLBACK di ClipMock kalau
+        // waveformPeaks/waveformMultiRes di bawah belum ada (mis. sample
+        // belum ke-decode) -- begitu ada, ClipMock gambar bentuk asli ini.
         wave: isAudioClip ? WAVE_STYLES[ti % WAVE_STYLES.length] : undefined,
         seed,
+        waveformPeaks: isAudioClip ? clip.waveformPeaks : undefined,
+        waveformMultiRes: isAudioClip ? clip.waveformMultiRes : undefined,
       }
     })
 

@@ -1,6 +1,15 @@
 // Data MOCK khusus Template 02 (tampilan playlist ala FL Studio).
 // Berdiri sendiri: gak nyambung ke tracks.ts / hasil parsing .flm punya
-// Template 01, jadi mengubah salah satunya nggak akan nyenggol yang lain.
+// Template 01, jadi mengubah salah satunya nggak akan nyenggol yang lain
+// -- KECUALI dua field waveform di bawah (waveformPeaks/waveformMultiRes),
+// yang sengaja dibawa lewat dari Clip asli (lihat fromTracks.ts) biar clip
+// audio di sini bisa gambar waveform ASLI (bentuknya ngikutin frekuensi
+// sample beneran), bukan cuma bentuk prosedural/acakan seed macam WaveSvg
+// di ClipMock.tsx. Kalau field ini kosong (project belum di-import / sample
+// belum ke-decode), ClipMock jatuh balik ke WaveSvg mock seperti sebelumnya.
+
+import type { WaveformPeaksData } from '../tracks'
+import type { MultiResPeaks } from '../waveformPeaksMultiRes'
 
 export type ClipKind = 'audio' | 'pattern' | 'automation'
 export type PatternStyle = 'steps' | 'notes' | 'sparse'
@@ -15,6 +24,12 @@ export interface MockClip {
   pattern?: PatternStyle
   wave?: WaveStyle
   seed: number
+  // Data peak audio ASLI (lihat Clip.waveformPeaks/waveformMultiRes di
+  // tracks.ts, diisi resolveWaveforms() di App.tsx setelah sample ke-decode).
+  // Kalau ada, ClipMock gambar waveform ini (mirip WaveformCanvas Template 01)
+  // alih-alih bentuk mock acakan.
+  waveformPeaks?: WaveformPeaksData
+  waveformMultiRes?: MultiResPeaks
 }
 
 export interface MockTrack {
