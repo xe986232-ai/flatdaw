@@ -193,7 +193,7 @@ function DraftCard({
 }) {
   return (
     <div
-      className="group relative flex w-full flex-col overflow-hidden rounded-lg border border-black text-left"
+      className="group relative flex w-full flex-col overflow-hidden rounded-3xl border border-black text-left"
       style={{ backgroundColor: tokens.colors.accent }}
     >
       <button
@@ -302,7 +302,7 @@ function TemplateCard({
   return (
     <button
       onClick={handleClick}
-      className="group relative flex w-full flex-col overflow-hidden rounded-lg border border-black text-left transition-transform duration-300 active:scale-[0.97]"
+      className="group relative flex w-full flex-col overflow-hidden rounded-3xl border border-black text-left transition-transform duration-300 active:scale-[0.97]"
       style={{ backgroundColor: tokens.colors.accent }}
     >
       <div className="relative flex h-full flex-col overflow-hidden">
