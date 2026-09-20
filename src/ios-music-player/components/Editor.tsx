@@ -84,6 +84,7 @@ import { exportTemplateVideoAuto, ExportCancelledError, type ExportProgress, typ
 import { analyzeAudio, type AudioAnalysis } from "../lib/waveform";
 import { logExportEvent } from "../lib/exportLog";
 import { subscribeCoverImages, type CoverImageEntry } from "../lib/coverImages";
+import { isCorsReadable } from "../lib/corsProbe";
 import {
   savePreset,
   listPresets,
@@ -1494,10 +1495,24 @@ export default function Editor({
     // User udah keburu upload foto sendiri sebelum daftar Firebase nyampe
     // -> jangan diganggu/ditimpa foto random.
     if (slotMedia[coverSlotId]?.kind === "file") return;
-    const picked = coverImages[Math.floor(Math.random() * coverImages.length)];
-    const entry: SlotMediaEntry = { kind: "sample", url: picked.url };
-    setSlotMedia((prev) => ({ ...prev, [coverSlotId]: entry }));
-    setCustomBackground(entry);
+    // Foto remote cuma dipakai kalau server-nya ngizinin dibaca lewat CORS
+    // (dites dulu). Kalau nolak, fotonya tetap KELIHATAN tapi gak bisa
+    // di-crop maupun di-export (error "server foto nolak diakses"). Coba
+    // beberapa foto acak; kalau semuanya nolak, tetap pakai sample lokal
+    // (sampleSrc) yang pasti aman.
+    void (async () => {
+      const order = [...coverImages].sort(() => Math.random() - 0.5).slice(0, 4);
+      for (const picked of order) {
+        if (!(await isCorsReadable(picked.url))) continue;
+        const entry: SlotMediaEntry = { kind: "sample", url: picked.url };
+        // User bisa aja keburu upload foto sendiri selama dites.
+        setSlotMedia((prev) =>
+          prev[coverSlotId]?.kind === "file" ? prev : { ...prev, [coverSlotId]: entry },
+        );
+        setCustomBackground((cur) => (cur?.kind === "file" ? cur : entry));
+        return;
+      }
+    })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [coverImages, coverSlotId]);
   // ---- Klip-klip di track audio (hasil potong/geser/trim user). Mulai
