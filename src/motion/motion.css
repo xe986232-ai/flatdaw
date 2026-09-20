@@ -44,7 +44,9 @@
 }
 @keyframes fx-curtain-cover { from { transform: translate3d(0, 100%, 0); } to { transform: translate3d(0, 0, 0); } }
 @keyframes fx-curtain-reveal { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -100%, 0); } }
-@keyframes fx-logo-in { from { opacity: 0; transform: translate3d(0, 24px, 0) scale(0.9); } }
+@keyframes fx-char-in { from { transform: translate3d(0, 115%, 0) rotate(8deg); } }
+@keyframes fx-char-out { to { transform: translate3d(0, -115%, 0) rotate(-8deg); } }
+@keyframes fx-dot-in { from { transform: translate3d(0, -190%, 0); } }
 
 /* ---------- Entrance sekali jalan (pas mount). Delay lewat --d ---------- */
 .fx-fade { animation: fx-fade-in 0.6s var(--fx-ease-out) var(--d, 0ms) backwards; }
@@ -175,7 +177,7 @@
    Periwinkle di paling atas, jadi itu warna yang kelihatan pas layar tertutup penuh.
    Kurva: cepat di awal, melambat halus di akhir (expo ease-out).
    Durasi harus sinkron sama COVER_MS / REVEAL_MS di Curtain.tsx:
-   cover 500ms + 2 x 70ms stagger, reveal 650ms + 2 x 70ms stagger. */
+   cover 500ms + 2 x 70ms stagger (+ huruf logo sampai ~770ms), reveal 650ms + 2 x 70ms stagger. */
 .fx-curtain { --fx-ease-curtain: cubic-bezier(0.16, 1, 0.3, 1); position: fixed; inset: 0; z-index: 9999; overflow: hidden; pointer-events: all; }
 .fx-curtain-panel { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .fx-curtain-a { background: #000000; }
@@ -188,13 +190,23 @@
 .fx-curtain[data-phase="reveal"] .fx-curtain-b { animation: fx-curtain-reveal 0.65s var(--fx-ease-curtain) 70ms both; }
 .fx-curtain[data-phase="reveal"] .fx-curtain-a { animation: fx-curtain-reveal 0.65s var(--fx-ease-curtain) 140ms both; }
 .fx-curtain-logo {
+  display: inline-flex;
+  overflow: hidden; /* masker: huruf muncul/keluar dari garis, bukan fade */
+  padding: 0.05em 0.08em;
   font-family: "Rubik", Arial, Helvetica, sans-serif;
   font-size: 44px;
   font-weight: 700;
+  line-height: 1.15;
   letter-spacing: -1.5px;
   color: #000000;
 }
-.fx-curtain[data-phase="cover"] .fx-curtain-logo { animation: fx-logo-in 0.55s var(--fx-ease-spring) 320ms backwards; }
+.fx-curtain-char { display: inline-block; will-change: transform; }
+/* Masuk: tiap huruf naik dari bawah bergantian (R-i-z-z), titiknya jatuh
+   dari atas pakai kurva spring. Selesai ~770ms (= COVER_MS di Curtain.tsx). */
+.fx-curtain[data-phase="cover"] .fx-curtain-char { animation: fx-char-in 0.45s var(--fx-ease-out) calc(160ms + var(--i) * 40ms) backwards; }
+.fx-curtain[data-phase="cover"] .fx-curtain-char[data-dot] { animation: fx-dot-in 0.5s var(--fx-ease-spring) calc(160ms + var(--i) * 40ms) backwards; }
+/* Keluar: huruf terangkat ke atas bergantian, barengan panel yang naik. */
+.fx-curtain[data-phase="reveal"] .fx-curtain-char { animation: fx-char-out 0.4s var(--fx-ease-in) calc(var(--i) * 30ms) both; }
 
 /* ---------- Hormati preferensi "kurangi gerakan" ---------- */
 @media (prefers-reduced-motion: reduce) {
