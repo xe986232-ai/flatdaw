@@ -138,16 +138,16 @@ function HeroVisual() {
   return (
     <div
       aria-hidden="true"
-      className="relative overflow-hidden rounded-xl border border-white/10 p-4 shadow-[8px_8px_0_#000]"
+      className="relative overflow-hidden rounded-lg border border-white/10 p-2 shadow-[4px_4px_0_#000] sm:rounded-xl sm:p-4 sm:shadow-[8px_8px_0_#000]"
       style={{ backgroundColor: '#1C1C1F' }}
     >
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-1 sm:gap-2">
         {HERO_ROWS.map((clips, row) => (
-          <div key={row} className="relative h-9 rounded-sm" style={{ backgroundColor: '#202024' }}>
+          <div key={row} className="relative h-4 rounded-sm sm:h-9" style={{ backgroundColor: '#202024' }}>
             {clips.map(([left, width, color], i) => (
               <span
                 key={i}
-                className={`fx-clip absolute top-1 bottom-1 rounded-[3px] ${color}`}
+                className={`fx-clip absolute top-0.5 bottom-0.5 rounded-[2px] sm:top-1 sm:bottom-1 sm:rounded-[3px] ${color}`}
                 style={fxDelay(200 + row * 110 + i * 70, { left: `${left}%`, width: `${width}%` })}
               />
             ))}
@@ -165,43 +165,79 @@ function HeroVisual() {
   )
 }
 
+// Layout kartu kategori:
+//  - Desktop (md+): 2 kolom — penjelasan di kiri (head, body, cta ditumpuk),
+//    gambar di kanan. Sama persis seperti sebelumnya.
+//  - Mobile (<md): tetap 2 kolom di bagian tengah — judul & badge full-width
+//    di atas, lalu penjelasan singkat BERDAMPINGAN dengan gambar, lalu fitur
+//    + tombol full-width di bawah. Jadi gambar gak lagi nendang ke bawah layar.
 function CategoryRow({ c }: { c: Category }) {
   const dark = c.color.fg === '#ffffff'
   return (
     <Reveal
       as="article"
-      className="grid overflow-hidden rounded-lg md:grid-cols-2"
+      className="grid grid-cols-[minmax(0,1fr)_auto] overflow-hidden rounded-lg md:grid-cols-2 md:grid-rows-[auto_auto_1fr]"
       style={{
         backgroundColor: c.color.bg,
         color: c.color.fg,
         border: dark ? `1px solid ${tokens.colors.border}` : undefined,
       }}
     >
-      {/* KIRI: penjelasan template */}
-      <div className="flex flex-col p-6 sm:p-10">
+      {/* HEAD: eyebrow + badge + judul */}
+      <div className="col-span-2 px-5 pt-5 sm:px-10 sm:pt-10 md:col-span-1 md:col-start-1 md:row-start-1">
         <div className="fx-child flex items-center justify-between gap-3" style={fxDelay(180)}>
-          <p className="text-xs font-bold uppercase tracking-widest sm:text-sm">{c.eyebrow}</p>
-          <span className="rounded-full border px-3 py-1 text-xs font-medium" style={{ borderColor: c.color.fg }}>
+          <p className="text-[11px] font-bold uppercase tracking-widest sm:text-sm">{c.eyebrow}</p>
+          <span className="shrink-0 rounded-full border px-3 py-1 text-xs font-medium" style={{ borderColor: c.color.fg }}>
             {c.tag}
           </span>
         </div>
         <h3
-          className="fx-child mt-4 text-[34px] font-bold leading-[1.05] sm:text-[44px]"
+          className="fx-child mt-3 text-[28px] font-bold leading-[1.05] sm:mt-4 sm:text-[44px]"
           style={fxDelay(260, { fontFamily: tokens.fonts.heading, letterSpacing: '-1px' })}
         >
           {c.name}
         </h3>
-        <p className="fx-child mt-3 max-w-md text-sm leading-relaxed sm:text-base" style={fxDelay(340, { color: `${c.color.fg}cc` })}>
+      </div>
+
+      {/* BODY: penjelasan (di mobile berdampingan sama gambar) */}
+      <div className="min-w-0 pl-5 pr-3 pt-3 sm:pl-10 sm:pr-6 md:col-start-1 md:row-start-2 md:pr-10">
+        <p className="fx-child max-w-md text-[13px] leading-relaxed sm:mt-0 sm:text-base" style={fxDelay(340, { color: `${c.color.fg}cc` })}>
           {c.text}
         </p>
         {c.note && (
-          <p className="fx-child mt-3 max-w-md text-xs leading-relaxed sm:text-sm" style={fxDelay(400, { color: `${c.color.fg}b3` })}>
+          <p className="fx-child mt-3 max-w-md text-[11px] leading-relaxed sm:text-sm" style={fxDelay(400, { color: `${c.color.fg}b3` })}>
             {c.note}
           </p>
         )}
+      </div>
 
+      {/* VISUAL: gambar mock-up (mobile: kolom kanan sebelah BODY) */}
+      <div className="flex items-center justify-center pl-1 pr-4 pt-3 sm:pr-10 md:col-start-2 md:row-span-3 md:row-start-1 md:p-10 md:py-12">
+        {c.visual === 'daw' ? (
+          <div
+            className="fx-child fx-child-pop w-[140px] min-[400px]:w-[170px] sm:w-[260px] md:w-full md:max-w-[520px]"
+            style={fxDelay(300)}
+          >
+            <HeroVisual />
+          </div>
+        ) : (
+          <div className="fx-child fx-child-slide" style={fxDelay(300)}>
+            <img
+              src={iosMusicMockup}
+              alt="Phone showing an iOS-style music player, a preview of the iOS Music Player template"
+              width={761}
+              height={1200}
+              loading="lazy"
+              className="fx-float h-[220px] w-auto drop-shadow-[0_12px_20px_rgba(0,0,0,0.3)] min-[400px]:h-[260px] min-[520px]:h-[320px] md:h-[500px] md:drop-shadow-[0_18px_30px_rgba(0,0,0,0.3)]"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* CTA: fitur, daftar template, tombol (full-width di mobile) */}
+      <div className="col-span-2 flex flex-col px-5 pb-5 sm:px-10 sm:pb-10 md:col-span-1 md:col-start-1 md:row-start-3">
         {c.features.length > 0 && (
-          <ul className="mt-5 flex flex-wrap gap-2">
+          <ul className="mt-4 flex flex-wrap gap-2 sm:mt-5">
             {c.features.map((f, i) => (
               <li key={f} className="fx-child fx-child-pop rounded-full border px-3 py-1 text-xs font-medium sm:text-sm" style={fxDelay(460 + i * 90, { borderColor: c.color.fg })}>
                 {f}
@@ -211,7 +247,7 @@ function CategoryRow({ c }: { c: Category }) {
         )}
 
         {c.templates && (
-          <div className="fx-child mt-8" style={fxDelay(540)}>
+          <div className="fx-child mt-6 sm:mt-8" style={fxDelay(540)}>
             <p className="text-xs font-bold uppercase tracking-widest">Templates in this category</p>
             <div className="mt-3 flex flex-wrap gap-3">
               {c.templates.map((t) => (
@@ -230,29 +266,13 @@ function CategoryRow({ c }: { c: Category }) {
         )}
         {c.href && (
           <div className="fx-child mt-5" style={fxDelay(620)}>
-            <Link to={c.href} data-ripple className={dark ? pillLight : pillButton}>
+            <Link
+              to={c.href}
+              data-ripple
+              className={`${dark ? pillLight : pillButton} w-full text-center md:w-auto`}
+            >
               {c.hrefLabel ?? 'See all DAW templates →'}
             </Link>
-          </div>
-        )}
-      </div>
-
-      {/* KANAN: gambar mock-up */}
-      <div className="flex items-center justify-center p-6 sm:p-10 md:py-12">
-        {c.visual === 'daw' ? (
-          <div className="fx-child fx-child-pop w-full max-w-[520px]" style={fxDelay(300)}>
-            <HeroVisual />
-          </div>
-        ) : (
-          <div className="fx-child fx-child-slide" style={fxDelay(300)}>
-          <img
-            src={iosMusicMockup}
-            alt="Phone showing an iOS-style music player, a preview of the iOS Music Player template"
-            width={761}
-            height={1200}
-            loading="lazy"
-            className="fx-float h-[400px] w-auto drop-shadow-[0_18px_30px_rgba(0,0,0,0.3)] sm:h-[500px]"
-          />
           </div>
         )}
       </div>
