@@ -244,20 +244,18 @@ export default function HomePage() {
       <main>
         {/* HERO */}
         <section className="relative overflow-hidden pb-16 pt-12 sm:pb-24 sm:pt-16" style={{ backgroundColor: tokens.colors.pageBackground }}>
-          <div className={`${containerClass} grid items-center gap-12 md:grid-cols-2`}>
+          <div className={containerClass}>
             <div>
               <Eyebrow color="#000000">(VISUAL TEMPLATES FOR MUSIC)</Eyebrow>
               <h1
-                className="mt-3 text-[42px] font-bold leading-[1.05] text-black sm:text-[72px]"
+                className="mt-3 text-[42px] font-bold leading-[1.05] text-black sm:text-[72px] lg:text-[96px]"
                 style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-1.5px' }}
               >
                 MAKE VISUALS
                 <br />
-                FOR YOUR
-                <br />
-                MUSIC.
+                FOR YOUR MUSIC.
               </h1>
-              <p className="mt-5 max-w-md text-sm leading-relaxed text-black/70 sm:text-base">
+              <p className="mt-6 max-w-xl text-sm leading-relaxed text-black/70 sm:text-base">
                 Rizz. is a set of templates that turn your music into visuals, right in the browser. Start with an
                 iOS-style music playlist. DAW mock-ups built from your own FL Studio Mobile project are on the way.
               </p>
@@ -273,7 +271,6 @@ export default function HomePage() {
                 </a>
               </div>
             </div>
-            <HeroVisual />
           </div>
         </section>
 
