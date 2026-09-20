@@ -12,8 +12,8 @@ type NavLeaf = { label: string; href?: string; to?: string }
 
 // Dropdown "Templates": isinya kategori template (bukan audiens ala referensi).
 const TEMPLATES_MENU: NavLeaf[] = [
-  { label: 'DAW Mock-up', to: '/template/daw-mockup' },
-  { label: 'iOS Music Playlist (soon)', href: '#brands' },
+  { label: 'iOS Music Playlist', href: '#brands' },
+  { label: 'DAW Mock-up (soon)', href: '#brands' },
 ]
 
 const MAIN_MENU: NavLeaf[] = [
@@ -222,10 +222,10 @@ export default function SiteNav() {
             <div className="right-part flex flex-col gap-4 xl:flex-row xl:items-center xl:gap-5">
               <ul className="menu-secondary flex flex-col gap-1 xl:flex-row xl:items-center xl:gap-5">
                 <li className="search">
-                  {/* Belum ada halaman pencarian -- sementara ngarah ke daftar template. */}
-                  <Link to="/template/daw-mockup" aria-label="Search" onClick={closeAll} className={linkClass}>
+                  {/* Belum ada halaman pencarian -- sementara ngarah ke daftar kategori template. */}
+                  <a href="#brands" aria-label="Search" onClick={closeAll} className={linkClass}>
                     <SearchIcon /> Search
-                  </Link>
+                  </a>
                 </li>
                 <li className="contact hidden xl:block">
                   <a

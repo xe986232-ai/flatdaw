@@ -6,13 +6,15 @@ import iosMusicMockup from '../../assets/ios-music-mockup.webp'
 
 // Halaman utama (route "/"). Gaya & palet ngikut style-guide referensi yang
 // udah dipakai di halaman template hub (Rubik + Noto Sans, blok warna
-// full-bleed, eyebrow "(HURUF BESAR)"), tapi ini halaman terpisah: hub
-// template tetep di /template/daw-mockup, halaman ini cuma nyambung ke situ.
+// full-bleed, eyebrow "(HURUF BESAR)"). Hub template (/template/daw-mockup)
+// masih ada, tapi sementara gak di-link dari sini karena kategori DAW
+// Mock-up lagi ditandai "coming soon".
 //
 // Isi konten: Rizz. = alat buat bikin visual musik. Template dikelompokin
-// per KATEGORI -- sekarang baru "DAW Mock-up" (Classic DAW & FL Playlist),
-// "iOS Music Playlist" masih coming soon. Nambah kategori/template baru
-// cukup edit CATEGORIES di bawah.
+// per KATEGORI -- sekarang "iOS Music Playlist" yang available (status
+// 'available'), "DAW Mock-up" (Classic DAW & FL Playlist) coming soon.
+// Buka/tutup kategori & nambah yang baru cukup edit CATEGORIES di bawah;
+// isi `href`/`templates` kalau kategorinya udah punya halaman.
 
 const [CORAL, PERIWINKLE, ORANGE, TAN] = SECTION_PALETTE
 
@@ -25,46 +27,40 @@ type Category = {
   name: string
   tag: string
   text: string
-  note: string
+  note?: string
   features: string[]
   status: 'available' | 'soon'
   // Gambar mock-up di kolom kanan: 'daw' = playlist mock (CSS), 'ios' = foto HP.
   visual: 'daw' | 'ios'
   color: { bg: string; fg: string }
-  // Cuma dipakai kategori yang udah available.
+  // Link ke template -- cuma diisi kalau kategorinya udah buka & punya halaman.
   href?: string
   templates?: Array<{ id: string; name: string }>
 }
 
 const CATEGORIES: Category[] = [
   {
-    id: 'daw-mockup',
-    eyebrow: '(CATEGORY 01)',
-    name: 'DAW MOCK-UP',
-    tag: 'Flat DAW',
-    text: 'Visuals that look like a DAW playlist. Import a project from FL Studio Mobile and Rizz. draws your real tracks and clips in the template you pick.',
-    note: 'Export is available in Classic DAW.',
-    features: ['Import .flm & .zip', '2 templates', 'PNG & MP4 export'],
-    status: 'available',
-    visual: 'daw',
-    color: CORAL,
-    href: '/template/daw-mockup',
-    templates: [
-      { id: 'theme1', name: 'Classic DAW' },
-      { id: 'theme2', name: 'FL Playlist' },
-    ],
-  },
-  {
     id: 'ios-music-playlist',
-    eyebrow: '(CATEGORY 02)',
+    eyebrow: '(CATEGORY 01)',
     name: 'iOS MUSIC PLAYLIST',
-    tag: 'Coming soon',
+    tag: 'Available',
     text: 'Playlist visuals styled after the iOS Music app, for showing a track list the way people are used to seeing it on their phone.',
-    note: 'Still being built. The phone shown is a preview of the look. Follow the Newsroom for updates.',
     features: [],
-    status: 'soon',
+    status: 'available',
     visual: 'ios',
     color: { bg: PERIWINKLE.bg, fg: '#000000' },
+  },
+  {
+    id: 'daw-mockup',
+    eyebrow: '(CATEGORY 02)',
+    name: 'DAW MOCK-UP',
+    tag: 'Coming soon',
+    text: 'Visuals that look like a DAW playlist. Import a project from FL Studio Mobile and Rizz. draws your real tracks and clips in the template you pick.',
+    note: 'Still being built. The mock-up shown is a preview of the look. Follow the Newsroom for updates.',
+    features: ['Import .flm & .zip', '2 templates', 'PNG & MP4 export'],
+    status: 'soon',
+    visual: 'daw',
+    color: CORAL,
   },
 ]
 
@@ -72,17 +68,17 @@ const STEPS = [
   {
     n: '01',
     title: 'Pick a category',
-    text: 'Choose the kind of visual you want. Right now that is a DAW mock-up, with iOS Music Playlist coming next.',
+    text: 'Choose the kind of visual you want. Right now that is the iOS Music Playlist, with DAW Mock-up coming next.',
   },
   {
     n: '02',
-    title: 'Add your project',
-    text: 'For DAW mock-ups, drop in a .flm or .zip project from FL Studio Mobile. Tracks and clips are read straight from the file.',
+    title: 'Add your music',
+    text: 'Bring what the template needs. DAW mock-ups will read tracks and clips straight from a .flm or .zip project from FL Studio Mobile.',
   },
   {
     n: '03',
     title: 'Choose a template and export',
-    text: 'Pick the look you like, then save it as a PNG or MP4 in 16:9 or 9:16 (currently in Classic DAW).',
+    text: 'Pick the look you like and export it. DAW mock-ups will export as PNG or MP4, in 16:9 or 9:16.',
   },
 ]
 
@@ -178,9 +174,11 @@ function CategoryRow({ c }: { c: Category }) {
         <p className="mt-3 max-w-md text-sm leading-relaxed sm:text-base" style={{ color: `${c.color.fg}cc` }}>
           {c.text}
         </p>
-        <p className="mt-3 max-w-md text-xs leading-relaxed sm:text-sm" style={{ color: `${c.color.fg}b3` }}>
-          {c.note}
-        </p>
+        {c.note && (
+          <p className="mt-3 max-w-md text-xs leading-relaxed sm:text-sm" style={{ color: `${c.color.fg}b3` }}>
+            {c.note}
+          </p>
+        )}
 
         {c.features.length > 0 && (
           <ul className="mt-5 flex flex-wrap gap-2">
@@ -260,13 +258,13 @@ export default function HomePage() {
                 MUSIC.
               </h1>
               <p className="mt-5 max-w-md text-sm leading-relaxed text-black/70 sm:text-base">
-                Rizz. is a set of templates that turn your music into visuals, right in the browser. Start with a DAW
-                mock-up built from your own FL Studio Mobile project. An iOS-style music playlist is on the way.
+                Rizz. is a set of templates that turn your music into visuals, right in the browser. Start with an
+                iOS-style music playlist. DAW mock-ups built from your own FL Studio Mobile project are on the way.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link to="/template/daw-mockup" className={pillButton}>
+                <a href="#brands" className={pillButton}>
                   Browse templates →
-                </Link>
+                </a>
                 <a
                   href="#what"
                   className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-black px-6 text-sm font-medium text-black transition-colors hover:bg-black hover:text-white"
@@ -327,8 +325,9 @@ export default function HomePage() {
             <SectionHeading color="#000000">A PERSONAL PROJECT, BUILT IN THE OPEN.</SectionHeading>
             <p className="mt-5 max-w-xl text-sm leading-relaxed text-black/75 sm:text-base">
               Rizz. is a personal project for making music visuals in the browser. It began as a mock-up of a DAW playlist
-              and now works with real FL Studio Mobile projects. The next category is an iOS-style music playlist, with more
-              template types to follow. It is made by one person, the code is public, and it keeps changing.
+              and now includes an iOS-style music playlist. DAW mock-ups built from real FL Studio Mobile projects are coming
+              to the site soon, with more template types to follow. It is made by one person, the code is public, and it
+              keeps changing.
             </p>
           </div>
         </section>
