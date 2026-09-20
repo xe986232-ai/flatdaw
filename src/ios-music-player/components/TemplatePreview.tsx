@@ -13,7 +13,7 @@ export type PreviewOrigin = { x: number; y: number };
  *  (TemplateGallery). Preview template-nya FULL SATU HALAMAN (edge to
  *  edge), dan semua elemen lain (tombol kembali, judul, nama template,
  *  info, tombol "Gunakan template") jadi OVERLAY yang nempel di atasnya.
- *  Flat: blok warna solid dari palet (lime/hitam/periwinkle) + outline
+ *  Flat: blok warna solid dari palet (coral/hitam/periwinkle) + outline
  *  hitam tipis, tanpa shadow/blur/gradient. Isi preview-nya (`preview`)
  *  dikirim dari galeri biar komponen ini nggak perlu tahu soal thumbnail
  *  kolase. */

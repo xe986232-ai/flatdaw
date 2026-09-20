@@ -639,7 +639,7 @@ export default function Timeline(props: TimelineProps) {
                   <X size={13} />
                 </button>
                 <span className="flex shrink-0 items-center gap-1 truncate text-[10px] font-medium text-editor-muted">
-                  <ListChecks size={12} className="shrink-0 text-editor-accent-ink" />
+                  <ListChecks size={12} className="shrink-0 text-editor-accent" />
                   {selectedTrackBaseIds.size} track dipilih
                 </span>
               </div>
@@ -659,7 +659,7 @@ export default function Timeline(props: TimelineProps) {
                         onClick={handleMakeGroupFromSelection}
                         className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] font-medium text-ed-text active:bg-white/10"
                       >
-                        <Link2 size={12} className="text-editor-accent-ink" />
+                        <Link2 size={12} className="text-editor-accent" />
                         Jadikan Grup
                       </button>
                     )}
@@ -861,7 +861,7 @@ export default function Timeline(props: TimelineProps) {
                   </span>
                   <button
                     onClick={() => setShowAddTextStyles(true)}
-                    className="flex items-center gap-1 rounded-lg bg-editor-accent/20 px-2.5 py-1.5 text-[11px] font-semibold text-editor-accent-ink transition active:scale-95"
+                    className="flex items-center gap-1 rounded-lg bg-editor-accent/20 px-2.5 py-1.5 text-[11px] font-semibold text-editor-accent transition active:scale-95"
                   >
                     <Plus size={12} />
                     Add teks

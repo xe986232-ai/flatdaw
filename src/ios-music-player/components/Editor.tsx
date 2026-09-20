@@ -198,7 +198,7 @@ function NavAction({
       data-ripple
       className={`flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-xl transition active:scale-90 ${
         active
-          ? "bg-editor-accent/20 text-editor-accent-ink"
+          ? "bg-editor-accent/20 text-editor-accent"
           : "text-paper/55 hover:text-paper"
       } ${disabled ? "opacity-30" : ""}`}
       title={label}
@@ -4314,7 +4314,7 @@ export default function Editor({
                       }}
                       className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left text-[13px] font-medium text-paper transition hover:bg-white/10 active:bg-white/15"
                     >
-                      <Video size={15} className="text-editor-accent-ink" />
+                      <Video size={15} className="text-editor-accent" />
                       <span className="flex flex-col">
                         Export Video
                         <span className="text-[10.5px] font-normal text-editor-muted">
@@ -4330,7 +4330,7 @@ export default function Editor({
                       }}
                       className="flex w-full items-center gap-2.5 px-3.5 py-3 text-left text-[13px] font-medium text-paper transition hover:bg-white/10 active:bg-white/15"
                     >
-                      <ImageIcon size={15} className="text-editor-accent-ink" />
+                      <ImageIcon size={15} className="text-editor-accent" />
                       <span className="flex flex-col">
                         Export Gambar
                         <span className="text-[10.5px] font-normal text-editor-muted">
@@ -5387,7 +5387,7 @@ export default function Editor({
                   />
                   <button
                     onClick={() => setSelectedTextLayerId(null)}
-                    className="flex h-9 shrink-0 items-center gap-1 rounded-lg bg-editor-accent/20 px-3 text-xs font-medium text-editor-accent-ink transition active:scale-95"
+                    className="flex h-9 shrink-0 items-center gap-1 rounded-lg bg-editor-accent/20 px-3 text-xs font-medium text-editor-accent transition active:scale-95"
                   >
                     <X size={14} />
                     Selesai
@@ -5834,11 +5834,11 @@ export default function Editor({
                   </div>
                 ) : (
                   <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-editor-accent/15">
-                    <Loader2 size={20} className="animate-spin text-editor-accent-ink" />
+                    <Loader2 size={20} className="animate-spin text-editor-accent" />
                   </div>
                 )}
                 <div className="flex items-center justify-center gap-1.5">
-                  <Sparkles size={13} className="text-editor-accent-ink" />
+                  <Sparkles size={13} className="text-editor-accent" />
                   <p className="text-sm font-semibold text-paper">
                     Merender video kamu…
                   </p>
@@ -5893,7 +5893,7 @@ export default function Editor({
                   </p>
                   {exportKind === "video" && exportEngineUsed && (
                     <span
-                      className="rounded-full bg-editor-accent/15 px-2 py-0.5 text-[10px] font-semibold text-editor-accent-ink"
+                      className="rounded-full bg-editor-accent/15 px-2 py-0.5 text-[10px] font-semibold text-editor-accent"
                       title="Dirender pakai WebCodecs API (VideoEncoder/AudioEncoder) — hardware-accelerated"
                     >
                       ⚡ WebCodecs
