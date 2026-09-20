@@ -50,7 +50,7 @@ const CATEGORIES: Category[] = [
     features: [],
     status: 'available',
     visual: 'ios',
-    color: { bg: '#ffffff', fg: '#000000' },
+    color: { bg: tokens.colors.accent, fg: '#000000' },
   },
   {
     id: 'daw-mockup',
