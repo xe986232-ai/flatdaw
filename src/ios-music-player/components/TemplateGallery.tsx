@@ -537,13 +537,8 @@ export default function TemplateGallery({
       <div className="relative flex shrink-0 flex-col gap-3 border-b border-black px-4 pb-4 pt-5">
         <div className="flex items-center justify-between">
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-widest text-black">
+            <p className="text-[11px] font-bold uppercase tracking-widest text-black">
               {activeTab === "draft" ? "(DRAFT PROJECT)" : "(KOLEKSI TEMPLATE)"}
-              {activeTab === "draft" && (
-                <span className="rounded-full border border-black bg-white px-2 py-0.5 text-[9px] tabular-nums tracking-wide">
-                  {drafts.length}/{MAX_DRAFTS} SLOT
-                </span>
-              )}
             </p>
             <h1
               className="mt-2 text-[34px] font-bold leading-[1.02] text-black"
