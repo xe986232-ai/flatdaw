@@ -1788,6 +1788,10 @@ export default function Editor({
   // jalan SEKALI pas mount, sebelum auto-save pertama diizinkan jalan.
   useEffect(() => {
     if (!resumeDraftId) return;
+    // Draft yang dibuka udah nentuin sendiri foto sampul/background-nya —
+    // JANGAN sampai foto acak dari Firebase (datangnya async, bisa lebih
+    // cepat/lambat dari pemulihan draft) nimpa atau bikin background ilang.
+    appliedCoverRef.current = true;
     let cancelled = false;
     (async () => {
       try {
@@ -1798,19 +1802,42 @@ export default function Editor({
         const nextSlotMedia = initialSlotMedia(template);
         for (const slot of template.slots) {
           const stored = record.slotMedia[slot.id];
+          const sampleUrl = record.slotMediaSamples?.[slot.id];
           if (stored) {
             nextSlotMedia[slot.id] = storedMediaToEntry(
               stored,
               `${slot.id}-draft`,
             );
+          } else if (sampleUrl) {
+            nextSlotMedia[slot.id] = { kind: "sample", url: sampleUrl };
           }
         }
         setSlotMedia(nextSlotMedia);
-        setCustomBackground(
-          record.customBackground
-            ? storedMediaToEntry(record.customBackground, "background-draft")
-            : null,
-        );
+
+        // Background: file user -> sample (URL) -> null (bg asli template).
+        // Draft LAMA (sebelum fix) gak nyimpen URL sample: kalau sampulnya
+        // juga bukan file user, anggap background-nya sample default.
+        let restoredBackground: SlotMediaEntry | null;
+        if (record.customBackground) {
+          restoredBackground = storedMediaToEntry(
+            record.customBackground,
+            "background-draft",
+          );
+        } else if (record.customBackgroundSampleUrl) {
+          restoredBackground = {
+            kind: "sample",
+            url: record.customBackgroundSampleUrl,
+          };
+        } else if (
+          record.customBackgroundSampleUrl === undefined &&
+          coverSlotId &&
+          !record.slotMedia[coverSlotId]
+        ) {
+          restoredBackground = nextSlotMedia[coverSlotId] ?? null;
+        } else {
+          restoredBackground = null;
+        }
+        setCustomBackground(restoredBackground);
         setLayerOpacity((prev) => {
           const next = { ...prev };
           for (const key of Object.keys(next)) {

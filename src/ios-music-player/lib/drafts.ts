@@ -118,6 +118,16 @@ export type DraftRecord = {
   lyricsGroups?: import("../types").LyricsGroup[];
   slotMedia: Record<string, StoredMedia>;
   customBackground: StoredMedia | null;
+  /** URL foto SAMPLE (bukan upload user) yang lagi dipakai sebagai
+   *  background. FIX "background kadang ilang pas buka draft": dulu cuma
+   *  background bertipe "file" yang disimpan, jadi kalau backgroundnya foto
+   *  sample bawaan, yang tersimpan null & pas draft dibuka background-nya
+   *  ketimpa null. undefined = draft lama / status gak diketahui, null =
+   *  user memang gak pakai background custom (pakai bg asli template). */
+  customBackgroundSampleUrl?: string | null;
+  /** URL foto sample per slot (slotId -> url) — biar foto sample yang
+   *  sama ikut ke-restore, bukan balik ke sample lokal / diacak lagi. */
+  slotMediaSamples?: Record<string, string>;
   /** Klip-klip potongan track audio (offset/trim) — biar posisi motong
    *  audio ikut ke-restore, bukan cuma file audionya doang. */
   audioClips: { id: string; trimStart: number; trimEnd: number; offset: number }[];
@@ -140,6 +150,7 @@ export type DraftSummary = Pick<
 
 async function saveMediaMap(
   slotMedia: SlotMediaState,
+  previous?: Record<string, StoredMedia>,
 ): Promise<Record<string, StoredMedia>> {
   const out: Record<string, StoredMedia> = {};
   for (const [slotId, media] of Object.entries(slotMedia)) {
@@ -158,10 +169,20 @@ async function saveMediaMap(
           `[drafts] Gagal baca media slot "${slotId}" saat auto-save, slot ini dilewati (slot lain tetap tersimpan).`,
           e instanceof Error ? e.message : e,
         );
+        // Jangan sampai media yang UDAH tersimpan di draft ikut kehapus
+        // cuma gara-gara gagal baca sekali — pertahankan versi lama.
+        if (previous?.[slotId]) out[slotId] = previous[slotId];
       }
     }
   }
   return out;
+}
+
+/** Foto sample (bukan blob: URL, karena blob: mati begitu halaman ditutup)
+ *  yang layak disimpan sebagai URL biasa. */
+function persistableSampleUrl(media?: SlotMediaEntry | null): string | null {
+  if (media?.kind !== "sample" || !media.url) return null;
+  return media.url.startsWith("blob:") ? null : media.url;
 }
 
 /** Simpan/update draft. `id` null = draft baru (id di-generate di sini);
@@ -197,11 +218,31 @@ export async function saveDraft(
   const now = Date.now();
   const existing = id ? await getDraft(id) : undefined;
 
-  const slotMediaOut = await saveMediaMap(params.slotMedia);
-  const customBackgroundOut =
-    params.customBackground?.kind === "file"
-      ? await readEntryAsBlob(params.customBackground)
-      : null;
+  const slotMediaOut = await saveMediaMap(params.slotMedia, existing?.slotMedia);
+
+  // Sebelumnya gagal baca background di sini nge-throw & bikin SELURUH
+  // auto-save batal diam-diam. Sekarang gagal -> pertahankan versi lama.
+  let customBackgroundOut: StoredMedia | null = null;
+  if (params.customBackground?.kind === "file") {
+    try {
+      customBackgroundOut = await readEntryAsBlob(params.customBackground);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[drafts] Gagal baca background saat auto-save, pakai versi draft sebelumnya.",
+        e instanceof Error ? e.message : e,
+      );
+      customBackgroundOut = existing?.customBackground ?? null;
+    }
+  }
+  const backgroundUnknown =
+    params.customBackground?.kind === "file" && !customBackgroundOut;
+
+  const slotMediaSamples: Record<string, string> = {};
+  for (const [slotId, media] of Object.entries(params.slotMedia)) {
+    const url = persistableSampleUrl(media);
+    if (url) slotMediaSamples[slotId] = url;
+  }
 
   const record: DraftRecord = {
     id: existing?.id ?? id ?? `draft-${now}-${Math.random().toString(36).slice(2, 8)}`,
@@ -225,6 +266,10 @@ export async function saveDraft(
     lyricsGroups: (params.lyricsGroups ?? []).map((g) => ({ ...g, memberIds: [...g.memberIds] })),
     slotMedia: slotMediaOut,
     customBackground: customBackgroundOut,
+    customBackgroundSampleUrl: backgroundUnknown
+      ? undefined
+      : persistableSampleUrl(params.customBackground),
+    slotMediaSamples,
     audioClips: params.audioClips.map((c) => ({ ...c })),
     hiddenElements: Array.from(params.hiddenElements),
     currentSec: params.currentSec,
