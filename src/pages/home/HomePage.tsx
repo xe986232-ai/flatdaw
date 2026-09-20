@@ -22,8 +22,6 @@ import iosMusicMockup from '../../assets/ios-music-mockup.webp'
 // Buka/tutup kategori & nambah yang baru cukup edit CATEGORIES di bawah;
 // isi `href`/`templates` kalau kategorinya udah punya halaman.
 
-const GITHUB_URL = 'https://github.com/xe986232-ai/rizzsemlehoy'
-const LIVE_URL = 'https://flatdaw.vercel.app'
 
 // Kontak WhatsApp (format internasional buat wa.me: 0831... -> 62831...).
 const WA_NUMBER = '6283129555763'
@@ -434,39 +432,23 @@ export default function HomePage() {
             <Eyebrow color={tokens.colors.accent}>(WHERE TO FIND US)</Eyebrow>
             <SectionHeading color="#ffffff">FIND RIZZ. ONLINE</SectionHeading>
             <Reveal as="p" delay={180} className="mt-5 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
-              Try Rizz. in the browser, or follow along through the repository. Found a bug, want a new template, or
-              have a question? Chat with me on WhatsApp.
-            </Reveal>
-            <Reveal delay={260} className="mt-8 flex flex-wrap gap-3">
-              <a href={LIVE_URL} data-ripple className={pillLight}>
-                Open the live site
-              </a>
-              <a
-                href={GITHUB_URL}
-                target="_blank"
-                rel="noreferrer"
-                data-ripple
-                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-white px-6 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:text-black active:translate-y-0 active:scale-95"
-              >
-                View on GitHub ↗
-              </a>
+              Found a bug, want a new template, or have a question? Chat with me on WhatsApp.
             </Reveal>
 
             {/* WhatsApp: bug, request template, pertanyaan */}
-            <Reveal delay={340} className="mt-10 border-t pt-8" style={{ borderColor: tokens.colors.border }}>
-              <p className="text-xs font-bold uppercase tracking-widest text-white/60">(CONTACT)</p>
+            <Reveal delay={260} className="mt-8">
               <a
                 href={waLink('Hi! I have a message about Rizz.: ')}
                 target="_blank"
                 rel="noreferrer"
                 data-ripple
-                className={`${pillLight} mt-4 w-full gap-2.5 whitespace-nowrap sm:w-auto`}
+                className={`${pillLight} w-full gap-2.5 whitespace-nowrap sm:w-auto`}
               >
                 <WhatsAppIcon size={20} />
                 Chat on WhatsApp
               </a>
               <p className="mt-3 text-sm text-white/50">{WA_DISPLAY}</p>
-              <ul className="mt-4 flex flex-wrap gap-2">
+              <ul className="mt-5 flex flex-wrap gap-2">
                 {WA_TOPICS.map((t) => (
                   <li key={t.label}>
                     <a
