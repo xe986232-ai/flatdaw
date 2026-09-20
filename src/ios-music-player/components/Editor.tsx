@@ -27,7 +27,6 @@ import {
   Minimize2,
   Download,
   ArrowLeft,
-  Sparkles,
   Check,
   Crop,
   Music2,
@@ -81,7 +80,7 @@ import {
   resolveLiquidGlassRectPx,
   DEFAULT_LIQUID_GLASS_SETTINGS,
 } from "../lib/liquidGlass";
-import { exportTemplateVideoAuto, ExportCancelledError, type ExportProgress, type ExportEngine } from "../lib/engine";
+import { exportTemplateVideoAuto, ExportCancelledError, type ExportProgress } from "../lib/engine";
 import { analyzeAudio, type AudioAnalysis } from "../lib/waveform";
 import { logExportEvent } from "../lib/exportLog";
 import { subscribeCoverImages, type CoverImageEntry } from "../lib/coverImages";
@@ -1445,7 +1444,6 @@ export default function Editor({
     null,
   );
   const [exportResultUrl, setExportResultUrl] = useState<string | null>(null);
-  const [exportEngineUsed, setExportEngineUsed] = useState<ExportEngine | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   // "video" = hasil render penuh (webcodecs), "image" = cuma nyaplok frame
   // yang lagi tampil di preview canvas saat tombol ditekan (instan, tanpa
@@ -4138,7 +4136,6 @@ export default function Editor({
     if (!canvas) return;
     setExportError(null);
     setExportResultUrl(null);
-    setExportEngineUsed(null);
     setExportKind("image");
     try {
       const blob: Blob | null = await new Promise((resolve) =>
@@ -4165,7 +4162,6 @@ export default function Editor({
     setExportKind("video");
     setExportError(null);
     setExportResultUrl(null);
-    setExportEngineUsed(null);
     const controller = new AbortController();
     exportAbortRef.current = controller;
     try {
@@ -4241,7 +4237,7 @@ export default function Editor({
       const exportCustomBackground = hiddenElements.has(BACKGROUND_LAYER_ID)
         ? null
         : customBackground;
-      const { blob, engine } = await exportTemplateVideoAuto(
+      const { blob } = await exportTemplateVideoAuto(
         exportTemplate,
         slotMedia,
         layerOpacity,
@@ -4261,7 +4257,6 @@ export default function Editor({
         glowIntensity,
       );
       setExportResultUrl(URL.createObjectURL(blob));
-      setExportEngineUsed(engine);
       logExportEvent(template.id);
     } catch (err) {
       if (err instanceof ExportCancelledError) {
@@ -4331,7 +4326,7 @@ export default function Editor({
               {template.name}
             </h1>
             <span
-              className={`flex items-center gap-1 text-[9.5px] font-medium text-emerald-300 transition-opacity duration-500 ${
+              className={`flex items-center gap-1 text-[9.5px] font-medium text-editor-muted transition-opacity duration-500 ${
                 draftSavedFlash ? "opacity-100" : "opacity-0"
               }`}
             >
@@ -5918,7 +5913,7 @@ export default function Editor({
             exportP.closing ? "fx-backdrop-out pointer-events-none" : "fx-backdrop-in"
           }`}
         >
-          <div className="fx-pop-in relative w-full max-w-xs overflow-hidden rounded-3xl border border-white/10 bg-editor-panel p-5 text-center">
+          <div className="fx-pop-in relative w-full max-w-xs overflow-hidden rounded-3xl border border-white/10 bg-dark-panel p-5 text-center">
             {isExporting && (
               <div className="fx-rise-sm relative">
                 {exportSnapshot ? (
@@ -5935,7 +5930,7 @@ export default function Editor({
                         preview sambil tetap keliatan progressnya jalan. */}
                     <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-editor-accent" />
-                      <span className="text-[10px] font-semibold tabular-nums text-paper">
+                      <span className="text-[10px] font-semibold tabular-nums text-dark-text">
                         {Math.round(exportProgress?.percent ?? 0)}%
                       </span>
                     </div>
@@ -5946,26 +5941,25 @@ export default function Editor({
                   </div>
                 )}
                 <div className="flex items-center justify-center gap-1.5">
-                  <Sparkles size={13} className="text-editor-accent" />
-                  <p className="text-sm font-semibold text-paper">
+                  <p className="text-sm font-semibold text-dark-text">
                     Merender video kamu…
                   </p>
                 </div>
-                <p className="mt-1 text-[11px] text-editor-muted">
+                <p className="mt-1 text-[11px] text-dark-muted">
                   {exportProgress?.label ?? "Lagi diproses, jangan tutup dulu ya"}
                 </p>
-                <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-editor-track">
+                <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-dark-track">
                   <div
                     className="h-full rounded-full bg-gradient-to-r from-editor-accent/70 via-editor-accent to-editor-accent/70 transition-all duration-300 ease-out"
                     style={{ width: `${exportProgress?.percent ?? 0}%` }}
                   />
                 </div>
-                <p className="mt-1.5 text-[10px] font-medium tabular-nums text-editor-muted">
+                <p className="mt-1.5 text-[10px] font-medium tabular-nums text-dark-muted">
                   {Math.round(exportProgress?.percent ?? 0)}%
                 </p>
                 <button
                   onClick={handleCancelExport}
-                  className="mt-4 w-full rounded-full border border-white/10 bg-editor-track px-4 py-2.5 text-xs font-medium text-paper transition hover:bg-white/10 active:scale-[0.98]"
+                  className="mt-4 w-full rounded-full border border-white/10 bg-dark-track px-4 py-2.5 text-xs font-medium text-dark-text transition hover:bg-white/10 active:scale-[0.98]"
                 >
                   Batalkan
                 </button>
@@ -5977,13 +5971,13 @@ export default function Editor({
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-rec/15">
                   <X size={20} className="text-rec" />
                 </div>
-                <p className="text-sm font-semibold text-paper">Export gagal</p>
-                <p className="mt-1.5 text-xs leading-relaxed text-editor-muted">
+                <p className="text-sm font-semibold text-dark-text">Export gagal</p>
+                <p className="mt-1.5 text-xs leading-relaxed text-dark-muted">
                   {exportError}
                 </p>
                 <button
                   onClick={() => setExportError(null)}
-                  className="mt-4 w-full rounded-full border border-white/10 bg-editor-track px-4 py-2.5 text-xs font-medium text-paper transition hover:bg-white/10 active:scale-[0.98]"
+                  className="mt-4 w-full rounded-full border border-white/10 bg-dark-track px-4 py-2.5 text-xs font-medium text-dark-text transition hover:bg-white/10 active:scale-[0.98]"
                 >
                   Tutup
                 </button>
@@ -5993,20 +5987,12 @@ export default function Editor({
             {!isExporting && exportResultUrl && (
               <div className="fx-rise-sm relative">
                 <div className="flex items-center justify-center gap-2">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15">
-                    <Check size={16} className="text-emerald-400" />
+                  <div className="flex h-8 w-8 items-center justify-center rounded-full bg-editor-accent">
+                    <Check size={16} strokeWidth={2.6} className="text-paper" />
                   </div>
-                  <p className="text-sm font-semibold text-paper">
+                  <p className="text-sm font-semibold text-dark-text">
                     {exportKind === "image" ? "Gambar siap!" : "Video siap!"}
                   </p>
-                  {exportKind === "video" && exportEngineUsed && (
-                    <span
-                      className="rounded-full bg-editor-accent/15 px-2 py-0.5 text-[10px] font-semibold text-editor-accent"
-                      title="Dirender pakai WebCodecs API (VideoEncoder/AudioEncoder) — hardware-accelerated"
-                    >
-                      ⚡ WebCodecs
-                    </span>
-                  )}
                 </div>
                 {exportKind === "image" ? (
                   <img
@@ -6032,7 +6018,7 @@ export default function Editor({
                   </a>
                   <button
                     onClick={() => setExportResultUrl(null)}
-                    className="flex-1 rounded-full border border-white/10 bg-editor-track px-3 py-2.5 text-xs font-medium text-paper transition hover:bg-white/10 active:scale-[0.98]"
+                    className="flex-1 rounded-full border border-white/10 bg-dark-track px-3 py-2.5 text-xs font-medium text-dark-text transition hover:bg-white/10 active:scale-[0.98]"
                   >
                     Tutup
                   </button>

@@ -48,6 +48,13 @@
   --color-ed-card: #f2f2f2;
   --color-ed-dim: #9ca3af;
   --color-ed-text: #000000;
+
+  /* Palet gelap buat overlay/dialog di atas editor (mis. overlay ekspor) —
+     supaya gak putih & semua warnanya tetap lewat token. */
+  --color-dark-panel: #1c1c1e;
+  --color-dark-track: #2c2c2e;
+  --color-dark-text: #ffffff;
+  --color-dark-muted: #9a9aa2;
 }
 
 body {
