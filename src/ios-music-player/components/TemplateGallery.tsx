@@ -192,7 +192,10 @@ function DraftCard({
   exporting: boolean;
 }) {
   return (
-    <div className="group relative flex w-full flex-col overflow-hidden rounded-lg border border-black bg-white text-left">
+    <div
+      className="group relative flex w-full flex-col overflow-hidden rounded-lg border border-black text-left"
+      style={{ backgroundColor: tokens.colors.accent }}
+    >
       <button
         onClick={() => onResume(draft)}
         disabled={busy}
@@ -225,7 +228,7 @@ function DraftCard({
             {draft.templateName}
           </p>
           <div className="flex items-center justify-between gap-2">
-            <span className="truncate text-[9.5px] text-black/50">
+            <span className="truncate text-[9.5px] text-black/70">
               {formatRelativeTime(draft.updatedAt)}
             </span>
             <span className="flex h-6 shrink-0 items-center justify-center rounded-full bg-black px-2.5 text-[10px] font-semibold tracking-wide text-white transition-transform duration-300 group-active:translate-x-0.5">
@@ -299,7 +302,8 @@ function TemplateCard({
   return (
     <button
       onClick={handleClick}
-      className="group relative flex w-full flex-col overflow-hidden rounded-lg border border-black bg-white text-left transition-transform duration-300 active:scale-[0.97]"
+      className="group relative flex w-full flex-col overflow-hidden rounded-lg border border-black text-left transition-transform duration-300 active:scale-[0.97]"
+      style={{ backgroundColor: tokens.colors.accent }}
     >
       <div className="relative flex h-full flex-col overflow-hidden">
         {/* kartu preview */}
@@ -345,11 +349,11 @@ function TemplateCard({
 
           <div className="flex items-center justify-between gap-2">
             {isCollageStyle ? (
-              <p className="truncate text-[9.5px] text-black/60">
+              <p className="truncate text-[9.5px] text-black/75">
                 Bar klasik & waveform, tinggal pilih
               </p>
             ) : usageCount !== null ? (
-              <div className="flex items-center gap-1 text-[9.5px] text-black/50">
+              <div className="flex items-center gap-1 text-[9.5px] text-black/70">
                 <ImageIcon size={10} strokeWidth={2} />
                 <span className="tabular-nums">
                   {usageCount.toLocaleString("id-ID")} kali digunakan
