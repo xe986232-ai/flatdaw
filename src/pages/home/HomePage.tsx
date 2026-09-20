@@ -11,7 +11,7 @@ import iosMusicMockup from '../../assets/ios-music-mockup.webp'
 // Mock-up lagi ditandai "coming soon".
 //
 // Isi konten: Rizz. = alat buat bikin visual musik. Template dikelompokin
-// per KATEGORI -- sekarang "iOS Music Playlist" yang available (status
+// per KATEGORI -- sekarang "iOS Music Player" yang available (status
 // 'available'), "DAW Mock-up" (Classic DAW & FL Playlist) coming soon.
 // Buka/tutup kategori & nambah yang baru cukup edit CATEGORIES di bawah;
 // isi `href`/`templates` kalau kategorinya udah punya halaman.
@@ -40,11 +40,11 @@ type Category = {
 
 const CATEGORIES: Category[] = [
   {
-    id: 'ios-music-playlist',
+    id: 'ios-music-player',
     eyebrow: '(CATEGORY 01)',
-    name: 'iOS MUSIC PLAYLIST',
+    name: 'iOS MUSIC PLAYER',
     tag: 'Available',
-    text: 'Playlist visuals styled after the iOS Music app, for showing a track list the way people are used to seeing it on their phone.',
+    text: 'Music player visuals styled after the iOS Music app, for showing a song the way people are used to seeing it on their phone.',
     features: [],
     status: 'available',
     visual: 'ios',
@@ -64,11 +64,14 @@ const CATEGORIES: Category[] = [
   },
 ]
 
+const LIVE_COUNT = CATEGORIES.filter((c) => c.status === 'available').length
+const SOON_COUNT = CATEGORIES.filter((c) => c.status === 'soon').length
+
 const STEPS = [
   {
     n: '01',
     title: 'Pick a category',
-    text: 'Choose the kind of visual you want. Right now that is the iOS Music Playlist, with DAW Mock-up coming next.',
+    text: 'Choose the kind of visual you want. Right now that is the iOS Music Player, with DAW Mock-up coming next.',
   },
   {
     n: '02',
@@ -224,7 +227,7 @@ function CategoryRow({ c }: { c: Category }) {
         ) : (
           <img
             src={iosMusicMockup}
-            alt="Phone showing an iOS-style music player, a preview of the iOS Music Playlist template"
+            alt="Phone showing an iOS-style music player, a preview of the iOS Music Player template"
             width={761}
             height={1200}
             loading="lazy"
@@ -242,34 +245,48 @@ export default function HomePage() {
       <SiteNav />
 
       <main>
-        {/* HERO */}
-        <section className="relative overflow-hidden pb-16 pt-12 sm:pb-24 sm:pt-16" style={{ backgroundColor: tokens.colors.pageBackground }}>
-          <div className={containerClass}>
-            <div>
-              <Eyebrow color="#000000">(VISUAL TEMPLATES FOR MUSIC)</Eyebrow>
-              <h1
-                className="mt-3 text-[42px] font-bold leading-[1.05] text-black sm:text-[72px] lg:text-[96px]"
-                style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-1.5px' }}
+        {/* HERO -- setinggi layar (dikurangi tinggi nav 4rem) biar section di bawahnya
+            gak nongol. svh = tinggi layar "aman" di browser mobile (toolbar URL kebuka). */}
+        <section
+          className="relative flex min-h-[calc(100svh-4rem)] supports-[height:100dvh]:min-h-[calc(100dvh-4rem)] flex-col overflow-hidden pb-6 pt-10 sm:pb-8 sm:pt-14"
+          style={{ backgroundColor: tokens.colors.pageBackground }}
+        >
+          <div className={`${containerClass} flex w-full flex-1 flex-col justify-center`}>
+            <Eyebrow color="#000000">(VISUAL TEMPLATES FOR MUSIC)</Eyebrow>
+            <h1
+              className="mt-3 text-[42px] font-bold leading-[1.05] text-black sm:text-[72px] lg:text-[96px]"
+              style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-1.5px' }}
+            >
+              MAKE VISUALS
+              <br />
+              FOR YOUR MUSIC.
+            </h1>
+            <p className="mt-6 max-w-xl text-sm leading-relaxed text-black/70 sm:text-base">
+              Rizz. is a set of templates that turn your music into visuals, right in the browser. Start with an
+              iOS-style music player. DAW mock-ups built from your own FL Studio Mobile project are on the way.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <a href="#brands" className={pillButton}>
+                Browse templates →
+              </a>
+              <a
+                href="#what"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-black px-6 text-sm font-medium text-black transition-colors hover:bg-black hover:text-white"
               >
-                MAKE VISUALS
-                <br />
-                FOR YOUR MUSIC.
-              </h1>
-              <p className="mt-6 max-w-xl text-sm leading-relaxed text-black/70 sm:text-base">
-                Rizz. is a set of templates that turn your music into visuals, right in the browser. Start with an
-                iOS-style music playlist. DAW mock-ups built from your own FL Studio Mobile project are on the way.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-3">
-                <a href="#brands" className={pillButton}>
-                  Browse templates →
-                </a>
-                <a
-                  href="#what"
-                  className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-black px-6 text-sm font-medium text-black transition-colors hover:bg-black hover:text-white"
-                >
-                  How it works
-                </a>
-              </div>
+                How it works
+              </a>
+            </div>
+          </div>
+
+          {/* Baris bawah hero: ngisi dasar layar + petunjuk scroll. */}
+          <div className={`${containerClass} mt-10 w-full`}>
+            <div className="flex items-center justify-between gap-4 border-t border-black/25 pt-4 text-xs font-bold uppercase tracking-widest text-black sm:text-sm">
+              <a href="#brands" className="hover:underline">
+                Scroll ↓
+              </a>
+              <span className="text-right text-black/70">
+                {LIVE_COUNT} live · {SOON_COUNT} coming soon
+              </span>
             </div>
           </div>
         </section>
@@ -322,7 +339,7 @@ export default function HomePage() {
             <SectionHeading color="#000000">A PERSONAL PROJECT, BUILT IN THE OPEN.</SectionHeading>
             <p className="mt-5 max-w-xl text-sm leading-relaxed text-black/75 sm:text-base">
               Rizz. is a personal project for making music visuals in the browser. It began as a mock-up of a DAW playlist
-              and now includes an iOS-style music playlist. DAW mock-ups built from real FL Studio Mobile projects are coming
+              and now includes an iOS-style music player. DAW mock-ups built from real FL Studio Mobile projects are coming
               to the site soon, with more template types to follow. It is made by one person, the code is public, and it
               keeps changing.
             </p>

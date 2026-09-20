@@ -12,7 +12,7 @@ type NavLeaf = { label: string; href?: string; to?: string }
 
 // Dropdown "Templates": isinya kategori template (bukan audiens ala referensi).
 const TEMPLATES_MENU: NavLeaf[] = [
-  { label: 'iOS Music Playlist', href: '#brands' },
+  { label: 'iOS Music Player', href: '#brands' },
   { label: 'DAW Mock-up (soon)', href: '#brands' },
 ]
 
