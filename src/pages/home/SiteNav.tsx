@@ -76,6 +76,9 @@ export default function SiteNav() {
   const rootRef = useRef<HTMLElement>(null)
 
   const closeAll = () => {
+    // Nyalain Lenis lagi SEKARANG (bukan nunggu effect), karena handler anchor
+    // Lenis jalan setelah onClick ini dan nolak scroll kalau masih stopped.
+    getLenis()?.start()
     setMenuOpen(false)
     setSubOpen(false)
     setLangOpen(false)
@@ -105,17 +108,20 @@ export default function SiteNav() {
   }, [])
 
   // Panel menu di mobile nutupin layar -- kunci scroll halaman selama kebuka.
+  // JANGAN pake body { overflow: hidden }: pas <html> lagi overflow:clip (class
+  // lenis-stopped dari Lenis), overflow body jadi gak ikut ke viewport dan
+  // header sticky ikut kelempar keluar layar -> tombol burger hilang & menu
+  // gak bisa ditutup. Cukup stop Lenis; kalau Lenis gak aktif, kunci lewat <html>.
   useEffect(() => {
     if (!menuOpen) return
-    const prev = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    // Lenis gak ngeliat overflow:hidden di body -- stop manual biar halaman
-    // di belakang panel menu gak ikut ke-scroll.
     const lenis = getLenis()
-    lenis?.stop()
+    const html = document.documentElement
+    const prev = html.style.overflow
+    if (lenis) lenis.stop()
+    else html.style.overflow = 'hidden'
     return () => {
-      document.body.style.overflow = prev
-      lenis?.start()
+      if (lenis) lenis.start()
+      else html.style.overflow = prev
     }
   }, [menuOpen])
 
