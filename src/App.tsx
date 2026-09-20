@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import HomePage from './pages/home/HomePage'
 import DawMockupPage from './pages/template/DawMockupPage'
 import EditorPage from './pages/editor/EditorPage'
+import IosMusicPlayerApp from './ios-music-player/IosMusicPlayerApp'
 import SmoothScroll from './SmoothScroll'
 import { useFlmProject } from './useFlmProject'
 
@@ -30,6 +31,11 @@ export default function App() {
       />
 
       <Route path="/editor/:themeId" element={<EditorPage {...flmProject} />} />
+
+      {/* Template iOS Music Player -- di-porting dari project spneditz
+          (5 varian: lockscreen, glass, black, v4, v5). App-nya sendiri
+          (gallery <-> editor) mandiri, gak nyentuh state flmProject. */}
+      <Route path="/template/ios-music-player" element={<IosMusicPlayerApp />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

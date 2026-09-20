@@ -37,6 +37,7 @@ type Category = {
   color: { bg: string; fg: string }
   // Link ke template -- cuma diisi kalau kategorinya udah buka & punya halaman.
   href?: string
+  hrefLabel?: string
   templates?: Array<{ id: string; name: string }>
 }
 
@@ -47,10 +48,12 @@ const CATEGORIES: Category[] = [
     name: 'iOS MUSIC PLAYER',
     tag: 'Available',
     text: 'Music player visuals styled after the iOS Music app, for showing a song the way people are used to seeing it on their phone.',
-    features: [],
+    features: ['5 template variants', 'Custom cover, title & artist', 'PNG & MP4 export'],
     status: 'available',
     visual: 'ios',
     color: { bg: tokens.colors.accent, fg: '#000000' },
+    href: '/template/ios-music-player',
+    hrefLabel: 'See all iOS Music Player templates →',
   },
   {
     id: 'daw-mockup',
@@ -220,7 +223,7 @@ function CategoryRow({ c }: { c: Category }) {
         {c.href && (
           <div className="mt-5">
             <Link to={c.href} className={dark ? pillLight : pillButton}>
-              See all DAW templates →
+              {c.hrefLabel ?? 'See all DAW templates →'}
             </Link>
           </div>
         )}
