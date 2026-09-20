@@ -62,7 +62,7 @@ const CATEGORIES: Category[] = [
     features: ['Import .flm & .zip', '2 templates', 'PNG & MP4 export'],
     status: 'soon',
     visual: 'daw',
-    color: { bg: '#161616', fg: '#ffffff' },
+    color: { bg: tokens.colors.accent, fg: '#000000' },
   },
 ]
 

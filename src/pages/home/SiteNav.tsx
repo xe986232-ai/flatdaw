@@ -129,7 +129,7 @@ export default function SiteNav() {
     <header
       ref={rootRef}
       className="sticky top-0 z-50 border-b border-black/10"
-      style={{ backgroundColor: '#ffffff', fontFamily: tokens.fonts.body }}
+      style={{ backgroundColor: tokens.colors.pageBackground, fontFamily: tokens.fonts.body }}
     >
       <div className="wrap mx-auto flex h-16 max-w-[1400px] items-center justify-between px-6 sm:px-10">
         <div id="logo">
@@ -178,7 +178,7 @@ export default function SiteNav() {
           className={`fixed inset-x-0 bottom-0 top-16 overflow-y-auto px-6 pb-10 pt-4 xl:static xl:ml-10 xl:flex xl:flex-1 xl:overflow-visible xl:p-0 ${
             menuOpen ? 'block' : 'hidden'
           }`}
-          style={{ backgroundColor: '#ffffff' }}
+          style={{ backgroundColor: tokens.colors.pageBackground }}
         >
           <div className="scroll-container flex w-full flex-col gap-6 xl:flex-row xl:items-center xl:justify-between xl:gap-8">
             <ul id="menu-menu-principal-en" className="menu flex flex-col gap-1 xl:flex-row xl:items-center xl:gap-6">
