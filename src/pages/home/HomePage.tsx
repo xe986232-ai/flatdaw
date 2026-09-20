@@ -13,7 +13,7 @@ import SiteNav from './SiteNav'
 // "iOS Music Playlist" masih coming soon. Nambah kategori/template baru
 // cukup edit CATEGORIES di bawah.
 
-const [CORAL, PERIWINKLE, ORANGE, TAN] = SECTION_PALETTE
+const [CORAL, , ORANGE, TAN] = SECTION_PALETTE
 
 const GITHUB_URL = 'https://github.com/xe986232-ai/flatdaw'
 const LIVE_URL = 'https://flatdaw.vercel.app'
@@ -78,33 +78,6 @@ const STEPS = [
     n: '03',
     title: 'Choose a template and export',
     text: 'Pick the look you like, then save it as a PNG or MP4 in 16:9 or 9:16 (currently in Classic DAW).',
-  },
-]
-
-const AUDIENCES = [
-  {
-    id: 'who-artists',
-    title: 'Rizz for Artists',
-    text: 'Post a clip that shows how your track is built, not just how it sounds.',
-    color: CORAL,
-  },
-  {
-    id: 'who-songwriters',
-    title: 'Rizz for Songwriters',
-    text: 'Share a song idea as a picture of the arrangement, not only an audio file.',
-    color: PERIWINKLE,
-  },
-  {
-    id: 'who-labels',
-    title: 'Rizz for Labels',
-    text: 'Give every release the same look by using one template across all your tracks.',
-    color: ORANGE,
-  },
-  {
-    id: 'who-publishers',
-    title: 'Rizz for Publishers',
-    text: 'Pitch demos with a visual that makes the structure of a song easy to see.',
-    color: TAN,
   },
 ]
 
@@ -328,37 +301,6 @@ export default function HomePage() {
                 </li>
               ))}
             </ol>
-          </div>
-        </section>
-
-        {/* WHO WE WORK WITH */}
-        <section id="who" className={sectionClass} style={{ backgroundColor: '#000000' }}>
-          <div className={containerClass}>
-            <Eyebrow color={tokens.colors.accent}>(WHO WE WORK WITH)</Eyebrow>
-            <SectionHeading color="#ffffff">MADE FOR PEOPLE WHO SHARE MUSIC</SectionHeading>
-            <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {AUDIENCES.map((a) => (
-                <article
-                  key={a.id}
-                  id={a.id}
-                  className="flex scroll-mt-20 flex-col rounded-lg p-6"
-                  style={{ backgroundColor: a.color.bg, color: a.color.fg }}
-                >
-                  <h3
-                    className="text-2xl font-bold leading-tight"
-                    style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-0.5px' }}
-                  >
-                    {a.title}
-                  </h3>
-                  <p className="mt-3 flex-1 text-sm leading-relaxed" style={{ color: `${a.color.fg}cc` }}>
-                    {a.text}
-                  </p>
-                  <Link to="/template/daw-mockup" className="mt-6 text-sm font-semibold underline-offset-4 hover:underline">
-                    Explore templates →
-                  </Link>
-                </article>
-              ))}
-            </div>
           </div>
         </section>
 

@@ -8,13 +8,12 @@ import { tokens } from '../../designTokens'
 // bukan ke believe.com. Id/aria dari markup aslinya (#logo, #menu-burger,
 // #nav, aria-controls, role="navigation") dipertahanin.
 
-type NavLeaf = { label: string; href: string }
+type NavLeaf = { label: string; href?: string; to?: string }
 
-const WHO_WE_WORK_WITH: NavLeaf[] = [
-  { label: 'Rizz for Artists', href: '#who-artists' },
-  { label: 'Rizz for Songwriters', href: '#who-songwriters' },
-  { label: 'Rizz for Labels', href: '#who-labels' },
-  { label: 'Rizz for Publishers', href: '#who-publishers' },
+// Dropdown "Templates": isinya kategori template (bukan audiens ala referensi).
+const TEMPLATES_MENU: NavLeaf[] = [
+  { label: 'DAW Mock-up', to: '/template/daw-mockup' },
+  { label: 'iOS Music Playlist (soon)', href: '#brands' },
 ]
 
 const MAIN_MENU: NavLeaf[] = [
@@ -63,12 +62,15 @@ function SearchIcon() {
   )
 }
 
+const subLinkClass =
+  'block rounded py-2 pl-4 text-[15px] font-medium text-black hover:underline xl:px-3 xl:pl-3 xl:text-white xl:no-underline xl:hover:bg-white/10 xl:hover:text-[#ffacff] xl:hover:no-underline'
+
 const linkClass =
   'inline-flex items-center gap-2 whitespace-nowrap py-2 text-[15px] font-medium text-black underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black'
 
 export default function SiteNav() {
   const [menuOpen, setMenuOpen] = useState(false) // panel mobile
-  const [subOpen, setSubOpen] = useState(false) // dropdown "Who we work with"
+  const [subOpen, setSubOpen] = useState(false) // dropdown "Templates"
   const [langOpen, setLangOpen] = useState(false)
   const rootRef = useRef<HTMLElement>(null)
 
@@ -174,22 +176,24 @@ export default function SiteNav() {
                   onClick={() => setSubOpen((v) => !v)}
                   className={linkClass}
                 >
-                  Who we work with <Chevron open={subOpen} />
+                  Templates <Chevron open={subOpen} />
                 </button>
                 <ul
                   className={`sub-menu flex-col xl:absolute xl:left-0 xl:top-full xl:mt-2 xl:min-w-[240px] xl:rounded-lg xl:bg-black xl:p-2 xl:shadow-lg ${
                     subOpen ? 'flex' : 'hidden'
                   }`}
                 >
-                  {WHO_WE_WORK_WITH.map((item) => (
-                    <li key={item.href} className="menu-item">
-                      <a
-                        href={item.href}
-                        onClick={closeAll}
-                        className="block rounded py-2 pl-4 text-[15px] font-medium text-black hover:underline xl:px-3 xl:pl-3 xl:text-white xl:no-underline xl:hover:bg-white/10 xl:hover:text-[#ffacff] xl:hover:no-underline"
-                      >
-                        {item.label}
-                      </a>
+                  {TEMPLATES_MENU.map((item) => (
+                    <li key={item.label} className="menu-item">
+                      {item.to ? (
+                        <Link to={item.to} onClick={closeAll} className={subLinkClass}>
+                          {item.label}
+                        </Link>
+                      ) : (
+                        <a href={item.href} onClick={closeAll} className={subLinkClass}>
+                          {item.label}
+                        </a>
+                      )}
                     </li>
                   ))}
                 </ul>
