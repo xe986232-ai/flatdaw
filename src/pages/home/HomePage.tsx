@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { tokens, SECTION_PALETTE } from '../../designTokens'
+import { tokens } from '../../designTokens'
 import SiteNav from './SiteNav'
 import iosMusicMockup from '../../assets/ios-music-mockup.webp'
 
@@ -10,13 +10,15 @@ import iosMusicMockup from '../../assets/ios-music-mockup.webp'
 // masih ada, tapi sementara gak di-link dari sini karena kategori DAW
 // Mock-up lagi ditandai "coming soon".
 //
+// Palet sengaja dibatasin: dasarnya HITAM & PUTIH (section gantian hitam/putih),
+// warna cuma dipake di hero (periwinkle) + aksen kecil (pink: eyebrow, hover,
+// tombol burger). Jangan kasih tiap section/kartu warna beda-beda lagi.
+//
 // Isi konten: Rizz. = alat buat bikin visual musik. Template dikelompokin
 // per KATEGORI -- sekarang "iOS Music Player" yang available (status
 // 'available'), "DAW Mock-up" (Classic DAW & FL Playlist) coming soon.
 // Buka/tutup kategori & nambah yang baru cukup edit CATEGORIES di bawah;
 // isi `href`/`templates` kalau kategorinya udah punya halaman.
-
-const [CORAL, PERIWINKLE, ORANGE, TAN] = SECTION_PALETTE
 
 const GITHUB_URL = 'https://github.com/xe986232-ai/flatdaw'
 const LIVE_URL = 'https://flatdaw.vercel.app'
@@ -48,7 +50,7 @@ const CATEGORIES: Category[] = [
     features: [],
     status: 'available',
     visual: 'ios',
-    color: { bg: PERIWINKLE.bg, fg: '#000000' },
+    color: { bg: '#ffffff', fg: '#000000' },
   },
   {
     id: 'daw-mockup',
@@ -60,7 +62,7 @@ const CATEGORIES: Category[] = [
     features: ['Import .flm & .zip', '2 templates', 'PNG & MP4 export'],
     status: 'soon',
     visual: 'daw',
-    color: CORAL,
+    color: { bg: '#161616', fg: '#ffffff' },
   },
 ]
 
@@ -120,13 +122,16 @@ function SectionHeading({ children, color }: { children: ReactNode; color: strin
 const containerClass = 'mx-auto max-w-[1400px] px-6 sm:px-10'
 const sectionClass = 'scroll-mt-16 py-14 sm:py-20'
 const pillButton =
-  'inline-flex min-h-[44px] items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white transition-colors hover:bg-white hover:text-black'
+  'inline-flex min-h-[44px] items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white transition-colors hover:bg-[#ffacff] hover:text-black'
+// Versi buat latar gelap.
+const pillLight =
+  'inline-flex min-h-[44px] items-center justify-center rounded-full bg-white px-6 text-sm font-medium text-black transition-colors hover:bg-[#ffacff]'
 
 function HeroVisual() {
   return (
     <div
       aria-hidden="true"
-      className="relative overflow-hidden rounded-xl p-4 shadow-[8px_8px_0_#000]"
+      className="relative overflow-hidden rounded-xl border border-white/10 p-4 shadow-[8px_8px_0_#000]"
       style={{ backgroundColor: '#1C1C1F' }}
     >
       <div className="flex flex-col gap-2">
@@ -152,10 +157,15 @@ function HeroVisual() {
 }
 
 function CategoryRow({ c }: { c: Category }) {
+  const dark = c.color.fg === '#ffffff'
   return (
     <article
       className="grid overflow-hidden rounded-lg md:grid-cols-2"
-      style={{ backgroundColor: c.color.bg, color: c.color.fg }}
+      style={{
+        backgroundColor: c.color.bg,
+        color: c.color.fg,
+        border: dark ? `1px solid ${tokens.colors.border}` : undefined,
+      }}
     >
       {/* KIRI: penjelasan template */}
       <div className="flex flex-col p-6 sm:p-10">
@@ -198,7 +208,8 @@ function CategoryRow({ c }: { c: Category }) {
                 <Link
                   key={t.id}
                   to={`/editor/${t.id}`}
-                  className="inline-flex min-h-[40px] items-center rounded-full border border-black px-5 text-sm font-medium text-black transition-colors hover:bg-black hover:text-white"
+                  className="inline-flex min-h-[40px] items-center rounded-full border px-5 text-sm font-medium transition-opacity hover:opacity-70"
+                  style={{ borderColor: c.color.fg }}
                 >
                   {t.name} →
                 </Link>
@@ -208,7 +219,7 @@ function CategoryRow({ c }: { c: Category }) {
         )}
         {c.href && (
           <div className="mt-5">
-            <Link to={c.href} className={pillButton}>
+            <Link to={c.href} className={dark ? pillLight : pillButton}>
               See all DAW templates →
             </Link>
           </div>
@@ -294,7 +305,7 @@ export default function HomePage() {
         </section>
 
         {/* WHAT WE DO */}
-        <section id="what" className={sectionClass} style={{ backgroundColor: tokens.colors.accent }}>
+        <section id="what" className={sectionClass} style={{ backgroundColor: '#ffffff' }}>
           <div className={containerClass}>
             <Eyebrow color="#000000">(WHAT WE DO)</Eyebrow>
             <SectionHeading color="#000000">FROM YOUR MUSIC TO A SHAREABLE VISUAL</SectionHeading>
@@ -318,11 +329,11 @@ export default function HomePage() {
         </section>
 
         {/* WHO WE ARE */}
-        <section id="about" className={sectionClass} style={{ backgroundColor: TAN.bg }}>
+        <section id="about" className={sectionClass} style={{ backgroundColor: '#000000' }}>
           <div className={containerClass}>
-            <Eyebrow color="#000000">(WHO WE ARE)</Eyebrow>
-            <SectionHeading color="#000000">A PERSONAL PROJECT, BUILT IN THE OPEN.</SectionHeading>
-            <p className="mt-5 max-w-xl text-sm leading-relaxed text-black/75 sm:text-base">
+            <Eyebrow color={tokens.colors.accent}>(WHO WE ARE)</Eyebrow>
+            <SectionHeading color="#ffffff">A PERSONAL PROJECT, BUILT IN THE OPEN.</SectionHeading>
+            <p className="mt-5 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
               Rizz. is a personal project for making music visuals in the browser. It began as a mock-up of a DAW playlist
               and now includes an iOS-style music player. DAW mock-ups built from real FL Studio Mobile projects are coming
               to the site soon, with more template types to follow. It is made by one person, the code is public, and it
@@ -332,19 +343,19 @@ export default function HomePage() {
         </section>
 
         {/* NEWSROOM */}
-        <section id="newsroom" className={sectionClass} style={{ backgroundColor: '#111111' }}>
+        <section id="newsroom" className={sectionClass} style={{ backgroundColor: '#ffffff' }}>
           <div className={containerClass}>
-            <Eyebrow color={tokens.colors.accent}>(NEWSROOM)</Eyebrow>
-            <SectionHeading color="#ffffff">LATEST UPDATES</SectionHeading>
+            <Eyebrow color="#000000">(NEWSROOM)</Eyebrow>
+            <SectionHeading color="#000000">LATEST UPDATES</SectionHeading>
             <ul className="mt-10 max-w-2xl">
               {UPDATES.map((u) => (
                 <li
                   key={u.title}
                   className="flex flex-col gap-1 border-t py-4 sm:flex-row sm:items-baseline sm:gap-6"
-                  style={{ borderColor: tokens.colors.border }}
+                  style={{ borderColor: 'rgba(0,0,0,0.15)' }}
                 >
-                  <span className="w-24 shrink-0 text-xs font-bold uppercase tracking-widest text-white/50">{u.date}</span>
-                  <span className="text-base font-medium">{u.title}</span>
+                  <span className="w-24 shrink-0 text-xs font-bold uppercase tracking-widest text-black/50">{u.date}</span>
+                  <span className="text-base font-medium text-black">{u.title}</span>
                 </li>
               ))}
             </ul>
@@ -352,22 +363,22 @@ export default function HomePage() {
         </section>
 
         {/* WHERE TO FIND US / CONTACT */}
-        <section id="find" className={sectionClass} style={{ backgroundColor: ORANGE.bg }}>
+        <section id="find" className={sectionClass} style={{ backgroundColor: '#000000' }}>
           <div className={containerClass}>
-            <Eyebrow color="#000000">(WHERE TO FIND US)</Eyebrow>
-            <SectionHeading color="#000000">FIND RIZZ. ONLINE</SectionHeading>
-            <p className="mt-5 max-w-xl text-sm leading-relaxed text-black/75 sm:text-base">
+            <Eyebrow color={tokens.colors.accent}>(WHERE TO FIND US)</Eyebrow>
+            <SectionHeading color="#ffffff">FIND RIZZ. ONLINE</SectionHeading>
+            <p className="mt-5 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
               Try Rizz. in the browser, or follow along and get in touch through the repository.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href={LIVE_URL} className={pillButton}>
+              <a href={LIVE_URL} className={pillLight}>
                 Open the live site
               </a>
               <a
                 href={GITHUB_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-black px-6 text-sm font-medium text-black transition-colors hover:bg-black hover:text-white"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-white px-6 text-sm font-medium text-white transition-colors hover:bg-white hover:text-black"
               >
                 View on GitHub ↗
               </a>
