@@ -4785,6 +4785,11 @@ export default function Editor({
           onExportImage={handleExportImage}
           onReplace={openPicker}
           onCrop={handleOpenCropForSlot}
+          hasProgressLayer={!!template.progressLayer}
+          progressStyle={progressStyle}
+          onProgressStyle={setProgressStyle}
+          canvasRatio={canvasRatio}
+          onCanvasRatio={setCanvasRatio}
           onOpenFullEditor={() => {
             setIsPlaying(false);
             setQuickMode(false);

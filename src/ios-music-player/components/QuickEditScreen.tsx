@@ -12,12 +12,15 @@ import {
   Crop,
   Download,
   Film,
+  AudioWaveform,
   Image as ImageIcon,
   Layers,
   Loader2,
   Music2,
   Pause,
   Play,
+  RectangleHorizontal,
+  RectangleVertical,
   Repeat,
   SlidersHorizontal,
   Type,
@@ -37,7 +40,9 @@ import type { SlotMediaState, TextValueState } from "../lib/render";
 // ulang, bukan ditulis ulang. Preview di sini cuma "cermin" canvas Editor.
 
 type Tab = "media" | "audio";
-type Sheet = "bg" | "text" | null;
+type Sheet = "bg" | "text" | "advanced" | null;
+type ProgressStyle = "bar" | "waveform";
+type CanvasRatio = "9:16" | "16:9" | "4:5";
 
 type Props = {
   template: Template;
@@ -66,7 +71,14 @@ type Props = {
   onExportImage: () => void;
   onReplace: (slot: TemplateSlot) => void;
   onCrop: (slot: TemplateSlot) => void;
-  /** Buka Editor penuh (timeline, lirik, preset, dll). */
+  /** Template punya progress bar lagu (opsi jenis waveform berlaku). */
+  hasProgressLayer: boolean;
+  progressStyle: ProgressStyle;
+  onProgressStyle: (v: ProgressStyle) => void;
+  canvasRatio: CanvasRatio;
+  onCanvasRatio: (v: CanvasRatio) => void;
+  /** Buka Editor penuh (timeline, lirik, preset, dll) — cuma lewat link
+   *  kecil di dalam sheet Lanjutan, bukan tombol Lanjutan itu sendiri. */
   onOpenFullEditor: () => void;
 };
 
@@ -135,7 +147,7 @@ function PreviewMirror({ sourceRef }: { sourceRef: RefObject<HTMLCanvasElement |
       <canvas
         ref={cvRef}
         aria-label="Preview"
-        className="rounded-2xl bg-white/5"
+        className="rounded-xl bg-white/5"
         style={{ width: cssW, height: cssH }}
       />
     </div>
@@ -163,7 +175,7 @@ function SeekBar({
       aria-valuemin={0}
       aria-valuemax={100}
       aria-valuenow={Math.round(progress * 100)}
-      className="relative h-6 w-full cursor-pointer touch-none"
+      className="relative h-4 w-full cursor-pointer touch-none"
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
         seekFrom(e);
@@ -172,9 +184,9 @@ function SeekBar({
         if (e.buttons) seekFrom(e);
       }}
     >
-      <div className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 bg-white/20" />
+      <div className="absolute inset-x-0 top-1/2 h-[2px] -translate-y-1/2 bg-white/20" />
       <div
-        className="absolute left-0 top-1/2 h-[3px] -translate-y-1/2 bg-editor-accent"
+        className="absolute left-0 top-1/2 h-[2px] -translate-y-1/2 bg-editor-accent"
         style={{ width: `${progress * 100}%` }}
       />
     </div>
@@ -200,11 +212,11 @@ function ActionButton({
       onClick={onClick}
       disabled={disabled}
       data-ripple
-      className={`flex w-[76px] shrink-0 flex-col items-center gap-1 rounded-xl py-1.5 text-[12px] transition active:scale-90 disabled:opacity-35 ${
+      className={`flex w-16 shrink-0 flex-col items-center gap-0.5 rounded-xl py-1 text-[10.5px] transition active:scale-90 disabled:opacity-35 ${
         active ? "text-editor-accent" : "text-white"
       }`}
     >
-      <Icon size={24} strokeWidth={1.8} />
+      <Icon size={19} strokeWidth={1.8} />
       {label}
     </button>
   );
@@ -236,25 +248,25 @@ export default function QuickEditScreen(p: Props) {
 
   return (
     <div className="fx-fade fixed inset-0 z-[45] flex flex-col bg-black text-white">
-      <header className="flex shrink-0 items-center justify-between gap-3 px-3 pb-2 pt-[max(12px,env(safe-area-inset-top))]">
+      <header className="flex shrink-0 items-center justify-between gap-3 px-3 pb-1 pt-[max(8px,env(safe-area-inset-top))]">
         <button
           type="button"
           onClick={p.onBack}
           data-ripple
           aria-label="Kembali ke daftar template"
-          className="flex h-11 w-11 items-center justify-center rounded-xl transition active:scale-90"
+          className="flex h-9 w-9 items-center justify-center rounded-xl transition active:scale-90"
         >
-          <ChevronLeft size={28} />
+          <ChevronLeft size={22} />
         </button>
 
         <button
           type="button"
           onClick={() => goTab("audio")}
-          className="flex h-11 min-w-0 flex-1 items-center justify-center gap-3 rounded-2xl bg-white/10 px-4 text-[15px] font-medium transition active:scale-[0.98]"
-          style={{ maxWidth: 260 }}
+          className="flex h-9 min-w-0 flex-1 items-center justify-center gap-2 rounded-xl bg-white/10 px-3 text-[13px] font-medium transition active:scale-[0.98]"
+          style={{ maxWidth: 220 }}
         >
-          <Music2 size={20} className="shrink-0" />
-          <span className="h-4 w-px shrink-0 bg-white/30" />
+          <Music2 size={16} className="shrink-0" />
+          <span className="h-3 w-px shrink-0 bg-white/30" />
           <span className="truncate">{p.audioName ?? "Tambah musik"}</span>
         </button>
 
@@ -266,31 +278,31 @@ export default function QuickEditScreen(p: Props) {
                 onClick={() => setExportOpen((v) => !v)}
                 disabled={p.isExporting}
                 data-ripple
-                className="flex h-11 items-center gap-2 rounded-xl bg-editor-accent px-4 text-[15px] font-semibold text-black transition active:scale-90 disabled:opacity-60"
+                className="flex h-9 items-center gap-1.5 rounded-xl bg-editor-accent px-3 text-[13px] font-semibold text-black transition active:scale-90 disabled:opacity-60"
               >
                 {p.isExporting ? (
-                  <Loader2 size={18} className="animate-spin" />
+                  <Loader2 size={15} className="animate-spin" />
                 ) : (
-                  <Download size={18} strokeWidth={2.4} />
+                  <Download size={15} strokeWidth={2.4} />
                 )}
                 Ekspor
               </button>
               {exportOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setExportOpen(false)} />
-                  <div className="fx-dd-in absolute right-0 top-[calc(100%+6px)] z-20 w-52 overflow-hidden rounded-2xl bg-[#1c1c1e]">
+                  <div className="fx-dd-in absolute right-0 top-[calc(100%+6px)] z-20 w-48 overflow-hidden rounded-xl bg-[#1c1c1e]">
                     <button
                       type="button"
                       onClick={() => {
                         setExportOpen(false);
                         p.onExportVideo();
                       }}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-[14px] font-medium transition active:bg-white/10"
+                      className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left text-[13px] font-medium transition active:bg-white/10"
                     >
-                      <Video size={18} className="text-editor-accent" />
+                      <Video size={16} className="text-editor-accent" />
                       <span className="flex flex-col">
                         Video
-                        <span className="text-[11px] font-normal text-white/50">Render penuh + audio</span>
+                        <span className="text-[10px] font-normal text-white/50">Render penuh + audio</span>
                       </span>
                     </button>
                     <div className="h-px bg-white/10" />
@@ -300,12 +312,12 @@ export default function QuickEditScreen(p: Props) {
                         setExportOpen(false);
                         p.onExportImage();
                       }}
-                      className="flex w-full items-center gap-3 px-4 py-3 text-left text-[14px] font-medium transition active:bg-white/10"
+                      className="flex w-full items-center gap-3 px-3.5 py-2.5 text-left text-[13px] font-medium transition active:bg-white/10"
                     >
-                      <ImageIcon size={18} className="text-editor-accent" />
+                      <ImageIcon size={16} className="text-editor-accent" />
                       <span className="flex flex-col">
                         Gambar
-                        <span className="text-[11px] font-normal text-white/50">Frame di preview</span>
+                        <span className="text-[10px] font-normal text-white/50">Frame di preview</span>
                       </span>
                     </button>
                   </div>
@@ -313,37 +325,37 @@ export default function QuickEditScreen(p: Props) {
               )}
             </>
           ) : (
-            <span className="block h-11 w-11" />
+            <span className="block h-9 w-9" />
           )}
         </div>
       </header>
 
-      <div className="min-h-0 flex-1 px-3 py-1">
+      <div className="min-h-0 flex-1 px-4 py-1">
         <PreviewMirror sourceRef={p.sourceCanvasRef} />
       </div>
 
       <div className="shrink-0">
         <SeekBar progress={progress} onSeek={(r) => p.onSeek(r * p.duration)} />
-        <div className="relative flex items-center px-4 pb-1 pt-1 text-[17px] tabular-nums">
+        <div className="relative flex items-center px-4 pb-0.5 pt-0 text-[12px] tabular-nums">
           <span>{fmtClock(p.currentSec)}</span>
-          <span className="mx-2 h-4 w-px bg-white/30" />
+          <span className="mx-1.5 h-3 w-px bg-white/30" />
           <span className="text-white/45">{fmtClock(p.duration)}</span>
           <button
             type="button"
             onClick={p.onTogglePlay}
             aria-label={p.isPlaying ? "Jeda" : "Putar"}
-            className="absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center transition active:scale-90"
+            className="absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center transition active:scale-90"
           >
             {p.isPlaying ? (
-              <Pause size={30} fill="currentColor" />
+              <Pause size={20} fill="currentColor" />
             ) : (
-              <Play size={30} fill="currentColor" />
+              <Play size={20} fill="currentColor" />
             )}
           </button>
         </div>
       </div>
 
-      <div className="flex h-36 shrink-0 items-center overflow-x-auto px-4 [scrollbar-width:none]">
+      <div className="flex h-[76px] shrink-0 items-center overflow-x-auto px-4 [scrollbar-width:none]">
         {tab === "media" ? (
           <div className="flex gap-2.5">
             {mediaSlots.map((slot, i) => {
@@ -358,7 +370,7 @@ export default function QuickEditScreen(p: Props) {
                     setSheet(null);
                   }}
                   aria-label={`${slot.label}${selected ? " (dipilih)" : ""}`}
-                  className={`relative h-[88px] w-[72px] shrink-0 overflow-hidden rounded-xl border-2 bg-white/10 transition active:scale-95 ${
+                  className={`relative h-[56px] w-[46px] shrink-0 overflow-hidden rounded-lg border-2 bg-white/10 transition active:scale-95 ${
                     selected ? "border-white" : "border-transparent"
                   }`}
                 >
@@ -375,12 +387,12 @@ export default function QuickEditScreen(p: Props) {
                       <img src={media.url} alt="" className="h-full w-full object-cover" />
                     )
                   ) : (
-                    <ImageIcon size={22} className="mx-auto text-white/40" />
+                    <ImageIcon size={16} className="mx-auto text-white/40" />
                   )}
-                  <span className="absolute left-1 top-1 rounded bg-black/60 px-1.5 text-[11px] font-semibold">
+                  <span className="absolute left-0.5 top-0.5 rounded bg-black/60 px-1 text-[9px] font-semibold">
                     {i + 1}
                   </span>
-                  <span className="absolute bottom-1 left-1.5 text-[13px] font-medium drop-shadow">
+                  <span className="absolute bottom-0.5 left-1 text-[9px] font-medium drop-shadow">
                     {p.duration.toFixed(1)}s
                   </span>
                 </button>
@@ -394,16 +406,16 @@ export default function QuickEditScreen(p: Props) {
               setSelectedId(audioSlot.id);
               setSheet(null);
             }}
-            className={`flex h-[72px] w-full items-center gap-3 rounded-xl border-2 bg-white/10 px-4 text-left transition active:scale-[0.99] ${
+            className={`flex h-[52px] w-full items-center gap-2.5 rounded-xl border-2 bg-white/10 px-4 text-left transition active:scale-[0.99] ${
               selectedId === audioSlot.id ? "border-white" : "border-transparent"
             }`}
           >
-            <Music2 size={24} className="shrink-0 text-editor-accent" />
+            <Music2 size={18} className="shrink-0 text-editor-accent" />
             <span className="flex min-w-0 flex-col">
-              <span className="truncate text-[15px] font-medium">
+              <span className="truncate text-[13px] font-medium">
                 {p.audioName ?? "Belum ada musik"}
               </span>
-              <span className="text-[12px] text-white/50">{fmtClock(p.duration)}</span>
+              <span className="text-[11px] text-white/50">{fmtClock(p.duration)}</span>
             </span>
           </button>
         ) : (
@@ -413,20 +425,20 @@ export default function QuickEditScreen(p: Props) {
         )}
       </div>
 
-      <div className="relative shrink-0 bg-[#111] px-2 pb-[max(12px,env(safe-area-inset-bottom))] pt-2">
+      <div className="relative shrink-0 bg-[#111] px-2 pb-[max(6px,env(safe-area-inset-bottom))] pt-1">
         {sheet && (
-          <div className="fx-rise-sm absolute inset-x-0 bottom-full z-10 max-h-[45dvh] overflow-y-auto rounded-t-2xl bg-[#1c1c1e] p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-[15px] font-semibold">
-                {sheet === "bg" ? "Latar" : "Teks"}
+          <div className="fx-rise-sm absolute inset-x-0 bottom-full z-10 max-h-[40dvh] overflow-y-auto rounded-t-2xl bg-[#1c1c1e] p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="text-[14px] font-semibold">
+                {sheet === "bg" ? "Latar" : sheet === "text" ? "Teks" : "Lanjutan"}
               </span>
               <button
                 type="button"
                 onClick={() => setSheet(null)}
                 aria-label="Selesai"
-                className="flex h-9 w-9 items-center justify-center rounded-full bg-editor-accent text-black transition active:scale-90"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-editor-accent text-black transition active:scale-90"
               >
-                <Check size={18} strokeWidth={2.6} />
+                <Check size={16} strokeWidth={2.6} />
               </button>
             </div>
 
@@ -465,6 +477,93 @@ export default function QuickEditScreen(p: Props) {
               </div>
             )}
 
+            {sheet === "advanced" && (
+              <div className="flex flex-col gap-4">
+                {p.hasProgressLayer && (
+                  <div className="flex flex-col gap-2">
+                    <span className="flex items-center gap-1.5 text-[12px] text-white/60">
+                      <AudioWaveform size={14} /> Jenis waveform
+                    </span>
+                    <div className="grid grid-cols-2 gap-2">
+                      {(
+                        [
+                          { id: "bar", label: "Standar" },
+                          { id: "waveform", label: "Waveform berjalan" },
+                        ] as const
+                      ).map(({ id, label }) => (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => p.onProgressStyle(id)}
+                          aria-pressed={p.progressStyle === id}
+                          className={`flex flex-col items-center gap-1.5 rounded-xl border px-2 py-2 transition active:scale-95 ${
+                            p.progressStyle === id
+                              ? "border-white bg-white/10"
+                              : "border-white/10 bg-white/5"
+                          }`}
+                        >
+                          {id === "bar" ? (
+                            <div className="flex h-5 w-full items-center rounded-full bg-black/50 px-1">
+                              <div className="h-1 w-1/2 rounded-full bg-white" />
+                            </div>
+                          ) : (
+                            <div className="flex h-5 w-full items-end justify-center gap-[2px] rounded-full bg-black/50 px-1.5 py-1">
+                              {[4, 8, 6, 11, 7, 10, 5, 4, 7, 4, 6, 3].map((h, i) => (
+                                <div
+                                  key={i}
+                                  className="w-[2px] rounded-full bg-white"
+                                  style={{ height: h, opacity: i < 6 ? 1 : 0.32 }}
+                                />
+                              ))}
+                            </div>
+                          )}
+                          <span className="text-[11px] font-medium">{label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex flex-col gap-2">
+                  <span className="flex items-center gap-1.5 text-[12px] text-white/60">
+                    <RectangleVertical size={14} /> Rasio canvas
+                  </span>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(
+                      [
+                        { id: "9:16", icon: RectangleVertical },
+                        { id: "4:5", icon: RectangleVertical },
+                        { id: "16:9", icon: RectangleHorizontal },
+                      ] as const
+                    ).map(({ id, icon: Icon }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => p.onCanvasRatio(id)}
+                        aria-pressed={p.canvasRatio === id}
+                        className={`flex items-center justify-center gap-1.5 rounded-xl border py-2 text-[12px] font-medium transition active:scale-95 ${
+                          p.canvasRatio === id
+                            ? "border-white bg-white/10"
+                            : "border-white/10 bg-white/5 text-white/70"
+                        }`}
+                      >
+                        <Icon size={15} />
+                        {id}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={p.onOpenFullEditor}
+                  className="self-center text-[11px] text-white/40 underline underline-offset-2 transition active:text-white/70"
+                >
+                  Buka editor lengkap (timeline, lirik, preset)
+                </button>
+              </div>
+            )}
+
             {sheet === "text" && (
               <div className="flex flex-col gap-3">
                 {textLayers.map((layer) => (
@@ -490,9 +589,9 @@ export default function QuickEditScreen(p: Props) {
               type="button"
               onClick={clearSelection}
               aria-label="Kembali ke tab"
-              className="flex h-14 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 transition active:scale-90"
+              className="flex h-11 w-10 shrink-0 items-center justify-center rounded-xl bg-white/10 transition active:scale-90"
             >
-              <ChevronLeft size={24} />
+              <ChevronLeft size={20} />
             </button>
             <div className="flex min-w-0 flex-1 overflow-x-auto [scrollbar-width:none]">
               <ActionButton icon={Repeat} label="Ganti" onClick={() => p.onReplace(selectedSlot)} />
@@ -535,23 +634,31 @@ export default function QuickEditScreen(p: Props) {
                 type="button"
                 onClick={() => goTab(id)}
                 aria-pressed={tab === id}
-                className="flex flex-col items-center gap-1 py-1.5 text-[12px] transition active:scale-90"
+                className="flex flex-col items-center gap-0.5 py-1 text-[10.5px] transition active:scale-90"
               >
-                <Icon size={26} strokeWidth={tab === id ? 2.2 : 1.6} className={tab === id ? "" : "text-white/60"} />
+                <Icon size={20} strokeWidth={tab === id ? 2.2 : 1.6} className={tab === id ? "" : "text-white/60"} />
                 <span className={tab === id ? "text-white" : "text-white/60"}>{label}</span>
                 <span
-                  className={`h-[3px] w-6 rounded-full ${tab === id ? "bg-editor-accent" : "bg-transparent"}`}
+                  className={`h-[2px] w-5 rounded-full ${tab === id ? "bg-editor-accent" : "bg-transparent"}`}
                 />
               </button>
             ))}
             <button
               type="button"
-              onClick={p.onOpenFullEditor}
-              className="flex flex-col items-center gap-1 py-1.5 text-[12px] text-white/60 transition active:scale-90"
+              onClick={() => {
+                clearSelection();
+                setSheet(sheet === "advanced" ? null : "advanced");
+              }}
+              aria-pressed={sheet === "advanced"}
+              className={`flex flex-col items-center gap-0.5 py-1 text-[10.5px] transition active:scale-90 ${
+                sheet === "advanced" ? "text-white" : "text-white/60"
+              }`}
             >
-              <SlidersHorizontal size={26} strokeWidth={1.6} />
+              <SlidersHorizontal size={20} strokeWidth={sheet === "advanced" ? 2.2 : 1.6} />
               Lanjutan
-              <span className="h-[3px] w-6" />
+              <span
+                className={`h-[2px] w-5 rounded-full ${sheet === "advanced" ? "bg-editor-accent" : "bg-transparent"}`}
+              />
             </button>
           </div>
         )}
