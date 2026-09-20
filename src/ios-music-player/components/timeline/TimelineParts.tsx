@@ -142,7 +142,7 @@ export function TrackLabel({
           className="ml-auto flex h-[10px] w-[10px] shrink-0 items-center justify-center"
           title="Bagian dari grup — resize font bareng anggota lain"
         >
-          <Link2 className="h-[10px] w-[10px] text-editor-accent" />
+          <Link2 className="h-[10px] w-[10px] text-editor-accent-ink" />
         </span>
       )}
     </div>

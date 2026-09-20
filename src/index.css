@@ -38,7 +38,9 @@
   --color-editor-bg: #ffffff;
   --color-editor-panel: #ffffff;
   --color-editor-track: #f2f2f2;
-  --color-editor-accent: #fd6363;
+  --color-editor-accent: #d4f24a;
+  /* Lime terlalu terang buat teks/ikon di latar putih -> versi gelap (olive) */
+  --color-editor-accent-ink: #4d6100;
   --color-editor-muted: #6b6b6b;
   --color-graphite: #f2f2f2;
   --color-panel: #ffffff;

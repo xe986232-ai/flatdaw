@@ -5,10 +5,10 @@
 export const tokens = {
   colors: {
     accent: '#ffacff',
-    // Aksen coral khusus halaman template iOS Music Player (galeri, preview,
-    // editor) + curtain transisi. Diambil dari referensi Believe.com.
+    // Aksen lime khusus halaman template iOS Music Player (galeri, preview,
+    // editor) + curtain transisi. Dipadu sama periwinkle (pageBackground).
     // TIDAK mengubah `accent` (pink) yang dipakai homepage.
-    templateAccent: '#fd6363',
+    templateAccent: '#d4f24a',
     background: '#000000',
     text: '#ffffff',
     border: '#374151',

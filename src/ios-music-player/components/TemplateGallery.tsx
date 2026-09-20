@@ -138,7 +138,7 @@ function CollageThumbnail({
         style={{ clipPath: bottomClip }}
       />
 
-      {/* pita pemisah miring, warna aksen coral template — flat, tanpa
+      {/* pita pemisah miring, warna aksen lime template — flat, tanpa
           glow/blur */}
       <div
         className="absolute inset-0"
@@ -766,7 +766,7 @@ export default function TemplateGallery({
 
       {/* Tab bar bawah — Draft (kiri) & Template (kanan), nempel di bawah
           layar, satu warna sama header (periwinkle), garis tipis hitam,
-          tanpa blur. Tab aktif ditandai pill coral (aksen template) yang
+          tanpa blur. Tab aktif ditandai pill lime (aksen template) yang
           MELUNCUR antar tab, bukan ganti warna instan. */}
       <div
         className="fx-rise relative z-30 shrink-0 border-t border-black p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
