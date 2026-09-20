@@ -21,17 +21,54 @@ interface ImageCropModalProps {
 // Lantai resolusi output, biar hasil crop nggak pecah kalau slotnya kecil.
 const MIN_OUTPUT_DIM = 480;
 
-function createImage(url: string): Promise<HTMLImageElement> {
+function loadImage(src: string, cors: boolean): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    // Perlu buat crop ULANG foto sample yang masih dari URL remote
-    // (Firebase/Unsplash) — tanpa ini, canvas bisa "tainted" & toBlob()
-    // gagal. Object URL lokal (blob:) tetap aman, atribut ini diabaikan.
-    img.crossOrigin = "anonymous";
+    if (cors) img.crossOrigin = "anonymous";
     img.addEventListener("load", () => resolve(img));
     img.addEventListener("error", (e) => reject(e));
-    img.src = url;
+    img.src = src;
   });
+}
+
+function isCrossOriginUrl(url: string) {
+  if (!/^https?:\/\//i.test(url)) return false; // blob:, data:, path lokal
+  try {
+    return new URL(url).origin !== window.location.origin;
+  } catch {
+    return false;
+  }
+}
+
+/** Muat gambar buat di-crop. Foto sample remote (Firebase/Unsplash/Picsum)
+ *  sebelumnya dimuat ulang pakai <img crossOrigin="anonymous"> — dan itu
+ *  sering gagal walau host-nya sebenarnya ngasih CORS, karena browser
+ *  make ulang respons foto yang SUDAH ke-cache dari tampilan biasa
+ *  (tanpa header CORS). Sekarang: ambil lewat fetch CORS + cache: "no-store"
+ *  jadi Blob lokal (same-origin, gak bikin canvas "tainted"), baru
+ *  dipakai. Kalau fetch gagal, fallback ke <img crossOrigin> dengan
+ *  cache-buster. `release` wajib dipanggil setelah selesai (revoke blob). */
+async function createImage(
+  url: string,
+): Promise<{ img: HTMLImageElement; release: () => void }> {
+  if (!isCrossOriginUrl(url)) {
+    return { img: await loadImage(url, false), release: () => {} };
+  }
+  try {
+    const res = await fetch(url, { mode: "cors", cache: "no-store" });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const blobUrl = URL.createObjectURL(await res.blob());
+    try {
+      const img = await loadImage(blobUrl, false);
+      return { img, release: () => URL.revokeObjectURL(blobUrl) };
+    } catch (e) {
+      URL.revokeObjectURL(blobUrl);
+      throw e;
+    }
+  } catch {
+    const busted = `${url}${url.includes("?") ? "&" : "?"}_cors=${Date.now()}`;
+    return { img: await loadImage(busted, true), release: () => {} };
+  }
 }
 
 /** Crop pixelCrop (dari react-easy-crop) jadi Blob JPEG, resolusi output
@@ -42,30 +79,36 @@ async function getCroppedBlob(
   targetWidth: number,
   targetHeight: number,
 ): Promise<Blob | null> {
-  const image = await createImage(imageSrc);
-  const outScale = Math.max(1, MIN_OUTPUT_DIM / Math.min(targetWidth, targetHeight));
-  const outW = Math.max(1, Math.round(targetWidth * outScale));
-  const outH = Math.max(1, Math.round(targetHeight * outScale));
+  const { img: image, release } = await createImage(imageSrc);
+  try {
+    const outScale = Math.max(1, MIN_OUTPUT_DIM / Math.min(targetWidth, targetHeight));
+    const outW = Math.max(1, Math.round(targetWidth * outScale));
+    const outH = Math.max(1, Math.round(targetHeight * outScale));
 
-  const canvas = document.createElement("canvas");
-  canvas.width = outW;
-  canvas.height = outH;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
+    const canvas = document.createElement("canvas");
+    canvas.width = outW;
+    canvas.height = outH;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
 
-  ctx.drawImage(
-    image,
-    pixelCrop.x,
-    pixelCrop.y,
-    pixelCrop.width,
-    pixelCrop.height,
-    0,
-    0,
-    outW,
-    outH,
-  );
+    ctx.drawImage(
+      image,
+      pixelCrop.x,
+      pixelCrop.y,
+      pixelCrop.width,
+      pixelCrop.height,
+      0,
+      0,
+      outW,
+      outH,
+    );
 
-  return new Promise((resolve) => canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.92));
+    return await new Promise((resolve) =>
+      canvas.toBlob((blob) => resolve(blob), "image/jpeg", 0.92),
+    );
+  } finally {
+    release();
+  }
 }
 
 /** Overlay full-screen buat crop foto sampul sebelum dipakai — muncul
@@ -122,7 +165,7 @@ export default function ImageCropModal({
       // nggak "tainted"), jadi createImage() reject. Kasih pesan yang
       // actionable, bukan diem aja.
       setCropError(
-        "Foto ini gagal diproses (kemungkinan masalah izin akses dari server foto). Coba upload foto lain dari galeri kamu.",
+        "Foto sample ini gagal diproses (server fotonya nolak diakses). Coba upload foto lain dari galeri kamu.",
       );
     } finally {
       setIsProcessing(false);
