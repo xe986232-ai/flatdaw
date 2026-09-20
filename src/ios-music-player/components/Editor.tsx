@@ -846,10 +846,12 @@ export default function Editor({
   resumeDraftId?: string | null;
 }) {
   const [activeTool, setActiveTool] = useState<string>("media");
-  // Layar edit ringkas aktif cuma buat project BARU (bukan lanjutin draft,
-  // yang mungkin udah diedit lewat Editor penuh).
-  const [quickMode, setQuickMode] = useState(
-    () => QUICK_EDIT_TEMPLATE_IDS.has(template.id) && !resumeDraftId,
+  // Layar edit ringkas aktif buat template di QUICK_EDIT_TEMPLATE_IDS —
+  // baik project BARU (klik "Gunakan template") maupun lanjutin DRAFT dari
+  // tab Draft. Editor penuh tetap hidup di bawahnya & masih bisa dibuka
+  // lewat link kecil di sheet "Lanjutan".
+  const [quickMode, setQuickMode] = useState(() =>
+    QUICK_EDIT_TEMPLATE_IDS.has(template.id),
   );
   // Rasio canvas: "9:16" (potret, default — samain sama semua template
   // yang ada sekarang) atau "16:9" (lanskap). Resolusi TETAP di budget
