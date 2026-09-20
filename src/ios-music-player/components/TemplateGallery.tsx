@@ -14,6 +14,7 @@ import {
   Download,
   Upload,
 } from "lucide-react";
+import { tokens } from "../../designTokens";
 import { TEMPLATES } from "../data/templates";
 import type { Template } from "../types";
 import { subscribeTemplateUsage } from "../lib/exportLog";
@@ -128,63 +129,33 @@ function CollageThumbnail({
         style={{ clipPath: bottomClip }}
       />
 
-      {/* glow ambient di garis sambungan — warna editor-accent, senada
-          Editor */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-[38%] h-24 opacity-80 blur-2xl"
-        style={{
-          backgroundImage:
-            "linear-gradient(100deg, transparent, rgba(124,108,255,0.55), transparent)",
-        }}
-      />
-
-      {/* pita pemisah miring, warna editor-accent persis (bukan ungu
-          custom terpisah) + highlight tipis biar keliatan kayak kaca */}
+      {/* pita pemisah miring, warna aksen pink homepage — flat, tanpa
+          glow/blur */}
       <div
         className="absolute inset-0"
-        style={{
-          clipPath: bandClip,
-          backgroundImage:
-            "linear-gradient(100deg, rgba(124,108,255,0.92), rgba(168,157,255,0.98) 45%, rgba(124,108,255,0.92))",
-        }}
-      />
-      <div
-        className="pointer-events-none absolute inset-0 animate-skeleton-shimmer opacity-70"
-        style={{
-          clipPath: bandClip,
-          backgroundImage:
-            "linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.85) 50%, transparent 70%)",
-        }}
+        style={{ clipPath: bandClip, backgroundColor: tokens.colors.accent }}
       />
 
-      {/* badge bulat pas di tengah sambungan */}
-      <div className="absolute left-1/2 top-[49.5%] z-10 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-editor-accent/60 bg-editor-panel shadow-[0_0_18px_rgba(124,108,255,0.65)]">
-        <Sparkles size={12} className="text-editor-accent" />
+      {/* badge bulat pas di tengah sambungan — flat, putih polos */}
+      <div className="absolute left-1/2 top-[49.5%] z-10 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white">
+        <Sparkles size={12} className="text-black" />
       </div>
 
-      {/* chip mini "Progress Bar" di potongan atas — gaya progress bar
-          klasik (isian putih polos), pill gelap + border tipis, sama pola
-          badge mengambang di preview Editor (bg-black/45, border-white/10,
-          backdrop-blur-sm) */}
-      <div className="absolute left-2.5 top-[15%] flex items-center gap-1.5 rounded-full border border-white/10 bg-black/50 py-1 pl-1.5 pr-2 backdrop-blur-sm">
-        <SlidersHorizontal size={9} className="shrink-0 text-paper/80" />
+      {/* chip mini "Progress Bar" di potongan atas — pill hitam flat, gak
+          ada blur */}
+      <div className="absolute left-2.5 top-[15%] flex items-center gap-1.5 rounded-full bg-black px-2 py-1">
+        <SlidersHorizontal size={9} className="shrink-0 text-white/80" />
         <div className="h-1 w-9 overflow-hidden rounded-full bg-white/25">
-          <div className="h-full w-[62%] rounded-full bg-paper" />
+          <div className="h-full w-[62%] rounded-full bg-white" />
         </div>
       </div>
 
-      {/* chip mini "Waveform" di potongan bawah — bar naik-turun kayak
-          gelombang audio beneran, warna emerald sama kayak klip audio di
-          Editor, biar konsisten identitas warnanya */}
-      <div className="absolute bottom-[14%] left-2.5 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/50 py-1 pl-1.5 pr-2 backdrop-blur-sm">
-        <AudioWaveform size={9} className="shrink-0 text-emerald-300" />
+      {/* chip mini "Waveform" di potongan bawah */}
+      <div className="absolute bottom-[14%] left-2.5 flex items-center gap-1.5 rounded-full bg-black px-2 py-1">
+        <AudioWaveform size={9} className="shrink-0 text-white/80" />
         <div className="flex items-end gap-[1.5px]">
           {[3, 7, 4, 9, 5, 8, 3].map((h, i) => (
-            <span
-              key={i}
-              className="w-[2px] rounded-full bg-emerald-300"
-              style={{ height: `${h}px` }}
-            />
+            <span key={i} className="w-[2px] rounded-full bg-white" style={{ height: `${h}px` }} />
           ))}
         </div>
       </div>
@@ -221,14 +192,13 @@ function DraftCard({
   exporting: boolean;
 }) {
   return (
-    <div className="group relative flex w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-editor-panel text-left shadow-[0_8px_28px_rgba(0,0,0,0.35)]">
-      <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl ring-1 ring-inset ring-white/[0.06]" />
+    <div className="group relative flex w-full flex-col overflow-hidden rounded-lg border border-black/10 bg-white text-left">
       <button
         onClick={() => onResume(draft)}
         disabled={busy}
         className="relative flex h-full flex-col overflow-hidden text-left transition active:scale-[0.97] disabled:opacity-60"
       >
-        <div className="relative aspect-[9/16] w-full overflow-hidden bg-graphite">
+        <div className="relative aspect-[9/16] w-full overflow-hidden bg-black/5">
           {draft.thumbnail ? (
             <img
               src={draft.thumbnail}
@@ -238,29 +208,30 @@ function DraftCard({
           ) : (
             <ThumbnailSkeleton />
           )}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/15" />
-          <span className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full border border-editor-accent/50 bg-editor-panel/85 px-2 py-0.5 text-[8.5px] font-semibold uppercase tracking-wide text-editor-accent backdrop-blur-sm">
+          <span
+            className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-[8.5px] font-semibold uppercase tracking-wide text-black"
+            style={{ backgroundColor: tokens.colors.accent }}
+          >
             <FolderClock size={9} strokeWidth={2.5} />
             Draft
           </span>
-
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-3 pb-2.5 pt-10">
-            <p className="truncate text-[13px] font-semibold leading-tight tracking-tight text-paper">
-              {draft.templateName}
-            </p>
-            <p className="mt-1 truncate text-[9.5px] text-editor-muted">
-              {formatRelativeTime(draft.updatedAt)}
-            </p>
-          </div>
         </div>
 
-        <div className="flex items-center justify-between gap-2 border-t border-white/[0.06] bg-black/20 px-3 py-2.5">
-          <span className="text-[11px] font-semibold tracking-wide text-paper/85">
-            Lanjutkan
-          </span>
-          <span className="flex h-6 items-center justify-center rounded-full bg-editor-accent px-2.5 text-[10px] font-semibold tracking-wide text-paper shadow-[0_2px_10px_rgba(124,108,255,0.5)] transition-transform duration-300 group-active:translate-x-0.5">
-            Edit
-          </span>
+        <div className="flex flex-col gap-1 border-t border-black/10 px-3 py-2.5">
+          <p
+            className="truncate text-[13px] font-semibold leading-tight tracking-tight text-black"
+            style={{ fontFamily: tokens.fonts.heading }}
+          >
+            {draft.templateName}
+          </p>
+          <div className="flex items-center justify-between gap-2">
+            <span className="truncate text-[9.5px] text-black/50">
+              {formatRelativeTime(draft.updatedAt)}
+            </span>
+            <span className="flex h-6 shrink-0 items-center justify-center rounded-full bg-black px-2.5 text-[10px] font-semibold tracking-wide text-white transition-transform duration-300 group-active:translate-x-0.5">
+              Edit
+            </span>
+          </div>
         </div>
       </button>
 
@@ -272,7 +243,7 @@ function DraftCard({
         disabled={busy || exporting}
         title="Export template (simpan sebagai file)"
         aria-label="Export template"
-        className="absolute right-2.5 top-11 z-30 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/60 text-paper/80 backdrop-blur-sm transition hover:text-editor-accent active:scale-90 disabled:opacity-60"
+        className="absolute right-2.5 top-11 z-30 flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white text-black/70 transition hover:text-black active:scale-90 disabled:opacity-60"
       >
         {exporting ? (
           <Loader2 size={12} className="animate-spin" />
@@ -289,7 +260,7 @@ function DraftCard({
         disabled={busy || exporting}
         title="Hapus draft"
         aria-label="Hapus draft"
-        className="absolute right-2.5 top-2.5 z-30 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/60 text-paper/80 backdrop-blur-sm transition hover:text-rec active:scale-90 disabled:opacity-60"
+        className="absolute right-2.5 top-2.5 z-30 flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white text-black/70 transition hover:text-black active:scale-90 disabled:opacity-60"
       >
         {busy ? (
           <Loader2 size={12} className="animate-spin" />
@@ -328,21 +299,11 @@ function TemplateCard({
   return (
     <button
       onClick={handleClick}
-      className="group relative flex w-full flex-col overflow-hidden rounded-2xl border border-white/10 bg-editor-panel text-left shadow-[0_8px_28px_rgba(0,0,0,0.35)] transition-transform duration-300 active:scale-[0.97]"
+      className="group relative flex w-full flex-col overflow-hidden rounded-lg border border-black/10 bg-white text-left transition-transform duration-300 active:scale-[0.97]"
     >
-      {/* ring tipis di dalam border, kesan "kaca premium" — pola yang
-          sama dipakai di snapshot export Editor (ring-1 ring-inset
-          ring-white/10) */}
-      <div className="pointer-events-none absolute inset-0 z-20 rounded-2xl ring-1 ring-inset ring-white/[0.06]" />
-
       <div className="relative flex h-full flex-col overflow-hidden">
         {/* kartu preview */}
-        <div
-          className="relative aspect-[9/16] w-full overflow-hidden"
-          style={{
-            backgroundImage: `linear-gradient(160deg, ${template.gradientFrom}, ${template.gradientTo})`,
-          }}
-        >
+        <div className="relative aspect-[9/16] w-full overflow-hidden bg-black/5">
           {isCollageStyle ? (
             <CollageThumbnail
               template={template}
@@ -356,54 +317,51 @@ function TemplateCard({
             />
           )}
 
-          {/* vignette halus biar teks & badge kebaca di semua foto */}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-black/15" />
-
           {/* badge "2 Gaya Progress" — cuma di kartu bergaya kolase */}
           {isCollageStyle && (
-            <span className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full border border-editor-accent/50 bg-editor-panel/85 px-2 py-0.5 text-[8.5px] font-semibold uppercase tracking-wide text-editor-accent backdrop-blur-sm">
+            <span
+              className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-[8.5px] font-semibold uppercase tracking-wide text-black"
+              style={{ backgroundColor: tokens.colors.accent }}
+            >
               <Sparkles size={9} strokeWidth={2.5} />
               2 Gaya Progress
             </span>
           )}
 
-          <span className="absolute right-2.5 top-2.5 rounded-full border border-white/10 bg-black/50 px-2 py-0.5 text-[9px] font-semibold tabular-nums tracking-wide text-paper/90 backdrop-blur-sm">
+          <span className="absolute right-2.5 top-2.5 rounded-full bg-black px-2 py-0.5 text-[9px] font-semibold tabular-nums tracking-wide text-white">
             {template.duration}
           </span>
-
-          {/* overlay bawah + info */}
-          <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/50 to-transparent px-3 pb-2.5 pt-10">
-            <p className="truncate text-[13px] font-semibold leading-tight tracking-tight text-paper">
-              {template.name}
-            </p>
-
-            {isCollageStyle ? (
-              <p className="mt-1 truncate text-[9.5px] text-editor-accent/90">
-                Bar klasik & waveform iconik, tinggal pilih
-              </p>
-            ) : (
-              usageCount !== null && (
-                <div className="mt-1 flex items-center gap-1 text-[9.5px] text-editor-muted">
-                  <ImageIcon size={10} strokeWidth={2} />
-                  <span className="tabular-nums">
-                    {usageCount.toLocaleString("id-ID")} kali digunakan
-                  </span>
-                </div>
-              )
-            )}
-          </div>
         </div>
 
-        {/* footer tipis — CTA "Gunakan" pakai aksen ungu editor-accent
-            (bukan lagi merah "rec"), sama pola visual sama tombol "Unduh"
-            di modal export Editor (bg-editor-accent + glow shadow ungu) */}
-        <div className="flex items-center justify-between gap-2 border-t border-white/[0.06] bg-black/20 px-3 py-2.5">
-          <span className="text-[11px] font-semibold tracking-wide text-paper/85">
-            Gunakan
-          </span>
-          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-editor-accent text-paper shadow-[0_2px_10px_rgba(124,108,255,0.5)] transition-transform duration-300 group-active:translate-x-0.5">
-            <ArrowRight size={12} strokeWidth={2.5} />
-          </span>
+        {/* footer — nama template + CTA "Gunakan", flat, ngikutin pola
+            pill/tombol di halaman utama (bg-black, teks putih) */}
+        <div className="flex flex-col gap-1.5 border-t border-black/10 px-3 py-2.5">
+          <p
+            className="truncate text-[13px] font-semibold leading-tight tracking-tight text-black"
+            style={{ fontFamily: tokens.fonts.heading }}
+          >
+            {template.name}
+          </p>
+
+          <div className="flex items-center justify-between gap-2">
+            {isCollageStyle ? (
+              <p className="truncate text-[9.5px] text-black/60">
+                Bar klasik & waveform, tinggal pilih
+              </p>
+            ) : usageCount !== null ? (
+              <div className="flex items-center gap-1 text-[9.5px] text-black/50">
+                <ImageIcon size={10} strokeWidth={2} />
+                <span className="tabular-nums">
+                  {usageCount.toLocaleString("id-ID")} kali digunakan
+                </span>
+              </div>
+            ) : (
+              <span />
+            )}
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black text-white transition-transform duration-300 group-active:translate-x-0.5">
+              <ArrowRight size={12} strokeWidth={2.5} />
+            </span>
+          </div>
         </div>
       </div>
     </button>
@@ -567,27 +525,26 @@ export default function TemplateGallery({
   }
 
   return (
-    <div className="relative flex h-[100dvh] w-screen flex-col overflow-hidden bg-editor-bg font-sans">
-      {/* glow ambient ungu di belakang header — senada persis sama glow
-          di modal export Editor (bg-editor-accent/25 blur-3xl), bukan lagi
-          glow merah generik */}
-      <div
-        className="pointer-events-none absolute -top-24 left-1/2 h-64 w-[140%] -translate-x-1/2 rounded-full bg-editor-accent/20 opacity-90 blur-3xl"
-      />
-
-      {/* Header — border-white/5 & bg-editor-panel/80, sama persis pola
-          panel gelap di Editor (bg-editor-panel, border-white/5) */}
-      <div className="relative flex shrink-0 flex-col gap-3 border-b border-white/5 bg-editor-panel/80 px-4 pb-4 pt-5 backdrop-blur">
+    <div
+      className="relative flex h-[100dvh] w-screen flex-col overflow-hidden bg-white"
+      style={{ fontFamily: tokens.fonts.body }}
+    >
+      {/* Header — flat putih, samain pola sama SiteNav/HomePage (border
+          tipis, tanpa blur/glow) */}
+      <div className="relative flex shrink-0 flex-col gap-3 border-b border-black/10 bg-white px-4 pb-4 pt-5">
         <div className="flex items-center justify-between">
           <div>
-            <div className="mb-1 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-editor-accent">
+            <div className="mb-1 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-black/60">
               <Sparkles size={11} strokeWidth={2.5} />
               Koleksi Template
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-paper">
+            <h1
+              className="text-xl font-bold tracking-tight text-black"
+              style={{ fontFamily: tokens.fonts.heading }}
+            >
               {activeTab === "draft" ? "Draft Project" : "Pilih Template"}
             </h1>
-            <p className="mt-0.5 text-xs text-editor-muted">
+            <p className="mt-0.5 text-xs text-black/50">
               {activeTab === "draft"
                 ? "Auto-tersimpan, tinggal lanjutin kapan aja"
                 : "Tinggal isi foto & audio, sisanya udah beres"}
@@ -598,7 +555,7 @@ export default function TemplateGallery({
               <button
                 onClick={handleImportButtonClick}
                 disabled={importBusy}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-paper/70 transition hover:text-paper active:scale-90 disabled:opacity-60"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 text-black/70 transition hover:text-black active:scale-90 disabled:opacity-60"
                 title="Import file template (.spnedit)"
                 aria-label="Import template"
               >
@@ -610,7 +567,7 @@ export default function TemplateGallery({
               </button>
             )}
             <button
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-white/10 bg-white/5 text-paper/70 transition hover:text-paper active:scale-90"
+              className="flex h-10 w-10 items-center justify-center rounded-full border border-black/10 text-black/70 transition hover:text-black active:scale-90"
               title="Cari template"
             >
               <Search size={17} />
@@ -647,18 +604,21 @@ export default function TemplateGallery({
            Editor (lihat lib/drafts.ts), diurutkan terbaru diubah duluan. */
         <div className="relative flex-1 overflow-y-auto p-4 pb-2">
           {draftsLoading ? (
-            <div className="flex h-full items-center justify-center text-editor-muted">
+            <div className="flex h-full items-center justify-center text-black/40">
               <Loader2 size={20} className="animate-spin" />
             </div>
           ) : drafts.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/[0.06]">
-                <FilePlus2 size={20} className="text-editor-muted" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-black/10">
+                <FilePlus2 size={20} className="text-black/40" />
               </div>
-              <p className="text-sm font-semibold text-paper">
+              <p
+                className="text-sm font-semibold text-black"
+                style={{ fontFamily: tokens.fonts.heading }}
+              >
                 Belum ada draft
               </p>
-              <p className="text-xs leading-relaxed text-editor-muted">
+              <p className="text-xs leading-relaxed text-black/50">
                 Mulai project dari tab Template — perubahannya bakal
                 ke-auto-save di sini, sampai maksimal {MAX_DRAFTS} project
                 sekaligus.
@@ -666,14 +626,15 @@ export default function TemplateGallery({
               <div className="mt-1 flex items-center gap-2">
                 <button
                   onClick={() => setActiveTab("template")}
-                  className="rounded-full bg-editor-accent px-4 py-2 text-xs font-semibold text-paper shadow-[0_4px_16px_rgba(124,108,255,0.4)] transition hover:brightness-110 active:scale-[0.98]"
+                  className="rounded-full px-4 py-2 text-xs font-semibold text-black transition hover:opacity-80 active:scale-[0.98]"
+                  style={{ backgroundColor: tokens.colors.accent }}
                 >
                   Pilih Template
                 </button>
                 <button
                   onClick={handleImportButtonClick}
                   disabled={importBusy}
-                  className="flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-semibold text-paper/80 transition hover:text-paper active:scale-[0.98] disabled:opacity-60"
+                  className="flex items-center gap-1.5 rounded-full border border-black/10 px-4 py-2 text-xs font-semibold text-black/80 transition hover:text-black active:scale-[0.98] disabled:opacity-60"
                 >
                   {importBusy ? (
                     <Loader2 size={13} className="animate-spin" />
@@ -703,27 +664,25 @@ export default function TemplateGallery({
       )}
 
       {/* Tab bar bawah — Draft (kiri) & Template (kanan), fixed nempel di
-          bawah layar, pola visual sama persis header (bg-editor-panel/80,
-          border-white/5, backdrop-blur) biar konsisten satu identitas. */}
-      <div className="relative z-30 flex shrink-0 items-center gap-2 border-t border-white/5 bg-editor-panel/90 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
+          bawah layar, flat putih ngikutin header, tanpa blur. Tab aktif
+          pakai aksen pink yang sama kayak homepage. */}
+      <div className="relative z-30 flex shrink-0 items-center gap-2 border-t border-black/10 bg-white p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
         <button
           onClick={() => setActiveTab("draft")}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-semibold tracking-wide transition active:scale-[0.97] ${
-            activeTab === "draft"
-              ? "bg-editor-accent text-paper shadow-[0_2px_12px_rgba(124,108,255,0.45)]"
-              : "text-editor-muted hover:text-paper"
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-full border py-2.5 text-xs font-semibold tracking-wide transition active:scale-[0.97] ${
+            activeTab === "draft" ? "border-transparent text-black" : "border-black/10 text-black/50 hover:text-black"
           }`}
+          style={activeTab === "draft" ? { backgroundColor: tokens.colors.accent } : undefined}
         >
           <FolderClock size={15} />
           Draft Project
         </button>
         <button
           onClick={() => setActiveTab("template")}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-full py-2.5 text-xs font-semibold tracking-wide transition active:scale-[0.97] ${
-            activeTab === "template"
-              ? "bg-editor-accent text-paper shadow-[0_2px_12px_rgba(124,108,255,0.45)]"
-              : "text-editor-muted hover:text-paper"
+          className={`flex flex-1 items-center justify-center gap-1.5 rounded-full border py-2.5 text-xs font-semibold tracking-wide transition active:scale-[0.97] ${
+            activeTab === "template" ? "border-transparent text-black" : "border-black/10 text-black/50 hover:text-black"
           }`}
+          style={activeTab === "template" ? { backgroundColor: tokens.colors.accent } : undefined}
         >
           <LayoutGrid size={15} />
           Template
