@@ -64,9 +64,6 @@ const CATEGORIES: Category[] = [
   },
 ]
 
-const LIVE_COUNT = CATEGORIES.filter((c) => c.status === 'available').length
-const SOON_COUNT = CATEGORIES.filter((c) => c.status === 'soon').length
-
 const STEPS = [
   {
     n: '01',
@@ -248,7 +245,7 @@ export default function HomePage() {
         {/* HERO -- setinggi layar (dikurangi tinggi nav 4rem) biar section di bawahnya
             gak nongol. svh = tinggi layar "aman" di browser mobile (toolbar URL kebuka). */}
         <section
-          className="relative flex min-h-[calc(100svh-4rem)] supports-[height:100dvh]:min-h-[calc(100dvh-4rem)] flex-col overflow-hidden pb-6 pt-10 sm:pb-8 sm:pt-14"
+          className="relative flex min-h-[calc(100svh-4rem)] supports-[height:100dvh]:min-h-[calc(100dvh-4rem)] flex-col overflow-hidden py-10 sm:py-14"
           style={{ backgroundColor: tokens.colors.pageBackground }}
         >
           <div className={`${containerClass} flex w-full flex-1 flex-col justify-center`}>
@@ -275,18 +272,6 @@ export default function HomePage() {
               >
                 How it works
               </a>
-            </div>
-          </div>
-
-          {/* Baris bawah hero: ngisi dasar layar + petunjuk scroll. */}
-          <div className={`${containerClass} mt-10 w-full`}>
-            <div className="flex items-center justify-between gap-4 border-t border-black/25 pt-4 text-xs font-bold uppercase tracking-widest text-black sm:text-sm">
-              <a href="#brands" className="hover:underline">
-                Scroll ↓
-              </a>
-              <span className="text-right text-black/70">
-                {LIVE_COUNT} live · {SOON_COUNT} coming soon
-              </span>
             </div>
           </div>
         </section>
