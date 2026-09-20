@@ -285,7 +285,7 @@ function BottomNavCard({
 
   return (
     <div
-      className="relative z-30 flex shrink-0 flex-col overflow-hidden rounded-t-2xl border-t border-white/5 bg-editor-panel shadow-[0_-8px_24px_rgba(0,0,0,0.35)]"
+      className="relative z-30 flex shrink-0 flex-col overflow-hidden rounded-t-2xl border-t border-white/5 bg-editor-panel"
       style={{ height: cardHeight }}
     >
       <div ref={contentRef} key={shown.key} className="flex flex-1 flex-col">
@@ -545,7 +545,7 @@ function LyricsChipRow({
             {opt === "none" && <Ban size={11} strokeWidth={2.5} />}
             {labels?.[opt] ?? opt}
             {newOptions?.includes(opt) && (
-              <span className="absolute -right-1.5 -top-1.5 rounded-full bg-rose-500 px-1 py-[1px] text-[7px] font-bold leading-none tracking-wide text-white shadow-sm">
+              <span className="absolute -right-1.5 -top-1.5 rounded-full bg-rose-500 px-1 py-[1px] text-[7px] font-bold leading-none tracking-wide text-white">
                 NEW
               </span>
             )}
@@ -4287,7 +4287,7 @@ export default function Editor({
                     className="fixed inset-0 z-40"
                     onClick={() => setShowExportMenu(false)}
                   />
-                  <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-48 overflow-hidden rounded-2xl border border-white/10 bg-editor-panel shadow-[0_12px_32px_rgba(0,0,0,0.5)]">
+                  <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-48 overflow-hidden rounded-2xl border border-white/10 bg-editor-panel">
                     <button
                       onClick={() => {
                         setShowExportMenu(false);
@@ -4355,7 +4355,7 @@ export default function Editor({
                 key={preset.id}
                 onClick={() => applyTextPreset(preset)}
                 title={`Tambah teks gaya ${preset.name}`}
-                className="flex flex-col items-center gap-1 rounded-xl border border-white/10 bg-editor-panel/90 py-3 shadow-[0_8px_20px_rgba(0,0,0,0.35)] backdrop-blur transition active:scale-95"
+                className="flex flex-col items-center gap-1 rounded-xl border border-white/10 bg-editor-panel/90 py-3 transition active:scale-95"
               >
                 <span className="flex h-9 w-full items-center justify-center overflow-hidden px-1 text-base font-bold">
                   <TextPresetLoopPreview preset={preset} />
@@ -4410,14 +4410,14 @@ export default function Editor({
               {canvasSnapGuides.x && (
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute inset-y-0 z-30 w-px bg-editor-accent shadow-[0_0_4px_rgba(0,0,0,0.4)]"
+                  className="pointer-events-none absolute inset-y-0 z-30 w-px bg-editor-accent"
                   style={{ left: "50%" }}
                 />
               )}
               {canvasSnapGuides.y && (
                 <div
                   aria-hidden
-                  className="pointer-events-none absolute inset-x-0 z-30 h-px bg-editor-accent shadow-[0_0_4px_rgba(0,0,0,0.4)]"
+                  className="pointer-events-none absolute inset-x-0 z-30 h-px bg-editor-accent"
                   style={{ top: "50%" }}
                 />
               )}
@@ -4471,7 +4471,7 @@ export default function Editor({
                       lyricsSelectionBox.eff,
                     )
                   }
-                  className="absolute -bottom-3 -right-3 flex h-7 w-7 cursor-nwse-resize touch-none items-center justify-center rounded-full border-2 border-editor-accent bg-paper shadow-md active:scale-95"
+                  className="absolute -bottom-3 -right-3 flex h-7 w-7 cursor-nwse-resize touch-none items-center justify-center rounded-full border-2 border-editor-accent bg-paper active:scale-95"
                   title="Tahan & geser buat ubah ukuran teks"
                 >
                   <Maximize2 size={12} className="text-editor-accent" />
@@ -4486,7 +4486,7 @@ export default function Editor({
                 setSelectedLayerId(BACKGROUND_LAYER_ID);
                 setShowBgLabel(true);
               }}
-              className={`absolute left-3 top-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium text-paper backdrop-blur-sm transition-opacity duration-700 ease-out active:scale-95 ${
+              className={`absolute left-3 top-3 flex items-center gap-1 rounded-full bg-black/60 px-2.5 py-1 text-[10px] font-medium text-paper transition-opacity duration-700 ease-out active:scale-95 ${
                 showBgLabel ? "opacity-100" : "pointer-events-none opacity-0"
               }`}
               title="Atur opacity & blur background"
@@ -4516,11 +4516,11 @@ export default function Editor({
               >
                 <div
                   onClick={(e) => e.stopPropagation()}
-                  className="animate-hint-pop relative mt-3 w-max max-w-[190px] rounded-2xl bg-paper px-3.5 py-2.5 text-left shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
+                  className="animate-hint-pop relative mt-3 w-max max-w-[190px] rounded-2xl bg-paper px-3.5 py-2.5 text-left"
                 >
                   <button
                     onClick={dismissAirplayHint}
-                    className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-graphite text-paper shadow-md active:scale-90"
+                    className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-graphite text-paper active:scale-90"
                     aria-label="Tutup pemberitahuan"
                   >
                     <X size={11} />
@@ -4543,7 +4543,7 @@ export default function Editor({
             biar nyatu sama preview full-bleed. */}
         <button
           onClick={() => setIsFullscreen((f) => !f)}
-          className="absolute right-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/45 text-paper backdrop-blur-sm transition active:scale-90"
+          className="absolute right-3 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-white/10 bg-black/45 text-paper transition active:scale-90"
           title={isFullscreen ? "Keluar dari fullscreen" : "Lihat preview fullscreen"}
         >
           {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
@@ -5652,7 +5652,7 @@ export default function Editor({
           muat/hapus preset yang sudah ada. */}
       {showPresetPanel && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-6">
-          <div className="flex max-h-[85dvh] w-full max-w-sm flex-col rounded-t-2xl bg-panel shadow-xl sm:rounded-2xl">
+          <div className="flex max-h-[85dvh] w-full max-w-sm flex-col rounded-t-2xl bg-panel sm:rounded-2xl">
             <div className="flex shrink-0 items-center justify-between border-b border-mute/10 px-4 py-3">
               <h2 className="text-sm font-semibold text-paper">Preset</h2>
               <button
@@ -5773,12 +5773,8 @@ export default function Editor({
           bukan lagi palet lama (panel/graphite/rec) biar nyambung visual
           sama layar editornya. */}
       {(isExporting || exportResultUrl || exportError) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 backdrop-blur-sm">
-          <div className="relative w-full max-w-xs overflow-hidden rounded-3xl border border-white/10 bg-editor-panel p-5 text-center shadow-[0_20px_60px_rgba(0,0,0,0.55)]">
-            {/* Glow ambient ungu di belakang, senada sama editor-accent —
-                kasih kesan "premium" tanpa ganggu keterbacaan. */}
-            <div className="pointer-events-none absolute -top-24 left-1/2 h-48 w-48 -translate-x-1/2 rounded-full bg-editor-accent/25 blur-3xl" />
-
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
+          <div className="relative w-full max-w-xs overflow-hidden rounded-3xl border border-white/10 bg-editor-panel p-5 text-center">
             {isExporting && (
               <div className="relative">
                 {exportSnapshot ? (
@@ -5793,7 +5789,7 @@ export default function Editor({
                     <div className="pointer-events-none absolute inset-0 ring-1 ring-inset ring-white/10" />
                     {/* Badge persen mengambang di pojok, biar fokus tetap di
                         preview sambil tetap keliatan progressnya jalan. */}
-                    <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 backdrop-blur-sm">
+                    <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1">
                       <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-editor-accent" />
                       <span className="text-[10px] font-semibold tabular-nums text-paper">
                         {Math.round(exportProgress?.percent ?? 0)}%
@@ -5885,7 +5881,7 @@ export default function Editor({
                   <a
                     href={exportResultUrl}
                     download={`${template.id}.${exportKind === "image" ? "png" : "mp4"}`}
-                    className="flex-1 rounded-full bg-editor-accent px-3 py-2.5 text-xs font-semibold text-paper shadow-[0_4px_16px_rgba(124,108,255,0.4)] transition hover:brightness-110 active:scale-[0.98]"
+                    className="flex-1 rounded-full bg-editor-accent px-3 py-2.5 text-xs font-semibold text-paper transition hover:brightness-110 active:scale-[0.98]"
                   >
                     Unduh
                   </a>

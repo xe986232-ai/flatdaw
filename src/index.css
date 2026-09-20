@@ -27,6 +27,26 @@
   --color-row-divider: #2C2C31;
 
   --font-mono-daw: "JetBrains Mono", ui-monospace, monospace;
+
+  /* Palet template iOS Music Player (di-port dari project spneditz) --
+     nama token dipertahanin sama (editor-*, ed-*, graphite, panel, paper,
+     mute, rec) biar komponen yang di-copy (Editor.tsx, Timeline*.tsx,
+     ImageCropModal.tsx) gak perlu diubah satu-satu, tapi NILAI warnanya
+     di-remap flat (putih/hitam/pink) ngikutin palet halaman utama --
+     ganti tema kaca-gelap-ungu bawaan spneditz. */
+  --color-editor-bg: #ffffff;
+  --color-editor-panel: #ffffff;
+  --color-editor-track: #f2f2f2;
+  --color-editor-accent: #ffacff;
+  --color-editor-muted: #6b6b6b;
+  --color-graphite: #f2f2f2;
+  --color-panel: #ffffff;
+  --color-paper: #000000;
+  --color-mute: #6b6b6b;
+  --color-rec: #e14c4c;
+  --color-ed-card: #f2f2f2;
+  --color-ed-dim: #9ca3af;
+  --color-ed-text: #000000;
 }
 
 body {

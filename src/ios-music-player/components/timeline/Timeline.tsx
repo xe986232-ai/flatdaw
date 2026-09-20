@@ -652,7 +652,7 @@ export default function Timeline(props: TimelineProps) {
                   <MoreVertical size={14} />
                 </button>
                 {trackGroupMenuOpen && (
-                  <div className="absolute right-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-lg border border-white/10 bg-editor-panel py-1 shadow-lg">
+                  <div className="absolute right-0 top-full z-30 mt-1 w-44 overflow-hidden rounded-lg border border-white/10 bg-editor-panel py-1">
                     {canMakeGroupFromSelection && (
                       <button
                         onClick={handleMakeGroupFromSelection}
