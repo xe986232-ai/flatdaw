@@ -22,7 +22,7 @@ import iosMusicMockup from '../../assets/ios-music-mockup.webp'
 // Buka/tutup kategori & nambah yang baru cukup edit CATEGORIES di bawah;
 // isi `href`/`templates` kalau kategorinya udah punya halaman.
 
-const GITHUB_URL = 'https://github.com/xe986232-ai/flatdaw'
+const GITHUB_URL = 'https://github.com/xe986232-ai/rizzsemlehoy'
 const LIVE_URL = 'https://flatdaw.vercel.app'
 
 type Category = {
