@@ -86,6 +86,7 @@ import { analyzeAudio, type AudioAnalysis } from "../lib/waveform";
 import { logExportEvent } from "../lib/exportLog";
 import { subscribeCoverImages, type CoverImageEntry } from "../lib/coverImages";
 import { isCorsReadable } from "../lib/corsProbe";
+import { useWakeLock } from "../lib/useWakeLock";
 import {
   savePreset,
   listPresets,
@@ -1437,6 +1438,8 @@ export default function Editor({
 
   // ---- Export state ----
   const [isExporting, setIsExporting] = useState(false);
+  // Layar tetap nyala selama proses ekspor (biar HP gak tidur & render berhenti).
+  useWakeLock(isExporting);
   const [exportSnapshot, setExportSnapshot] = useState<string | null>(null);
   const [exportProgress, setExportProgress] = useState<ExportProgress | null>(
     null,
