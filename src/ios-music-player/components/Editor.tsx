@@ -40,6 +40,7 @@ import {
   Ban,
 } from "lucide-react";
 import ImageCropModal from "./ImageCropModal";
+import QuickEditScreen from "./QuickEditScreen";
 import { fxDelay, usePresence, usePresenceValue } from "../../motion/hooks";
 import Timeline from "./timeline/Timeline";
 import type { Template, TemplateSlot, TemplateTextLayer, TemplateLyricsTextLayer, LyricsGroup, SlotType, LiquidGlassSettings } from "../types";
@@ -821,6 +822,12 @@ function TextPresetLoopPreview({ preset }: { preset: TextStylePreset }) {
   );
 }
 
+// Template yang langsung masuk layar edit RINGKAS (ala template CapCut:
+// preview + tab Media/Audio) begitu user pencet "Gunakan template". Editor
+// penuh tetap bisa dibuka lewat tombol "Lanjutan". Tambah id template lain
+// di sini kalau mau ikut pakai mode ini.
+const QUICK_EDIT_TEMPLATE_IDS = new Set(["iphone-music-player-v4"]);
+
 export default function Editor({
   template,
   onBack,
@@ -839,6 +846,11 @@ export default function Editor({
   resumeDraftId?: string | null;
 }) {
   const [activeTool, setActiveTool] = useState<string>("media");
+  // Layar edit ringkas aktif cuma buat project BARU (bukan lanjutin draft,
+  // yang mungkin udah diedit lewat Editor penuh).
+  const [quickMode, setQuickMode] = useState(
+    () => QUICK_EDIT_TEMPLATE_IDS.has(template.id) && !resumeDraftId,
+  );
   // Rasio canvas: "9:16" (potret, default — samain sama semua template
   // yang ada sekarang) atau "16:9" (lanskap). Resolusi TETAP di budget
   // 1920x1080, cuma tukar mana yang lebar/tinggi (lihat getRatioCanvasSize).
@@ -3621,6 +3633,16 @@ export default function Editor({
     setCurrentSec(0);
     centerTimelineOnSec(0);
   }
+  // Loncat ke detik tertentu (dipakai seek bar layar edit ringkas) — pola
+  // sama kayak drag playhead: pause dulu, baru set posisi.
+  function seekTo(sec: number) {
+    setIsPlaying(false);
+    isPlayingRef.current = false;
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    const next = Math.min(DURATION, Math.max(0, sec));
+    setCurrentSec(next);
+    centerTimelineOnSec(next);
+  }
   function handleSkipToEnd() {
     setIsPlaying(false);
     isPlayingRef.current = false;
@@ -4733,6 +4755,42 @@ export default function Editor({
         className="hidden"
         onChange={handleFileChange}
       />
+
+      {/* Layar edit ringkas (mode template ala CapCut) — nutupin Editor
+          penuh di bawahnya, yang tetap hidup buat render/audio/ekspor. */}
+      {quickMode && (
+        <QuickEditScreen
+          template={template}
+          sourceCanvasRef={canvasRef}
+          isPlaying={isPlaying}
+          onTogglePlay={() => setIsPlaying((p) => !p)}
+          currentSec={currentSec}
+          duration={DURATION}
+          onSeek={seekTo}
+          slotMedia={slotMedia}
+          audioName={audioMedia ? (audioMedia.file?.name ?? "Audio contoh") : null}
+          textValues={textValues}
+          onTextChange={(id, value) =>
+            setTextValues((prev) => ({ ...prev, [id]: value }))
+          }
+          hasBackgroundPhoto={!!customBackground}
+          backgroundOpacity={backgroundOpacity}
+          backgroundBlur={backgroundBlur}
+          maxBackgroundBlur={MAX_BACKGROUND_BLUR}
+          onBackgroundOpacity={setBackgroundOpacity}
+          onBackgroundBlur={setBackgroundBlur}
+          isExporting={isExporting}
+          onBack={onBack}
+          onExportVideo={handleExport}
+          onExportImage={handleExportImage}
+          onReplace={openPicker}
+          onCrop={handleOpenCropForSlot}
+          onOpenFullEditor={() => {
+            setIsPlaying(false);
+            setQuickMode(false);
+          }}
+        />
+      )}
 
       {/* Overlay crop foto sampul — muncul begitu user pilih file baru
           buat slot bertipe image (lihat handleFileChange). */}
