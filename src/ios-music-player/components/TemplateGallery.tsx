@@ -30,6 +30,7 @@ import TemplateThumbnail, { ThumbnailSkeleton } from "./TemplateThumbnail";
 import TemplatePreview, { type PreviewOrigin } from "./TemplatePreview";
 import { fxDelay, usePresenceValue } from "../../motion/hooks";
 import { renderTemplateThumbnail } from "../lib/thumbnail";
+import { alertDialog, confirmDialog } from "../lib/dialog";
 import {
   listDrafts,
   deleteDraft,
@@ -478,17 +479,19 @@ export default function TemplateGallery({
     refreshDrafts();
   }, [activeTab]);
 
-  function handleResumeDraft(draft: DraftSummary) {
+  async function handleResumeDraft(draft: DraftSummary) {
     const template = TEMPLATES.find((t) => t.id === draft.templateId);
     if (!template || disabledTemplateIds.has(template.id)) {
       // Template sumber draft ini udah gak ada lagi di daftar (mis. sudah
       // dihapus dari katalog) ATAU lagi dinonaktifin admin — daripada
       // nyangkut, draft-nya dianggap tidak bisa dilanjutkan.
-      window.alert(
-        !template
+      await alertDialog({
+        title: "Draft tidak bisa dilanjutkan",
+        message: !template
           ? "Template untuk draft ini sudah tidak tersedia lagi. Draft akan dihapus."
           : "Template untuk draft ini lagi dinonaktifkan sementara. Draft akan dihapus.",
-      );
+        tone: "warning",
+      });
       void deleteDraft(draft.id).then(refreshDrafts);
       return;
     }
@@ -497,9 +500,13 @@ export default function TemplateGallery({
 
   async function handleDeleteDraft(draft: DraftSummary) {
     if (draftBusyId) return;
-    if (!window.confirm(`Hapus draft "${draft.templateName}"? Tidak bisa dibatalkan.`)) {
-      return;
-    }
+    const ok = await confirmDialog({
+      title: "Hapus draft?",
+      message: `Draft "${draft.templateName}" akan dihapus dan tidak bisa dibatalkan.`,
+      tone: "danger",
+      confirmLabel: "Hapus",
+    });
+    if (!ok) return;
     setDraftBusyId(draft.id);
     try {
       await deleteDraft(draft.id);
@@ -527,11 +534,11 @@ export default function TemplateGallery({
     try {
       await exportDraftToFile(draft.id);
     } catch (e) {
-      window.alert(
-        e instanceof Error
-          ? `Gagal export template: ${e.message}`
-          : "Gagal export template.",
-      );
+      await alertDialog({
+        title: "Gagal export",
+        message: e instanceof Error ? e.message : "Gagal export template.",
+        tone: "error",
+      });
     } finally {
       setDraftExportBusyId(null);
     }
@@ -555,22 +562,30 @@ export default function TemplateGallery({
       const data = await readTemplateExportFile(file);
       const template = TEMPLATES.find((t) => t.id === data.templateId);
       if (!template) {
-        window.alert(
-          `Template sumber file ini ("${data.templateName}") sudah tidak tersedia di aplikasi, jadi tidak bisa di-import.`,
-        );
+        await alertDialog({
+          title: "Tidak bisa di-import",
+          message: `Template sumber file ini ("${data.templateName}") sudah tidak tersedia di aplikasi, jadi tidak bisa di-import.`,
+          tone: "error",
+        });
         return;
       }
       await importTemplateExportFile(data);
-      window.alert(`Template "${data.templateName}" berhasil di-import sebagai draft baru.`);
+      await alertDialog({
+        title: "Import berhasil",
+        message: `Template "${data.templateName}" berhasil di-import sebagai draft baru.`,
+        tone: "success",
+      });
       if (activeTab === "draft") {
         refreshDrafts();
       } else {
         setActiveTab("draft");
       }
     } catch (err) {
-      window.alert(
-        err instanceof Error ? err.message : "Gagal import file template.",
-      );
+      await alertDialog({
+        title: "Gagal import",
+        message: err instanceof Error ? err.message : "Gagal import file template.",
+        tone: "error",
+      });
     } finally {
       setImportBusy(false);
     }

@@ -85,6 +85,7 @@ import { analyzeAudio, type AudioAnalysis } from "../lib/waveform";
 import { logExportEvent } from "../lib/exportLog";
 import { subscribeCoverImages, type CoverImageEntry } from "../lib/coverImages";
 import { isCorsReadable } from "../lib/corsProbe";
+import { confirmDialog } from "../lib/dialog";
 import { useWakeLock } from "../lib/useWakeLock";
 import {
   savePreset,
@@ -2323,7 +2324,7 @@ export default function Editor({
   // SEMUA klip lirik lain di project ini. SENGAJA TIDAK ikut nyalin
   // posisi (x/y), startSec/endSec, row, atau isi teks — itu tetap
   // punya masing-masing klip, cuma "gaya"-nya yang disamain.
-  function applySelectedLyricsStyleToAllTracks() {
+  async function applySelectedLyricsStyleToAllTracks() {
     if (!selectedLyricsBaseId) return;
     const eff = getEffectiveLyricsLayer(selectedLyricsBaseId);
     if (!eff) return;
@@ -2331,13 +2332,13 @@ export default function Editor({
       .map((l) => l.id)
       .filter((id) => id !== selectedLyricsBaseId);
     if (otherIds.length === 0) return;
-    if (
-      !window.confirm(
-        `Terapkan gaya & animasi klip ini ke ${otherIds.length} track lirik lain? Gaya lama masing-masing track akan ketimpa.`,
-      )
-    ) {
-      return;
-    }
+    const ok = await confirmDialog({
+      title: "Terapkan ke semua track?",
+      message: `Gaya & animasi klip ini akan diterapkan ke ${otherIds.length} track lirik lain. Gaya lama masing-masing track akan ketimpa.`,
+      tone: "warning",
+      confirmLabel: "Terapkan",
+    });
+    if (!ok) return;
     const topColor = textColors[`${selectedLyricsBaseId}__top`] ?? eff.colorTop;
     const bottomColor = textColors[`${selectedLyricsBaseId}__bottom`] ?? eff.colorBottom;
     const styleToApply: Partial<TemplateLyricsTextLayer> = {
@@ -3956,7 +3957,13 @@ export default function Editor({
 
   async function handleDeletePreset(id: string, name: string) {
     if (presetBusyId) return;
-    if (!window.confirm(`Hapus preset "${name}"? Tidak bisa dibatalkan.`)) return;
+    const ok = await confirmDialog({
+      title: "Hapus preset?",
+      message: `Preset "${name}" akan dihapus dan tidak bisa dibatalkan.`,
+      tone: "danger",
+      confirmLabel: "Hapus",
+    });
+    if (!ok) return;
     setPresetBusyId(id);
     setPresetError(null);
     try {

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import TemplateGallery from './components/TemplateGallery'
 import Editor from './components/Editor'
+import DialogHost from './components/DialogHost'
 import type { Template } from './types'
 import { ensureCoverImagesSeeded, ensureGlassCoverImagesMigrated } from './lib/coverImages'
 import { useCurtain } from '../motion/Curtain'
@@ -46,6 +47,7 @@ export default function IosMusicPlayerApp() {
           resumeDraftId={resumeDraftId}
         />
       )}
+      <DialogHost />
       {curtain}
     </>
   )
