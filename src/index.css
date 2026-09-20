@@ -29,6 +29,11 @@
   --font-mono-daw: "JetBrains Mono", ui-monospace, monospace;
 }
 
+html {
+  /* Link anchor di nav halaman utama (#what, #brands, ...) scroll halus. */
+  scroll-behavior: smooth;
+}
+
 body {
   margin: 0;
   background: var(--color-surface-base);

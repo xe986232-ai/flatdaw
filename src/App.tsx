@@ -1,4 +1,5 @@
 import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import HomePage from './pages/home/HomePage'
 import DawMockupPage from './pages/template/DawMockupPage'
 import EditorPage from './pages/editor/EditorPage'
 import { useFlmProject } from './useFlmProject'
@@ -16,10 +17,8 @@ export default function App() {
 
   return (
     <Routes>
-      {/* Belum ada halaman utama beneran -- sementara diarahin ke hub
-          template. Begini bikin gampang: pas halaman utama udah ada, tinggal
-          ganti elemen di path "/" ini, route lain gak kesenggol. */}
-      <Route path="/" element={<Navigate to="/template/daw-mockup" replace />} />
+      {/* Halaman utama (Rizz.). Hub template tetep di /template/daw-mockup. */}
+      <Route path="/" element={<HomePage />} />
 
       <Route
         path="/template/daw-mockup"
@@ -28,7 +27,7 @@ export default function App() {
 
       <Route path="/editor/:themeId" element={<EditorPage {...flmProject} />} />
 
-      <Route path="*" element={<Navigate to="/template/daw-mockup" replace />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
