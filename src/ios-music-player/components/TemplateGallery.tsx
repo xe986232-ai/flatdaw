@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type MouseEvent,
+} from "react";
 import {
   Image as ImageIcon,
   Search,
@@ -20,7 +27,8 @@ import type { Template } from "../types";
 import { subscribeTemplateUsage } from "../lib/exportLog";
 import { subscribeTemplateEnabled } from "../lib/templateFlags";
 import TemplateThumbnail, { ThumbnailSkeleton } from "./TemplateThumbnail";
-import TemplatePreview from "./TemplatePreview";
+import TemplatePreview, { type PreviewOrigin } from "./TemplatePreview";
+import { fxDelay, usePresenceValue } from "../../motion/hooks";
 import { renderTemplateThumbnail } from "../lib/thumbnail";
 import {
   listDrafts,
@@ -116,7 +124,7 @@ function CollageThumbnail({
   }
 
   return (
-    <div className={`absolute inset-0 ${className ?? ""}`}>
+    <div className={`fx-fade absolute inset-0 ${className ?? ""}`}>
       <img
         src={shots.bar}
         alt=""
@@ -139,7 +147,7 @@ function CollageThumbnail({
 
       {/* badge bulat pas di tengah sambungan — flat, putih polos */}
       <div className="absolute left-1/2 top-[49.5%] z-10 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-black/10 bg-white">
-        <Sparkles size={12} className="text-black" />
+        <Sparkles size={12} className="fx-pulse-soft text-black" />
       </div>
 
       {/* chip mini "Progress Bar" di potongan atas — pill hitam flat, gak
@@ -184,7 +192,13 @@ function DraftCard({
   onExport,
   busy,
   exporting,
+  index,
+  removing,
 }: {
+  index: number;
+  /** true = lagi diputar animasi keluar (kartu mengecil & memudar) sebelum
+   *  benar-benar dibuang dari daftar. */
+  removing: boolean;
   draft: DraftSummary;
   onResume: (draft: DraftSummary) => void;
   onDelete: (draft: DraftSummary) => void;
@@ -194,12 +208,17 @@ function DraftCard({
 }) {
   return (
     <div
-      className="group relative flex w-full flex-col overflow-hidden rounded-3xl border border-black text-left"
-      style={{ backgroundColor: tokens.colors.accent }}
+      className={`group relative flex w-full flex-col overflow-hidden rounded-3xl border border-black text-left transition-transform duration-300 hover:-translate-y-1 ${
+        removing ? "fx-card-out" : "fx-card-in"
+      }`}
+      style={fxDelay(Math.min(index, 8) * 60 + 80, {
+        backgroundColor: tokens.colors.accent,
+      })}
     >
       <button
         onClick={() => onResume(draft)}
         disabled={busy}
+        data-ripple
         className="relative flex h-full flex-col overflow-hidden text-left transition active:scale-[0.97] disabled:opacity-60"
       >
         <div className="relative aspect-[9/16] w-full overflow-hidden bg-black/5">
@@ -247,6 +266,7 @@ function DraftCard({
         disabled={busy || exporting}
         title="Export template (simpan sebagai file)"
         aria-label="Export template"
+        data-ripple
         className="absolute right-2.5 top-11 z-30 flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white text-black/70 transition hover:text-black active:scale-90 disabled:opacity-60"
       >
         {exporting ? (
@@ -264,6 +284,7 @@ function DraftCard({
         disabled={busy || exporting}
         title="Hapus draft"
         aria-label="Hapus draft"
+        data-ripple
         className="absolute right-2.5 top-2.5 z-30 flex h-7 w-7 items-center justify-center rounded-full border border-black/10 bg-white text-black/70 transition hover:text-black active:scale-90 disabled:opacity-60"
       >
         {busy ? (
@@ -279,9 +300,11 @@ function DraftCard({
 function TemplateCard({
   template,
   onSelect,
+  index,
 }: {
   template: Template;
-  onSelect: (t: Template) => void;
+  onSelect: (t: Template, origin: PreviewOrigin) => void;
+  index: number;
 }) {
   // Jumlah "X kali digunakan" — dengerin real-time dari Firebase Realtime
   // Database, di-update otomatis tiap ada export baru (nggak perlu refresh).
@@ -291,8 +314,10 @@ function TemplateCard({
     return unsubscribe;
   }, [template.id]);
 
-  function handleClick() {
-    onSelect(template);
+  function handleClick(e: MouseEvent<HTMLButtonElement>) {
+    // Titik pusat kartu = asal lingkaran yang membuka halaman preview.
+    const r = e.currentTarget.getBoundingClientRect();
+    onSelect(template, { x: r.left + r.width / 2, y: r.top + r.height / 2 });
   }
 
   // Template dengan gaya kolase khusus — potongan atas & bawahnya dua
@@ -303,8 +328,11 @@ function TemplateCard({
   return (
     <button
       onClick={handleClick}
-      className="group relative flex w-full flex-col overflow-hidden rounded-3xl border border-black text-left transition-transform duration-300 active:scale-[0.97]"
-      style={{ backgroundColor: tokens.colors.accent }}
+      data-ripple
+      className="fx-card-in group relative flex w-full flex-col overflow-hidden rounded-3xl border border-black text-left transition-transform duration-300 hover:-translate-y-1 active:scale-[0.97]"
+      style={fxDelay(Math.min(index, 8) * 60 + 80, {
+        backgroundColor: tokens.colors.accent,
+      })}
     >
       <div className="relative flex h-full flex-col overflow-hidden">
         {/* kartu preview */}
@@ -420,7 +448,14 @@ export default function TemplateGallery({
   // Template yang lagi di-preview (user tap kartu di grid) — halaman
   // TemplatePreview nutup seluruh galeri sampai user tekan "Gunakan
   // template" (baru lanjut ke Editor) atau kembali.
-  const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
+  const [preview, setPreview] = useState<{
+    template: Template;
+    origin: PreviewOrigin;
+  } | null>(null);
+  // Presence: overlay tetap ter-mount selama animasi tutupnya jalan.
+  const previewP = usePresenceValue(preview, 430);
+  // Draft yang lagi diputar animasi keluarnya (setelah dihapus).
+  const [removingIds, setRemovingIds] = useState<Set<string>>(() => new Set());
   const [drafts, setDrafts] = useState<DraftSummary[]>([]);
   const [draftsLoading, setDraftsLoading] = useState(false);
   const [draftBusyId, setDraftBusyId] = useState<string | null>(null);
@@ -468,7 +503,15 @@ export default function TemplateGallery({
     setDraftBusyId(draft.id);
     try {
       await deleteDraft(draft.id);
+      // Kartu mengecil & memudar dulu, baru dibuang dari daftar.
+      setRemovingIds((prev) => new Set(prev).add(draft.id));
+      await new Promise((resolve) => window.setTimeout(resolve, 280));
       setDrafts((prev) => prev.filter((d) => d.id !== draft.id));
+      setRemovingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(draft.id);
+        return next;
+      });
     } finally {
       setDraftBusyId(null);
     }
@@ -545,8 +588,12 @@ export default function TemplateGallery({
           tipis hitam di bawah, tanpa blur/glow */}
       <div className="relative flex shrink-0 flex-col gap-3 border-b border-black px-4 pb-4 pt-5">
         <div className="flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-[11px] font-bold uppercase tracking-widest text-black">
+          {/* key = tab aktif -> teks header dianimasikan ulang tiap ganti tab */}
+          <div key={activeTab} className="min-w-0">
+            <p
+              className="fx-rise-sm text-[11px] font-bold uppercase tracking-widest text-black"
+              style={fxDelay(0)}
+            >
               {activeTab === "draft" ? "(DRAFT PROJECT)" : "(KOLEKSI TEMPLATE)"}
             </p>
             <h1
@@ -555,29 +602,39 @@ export default function TemplateGallery({
             >
               {activeTab === "draft" ? (
                 <>
-                  LANJUTIN
-                  <br />
-                  <span
-                    className="inline-block px-2 text-black"
-                    style={{ backgroundColor: tokens.colors.accent }}
-                  >
-                    KARYAMU.
+                  <span className="fx-mask">
+                    <span className="fx-mask-inner" style={fxDelay(60)}>
+                      LANJUTIN
+                    </span>
+                  </span>
+                  <span className="block">
+                    <span
+                      className="fx-wipe-x inline-block px-2 text-black"
+                      style={fxDelay(200, { backgroundColor: tokens.colors.accent })}
+                    >
+                      KARYAMU.
+                    </span>
                   </span>
                 </>
               ) : (
                 <>
-                  PILIH
-                  <br />
-                  <span
-                    className="inline-block bg-black px-2"
-                    style={{ color: tokens.colors.accent }}
-                  >
-                    TEMPLATE.
+                  <span className="fx-mask">
+                    <span className="fx-mask-inner" style={fxDelay(60)}>
+                      PILIH
+                    </span>
+                  </span>
+                  <span className="block">
+                    <span
+                      className="fx-wipe-x inline-block bg-black px-2"
+                      style={fxDelay(200, { color: tokens.colors.accent })}
+                    >
+                      TEMPLATE.
+                    </span>
                   </span>
                 </>
               )}
             </h1>
-            <p className="mt-2.5 text-xs text-black/70">
+            <p className="fx-rise-sm mt-2.5 text-xs text-black/70" style={fxDelay(300)}>
               {activeTab === "draft"
                 ? "Auto-tersimpan, tinggal lanjutin kapan aja."
                 : "Tinggal isi foto & audio, sisanya udah beres."}
@@ -588,7 +645,9 @@ export default function TemplateGallery({
               <button
                 onClick={handleImportButtonClick}
                 disabled={importBusy}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-black text-black transition hover:bg-black hover:text-white active:scale-90 disabled:opacity-60"
+                data-ripple
+                className="fx-pop flex h-10 w-10 items-center justify-center rounded-full border border-black text-black transition hover:bg-black hover:text-white active:scale-90 disabled:opacity-60"
+                style={fxDelay(260)}
                 title="Import file template (.spnedit)"
                 aria-label="Import template"
               >
@@ -600,7 +659,9 @@ export default function TemplateGallery({
               </button>
             )}
             <button
-              className="flex h-10 w-10 items-center justify-center rounded-full border border-black text-black transition hover:bg-black hover:text-white active:scale-90"
+              data-ripple
+              className="fx-pop flex h-10 w-10 items-center justify-center rounded-full border border-black text-black transition hover:bg-black hover:text-white active:scale-90"
+              style={fxDelay(340)}
               title="Cari template"
             >
               <Search size={17} />
@@ -623,42 +684,47 @@ export default function TemplateGallery({
         /* Grid template — dua berbanjar (2 kolom). Cuma template yang
            masih AKTIF (bukan config/templates/{id}/enabled === false)
            yang dirender di sini. */
-        <div className="relative grid flex-1 auto-rows-min grid-cols-2 gap-3 overflow-y-auto p-4 pb-2">
-          {visibleTemplates.map((template) => (
+        <div className="fx-slide-from-right relative grid flex-1 auto-rows-min grid-cols-2 gap-3 overflow-y-auto p-4 pb-2">
+          {visibleTemplates.map((template, i) => (
             <TemplateCard
               key={template.id}
               template={template}
-              onSelect={setPreviewTemplate}
+              index={i}
+              onSelect={(t, origin) => setPreview({ template: t, origin })}
             />
           ))}
         </div>
       ) : (
         /* Daftar Draft Project — maksimal MAX_DRAFTS item, auto-save dari
            Editor (lihat lib/drafts.ts), diurutkan terbaru diubah duluan. */
-        <div className="relative flex-1 overflow-y-auto p-4 pb-2">
+        <div className="fx-slide-from-left relative flex-1 overflow-y-auto p-4 pb-2">
           {draftsLoading ? (
             <div className="flex h-full items-center justify-center text-black">
               <Loader2 size={20} className="animate-spin" />
             </div>
           ) : drafts.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center gap-3 px-6 text-center">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-black bg-white">
-                <FilePlus2 size={20} className="text-black" />
+              <div
+                className="fx-pop flex h-12 w-12 items-center justify-center rounded-lg border border-black bg-white"
+                style={fxDelay(80)}
+              >
+                <FilePlus2 size={20} className="fx-float text-black" />
               </div>
               <p
-                className="text-sm font-semibold text-black"
-                style={{ fontFamily: tokens.fonts.heading }}
+                className="fx-rise-sm text-sm font-semibold text-black"
+                style={fxDelay(180, { fontFamily: tokens.fonts.heading })}
               >
                 Belum ada draft
               </p>
-              <p className="text-xs leading-relaxed text-black/70">
+              <p className="fx-rise-sm text-xs leading-relaxed text-black/70" style={fxDelay(260)}>
                 Mulai project dari tab Template — perubahannya bakal
                 ke-auto-save di sini, sampai maksimal {MAX_DRAFTS} project
                 sekaligus.
               </p>
-              <div className="mt-1 flex items-center gap-2">
+              <div className="fx-stagger mt-1 flex items-center gap-2" style={{ ["--base" as string]: "340ms" }}>
                 <button
                   onClick={() => setActiveTab("template")}
+                  data-ripple
                   className="rounded-full bg-black px-4 py-2 text-xs font-semibold text-white transition hover:bg-white hover:text-black active:scale-[0.98]"
                 >
                   Pilih Template
@@ -666,6 +732,7 @@ export default function TemplateGallery({
                 <button
                   onClick={handleImportButtonClick}
                   disabled={importBusy}
+                  data-ripple
                   className="flex items-center gap-1.5 rounded-full border border-black px-4 py-2 text-xs font-semibold text-black transition hover:bg-black hover:text-white active:scale-[0.98] disabled:opacity-60"
                 >
                   {importBusy ? (
@@ -679,9 +746,11 @@ export default function TemplateGallery({
             </div>
           ) : (
             <div className="grid auto-rows-min grid-cols-2 gap-3">
-              {drafts.map((draft) => (
+              {drafts.map((draft, i) => (
                 <DraftCard
                   key={draft.id}
+                  index={i}
+                  removing={removingIds.has(draft.id)}
                   draft={draft}
                   onResume={handleResumeDraft}
                   onDelete={handleDeleteDraft}
@@ -697,57 +766,72 @@ export default function TemplateGallery({
 
       {/* Tab bar bawah — Draft (kiri) & Template (kanan), nempel di bawah
           layar, satu warna sama header (periwinkle), garis tipis hitam,
-          tanpa blur. Tab aktif pakai aksen pink homepage. */}
+          tanpa blur. Tab aktif ditandai pill pink (aksen homepage) yang
+          MELUNCUR antar tab, bukan ganti warna instan. */}
       <div
-        className="relative z-30 flex shrink-0 items-center gap-2 border-t border-black p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
-        style={{ backgroundColor: tokens.colors.pageBackground }}
+        className="fx-rise relative z-30 shrink-0 border-t border-black p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+        style={fxDelay(350, { backgroundColor: tokens.colors.pageBackground })}
       >
-        <button
-          onClick={() => setActiveTab("draft")}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-full border py-2.5 text-xs font-semibold tracking-wide transition active:scale-[0.97] ${
-            activeTab === "draft" ? "border-black text-black" : "border-black text-black hover:bg-black hover:text-white"
-          }`}
-          style={activeTab === "draft" ? { backgroundColor: tokens.colors.accent } : undefined}
-        >
-          <FolderClock size={15} />
-          Draft Project
-        </button>
-        <button
-          onClick={() => setActiveTab("template")}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-full border py-2.5 text-xs font-semibold tracking-wide transition active:scale-[0.97] ${
-            activeTab === "template" ? "border-black text-black" : "border-black text-black hover:bg-black hover:text-white"
-          }`}
-          style={activeTab === "template" ? { backgroundColor: tokens.colors.accent } : undefined}
-        >
-          <LayoutGrid size={15} />
-          Template
-        </button>
+        <div className="relative flex items-center gap-2">
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 left-0 w-[calc(50%-4px)] rounded-full border border-black transition-transform duration-500"
+            style={{
+              backgroundColor: tokens.colors.accent,
+              transitionTimingFunction: "cubic-bezier(0.34, 1.3, 0.64, 1)",
+              transform:
+                activeTab === "template" ? "translateX(calc(100% + 8px))" : "translateX(0)",
+            }}
+          />
+          <button
+            onClick={() => setActiveTab("draft")}
+            data-ripple
+            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-full border border-black py-2.5 text-xs font-semibold tracking-wide text-black transition duration-300 active:scale-[0.97] ${
+              activeTab === "draft" ? "" : "hover:bg-black hover:text-white"
+            }`}
+          >
+            <FolderClock size={15} />
+            Draft Project
+          </button>
+          <button
+            onClick={() => setActiveTab("template")}
+            data-ripple
+            className={`relative z-10 flex flex-1 items-center justify-center gap-1.5 rounded-full border border-black py-2.5 text-xs font-semibold tracking-wide text-black transition duration-300 active:scale-[0.97] ${
+              activeTab === "template" ? "" : "hover:bg-black hover:text-white"
+            }`}
+          >
+            <LayoutGrid size={15} />
+            Template
+          </button>
+        </div>
       </div>
 
-      {/* Halaman preview template — muncul pas kartu template di-tap,
-          baru masuk Editor lewat tombol "Gunakan template". */}
-      {previewTemplate && (
+      {/* Halaman preview template — membuka dari titik tap kartu (lingkaran),
+          menutup balik ke situ. Baru masuk Editor lewat "Gunakan template". */}
+      {previewP.item && (
         <TemplatePreview
-          template={previewTemplate}
+          template={previewP.item.template}
+          origin={previewP.item.origin}
+          closing={previewP.closing}
           badge={
-            COLLAGE_TEMPLATE_IDS.has(previewTemplate.id)
+            COLLAGE_TEMPLATE_IDS.has(previewP.item.template.id)
               ? "2 Gaya Progress"
               : undefined
           }
           preview={
-            COLLAGE_TEMPLATE_IDS.has(previewTemplate.id) ? (
-              <CollageThumbnail template={previewTemplate} />
+            COLLAGE_TEMPLATE_IDS.has(previewP.item.template.id) ? (
+              <CollageThumbnail template={previewP.item.template} />
             ) : (
               <TemplateThumbnail
-                template={previewTemplate}
-                alt={`Preview ${previewTemplate.name}`}
+                template={previewP.item.template}
+                alt={`Preview ${previewP.item.template.name}`}
                 className="absolute inset-0 h-full w-full object-cover"
                 instant
               />
             )
           }
-          onBack={() => setPreviewTemplate(null)}
-          onUse={() => onSelect(previewTemplate)}
+          onBack={() => setPreview(null)}
+          onUse={() => onSelect(previewP.item!.template)}
         />
       )}
 

@@ -1,4 +1,5 @@
 import type { LucideIcon } from "lucide-react";
+import { fxDelay } from "../../../motion/hooks";
 import {
   Music,
   Music2,
@@ -601,8 +602,8 @@ export default function Timeline(props: TimelineProps) {
     <>
       {!isFullscreen && (
       <div
-        className="flex shrink-0 select-none flex-col border-t border-white/5 bg-editor-panel"
-        style={{ height: timelineHeight }}
+        className="fx-rise flex shrink-0 select-none flex-col border-t border-white/5 bg-editor-panel"
+        style={fxDelay(300, { height: timelineHeight })}
       >
         {/* Handle drag — geser buat ngatur tinggi timeline, biar canvas
             preview di atas bisa keliatan penuh kalau ditarik ke bawah. */}

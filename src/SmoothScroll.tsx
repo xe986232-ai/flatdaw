@@ -1,5 +1,4 @@
 import { useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
 import Lenis from 'lenis'
 import 'lenis/dist/lenis.css'
 import { getLenis, setLenis } from './lenisInstance'
@@ -13,8 +12,7 @@ const EXCLUDED_PREFIXES = ['/editor']
 // Link anchor (#brands, #what, ...) di-handle Lenis (anchors: true). Jarak dari
 // nav sticky diatur lewat `scroll-mt-16` di tiap section, yang ikut dihitung Lenis.
 
-export default function SmoothScroll() {
-  const { pathname } = useLocation()
+export default function SmoothScroll({ pathname }: { pathname: string }) {
   const enabled = !EXCLUDED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`))
 
   useEffect(() => {
@@ -29,7 +27,9 @@ export default function SmoothScroll() {
 
   // Pindah halaman (bukan pindah hash) -> mulai lagi dari atas.
   useEffect(() => {
-    getLenis()?.scrollTo(0, { immediate: true, force: true })
+    const lenis = getLenis()
+    if (lenis) lenis.scrollTo(0, { immediate: true, force: true })
+    else window.scrollTo(0, 0)
   }, [pathname])
 
   return null

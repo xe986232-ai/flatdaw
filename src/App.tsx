@@ -4,6 +4,7 @@ import DawMockupPage from './pages/template/DawMockupPage'
 import EditorPage from './pages/editor/EditorPage'
 import IosMusicPlayerApp from './ios-music-player/IosMusicPlayerApp'
 import SmoothScroll from './SmoothScroll'
+import AnimatedRoutes from './motion/AnimatedRoutes'
 import { useFlmProject } from './useFlmProject'
 
 export default function App() {
@@ -18,27 +19,33 @@ export default function App() {
   const flmProject = useFlmProject()
 
   return (
-    <>
-      {/* Lenis nyala di semua halaman kecuali /editor/* (lihat SmoothScroll.tsx). */}
-      <SmoothScroll />
-      <Routes>
-      {/* Halaman utama (Rizz.). Hub template tetep di /template/daw-mockup. */}
-      <Route path="/" element={<HomePage />} />
+    <AnimatedRoutes>
+      {(location) => (
+        <>
+          {/* Lenis nyala di semua halaman kecuali /editor/* (lihat SmoothScroll.tsx).
+              Pakai path yang lagi DITAMPILKAN, bukan path tujuan, biar scroll baru
+              di-reset pas curtain lagi nutup layar. */}
+          <SmoothScroll pathname={location.pathname} />
+          <Routes location={location}>
+            {/* Halaman utama (Rizz.). Hub template tetep di /template/daw-mockup. */}
+            <Route path="/" element={<HomePage />} />
 
-      <Route
-        path="/template/daw-mockup"
-        element={<DawMockupPage onSelectTheme={(themeId) => navigate(`/editor/${themeId}`)} />}
-      />
+            <Route
+              path="/template/daw-mockup"
+              element={<DawMockupPage onSelectTheme={(themeId) => navigate(`/editor/${themeId}`)} />}
+            />
 
-      <Route path="/editor/:themeId" element={<EditorPage {...flmProject} />} />
+            <Route path="/editor/:themeId" element={<EditorPage {...flmProject} />} />
 
-      {/* Template iOS Music Player -- di-porting dari project spneditz
-          (5 varian: lockscreen, glass, black, v4, v5). App-nya sendiri
-          (gallery <-> editor) mandiri, gak nyentuh state flmProject. */}
-      <Route path="/template/ios-music-player" element={<IosMusicPlayerApp />} />
+            {/* Template iOS Music Player -- di-porting dari project spneditz
+                (5 varian: lockscreen, glass, black, v4, v5). App-nya sendiri
+                (gallery <-> editor) mandiri, gak nyentuh state flmProject. */}
+            <Route path="/template/ios-music-player" element={<IosMusicPlayerApp />} />
 
-      <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </>
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </>
+      )}
+    </AnimatedRoutes>
   )
 }

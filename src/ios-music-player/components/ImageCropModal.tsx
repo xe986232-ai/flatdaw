@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import Cropper, { type Area, type Point } from "react-easy-crop";
 import "react-easy-crop/react-easy-crop.css";
 import { Check, X, ZoomIn, ZoomOut } from "lucide-react";
+import { fxDelay } from "../../motion/hooks";
 
 interface ImageCropModalProps {
   /** Object URL dari file mentah yang baru dipilih user (belum di-crop). */
@@ -13,6 +14,8 @@ interface ImageCropModalProps {
   targetHeight: number;
   onConfirm: (blob: Blob) => void;
   onCancel: () => void;
+  /** true = animasi tutup lagi jalan (overlay memudar, gak bisa disentuh). */
+  closing?: boolean;
 }
 
 // Lantai resolusi output, biar hasil crop nggak pecah kalau slotnya kecil.
@@ -77,6 +80,7 @@ export default function ImageCropModal({
   targetHeight,
   onConfirm,
   onCancel,
+  closing = false,
 }: ImageCropModalProps) {
   const aspect = targetWidth > 0 && targetHeight > 0 ? targetWidth / targetHeight : 1;
 
@@ -126,10 +130,15 @@ export default function ImageCropModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-black/95">
-      <div className="flex shrink-0 items-center justify-between px-4 py-3">
+    <div
+      className={`fixed inset-0 z-[60] flex flex-col bg-black/95 ${
+        closing ? "fx-backdrop-out pointer-events-none" : "fx-backdrop-in"
+      }`}
+    >
+      <div className="fx-drop flex shrink-0 items-center justify-between px-4 py-3" style={fxDelay(80)}>
         <button
           onClick={onCancel}
+          data-ripple
           className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-paper transition active:scale-90"
           title="Batal"
         >
@@ -139,6 +148,7 @@ export default function ImageCropModal({
         <button
           onClick={handleConfirm}
           disabled={!pixelCrop || isProcessing}
+          data-ripple
           className="flex h-9 w-9 items-center justify-center rounded-full bg-editor-accent text-paper transition active:scale-90 disabled:opacity-40"
           title="Pakai crop ini"
         >
@@ -149,7 +159,7 @@ export default function ImageCropModal({
       {/* Area cropper — relative + flex-1 biar ngisi sisa layar, react-easy-crop
           butuh parent dengan tinggi pasti (position relative, overflow hidden
           sudah di-handle library-nya sendiri lewat container internalnya). */}
-      <div className="relative flex-1">
+      <div className="fx-scale-in relative flex-1" style={fxDelay(120)}>
         <Cropper
           image={imageUrl}
           crop={crop}
@@ -163,7 +173,7 @@ export default function ImageCropModal({
         />
       </div>
 
-      <div className="flex shrink-0 flex-col gap-3 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4">
+      <div className="fx-rise flex shrink-0 flex-col gap-3 px-4 pb-[calc(1rem+env(safe-area-inset-bottom))] pt-4" style={fxDelay(200)}>
         <div className="mx-auto flex w-full max-w-xs items-center gap-3">
           <ZoomOut size={16} className="shrink-0 text-mute" />
           <input

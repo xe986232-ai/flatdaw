@@ -40,6 +40,7 @@ import {
   Ban,
 } from "lucide-react";
 import ImageCropModal from "./ImageCropModal";
+import { fxDelay, usePresence, usePresenceValue } from "../../motion/hooks";
 import Timeline from "./timeline/Timeline";
 import type { Template, TemplateSlot, TemplateTextLayer, TemplateLyricsTextLayer, LyricsGroup, SlotType, LiquidGlassSettings } from "../types";
 import { LYRICS_FONTS, LyricsAnimationPresets, defaultLyricsLayer, LOOP_CYCLE_SEC, NEW_LYRICS_PRESET_KEYS } from "../lib/lyricsAnim";
@@ -194,6 +195,7 @@ function NavAction({
     <button
       onClick={disabled ? undefined : onClick}
       disabled={disabled}
+      data-ripple
       className={`flex h-12 w-12 flex-col items-center justify-center gap-0.5 rounded-xl transition active:scale-90 ${
         active
           ? "bg-editor-accent/20 text-editor-accent"
@@ -288,7 +290,7 @@ function BottomNavCard({
       className="relative z-30 flex shrink-0 flex-col overflow-hidden rounded-t-2xl border-t border-white/5 bg-editor-panel"
       style={{ height: cardHeight }}
     >
-      <div ref={contentRef} key={shown.key} className="flex flex-1 flex-col">
+      <div ref={contentRef} key={shown.key} className="fx-panel-in flex flex-1 flex-col">
         {shown.node}
       </div>
     </div>
@@ -1187,6 +1189,8 @@ export default function Editor({
     // boleh di-revoke.
     file?: File;
   } | null>(null);
+  // Presence: overlay crop tetap ter-mount selama animasi tutupnya jalan.
+  const cropP = usePresenceValue(cropTarget, 270);
 
   // ---- Bottom sheet buat panel "banyak kontrol" (Background & Liquid
   // Glass) — sengaja dipisah dari toolbar bawah biasa dan dirender sebagai
@@ -1436,6 +1440,8 @@ export default function Editor({
   // isinya 2 pilihan: "Export Video" (jalur lama, full render) atau
   // "Export Gambar" (ambil frame preview yang lagi tampil, instan).
   const [showExportMenu, setShowExportMenu] = useState(false);
+  // Presence buat overlay: tetap ter-mount selama animasi keluarnya jalan.
+  const exportMenuP = usePresence(showExportMenu, 170);
 
   const timelineScrollRef = useRef<HTMLDivElement | null>(null);
   const rafRef = useRef<number | null>(null);
@@ -1533,6 +1539,7 @@ export default function Editor({
   // progress, teks, & foto/background) biar gak perlu ngatur ulang dari nol
   // tiap buka project baru.
   const [showPresetPanel, setShowPresetPanel] = useState(false);
+  const presetP = usePresence(showPresetPanel, 270);
   const [presets, setPresets] = useState<PresetSummary[]>([]);
   const [presetsLoading, setPresetsLoading] = useState(false);
   const [presetName, setPresetName] = useState("");
@@ -4221,6 +4228,12 @@ export default function Editor({
     exportAbortRef.current?.abort();
   }
 
+  // Modal progress/hasil export: fade-in pas muncul, fade-out pas ditutup.
+  const exportP = usePresence(
+    isExporting || !!exportResultUrl || !!exportError,
+    230,
+  );
+
   // ---- Track audio (dipakai bareng di tab Edit & tab Audio, biar musik
   // latar kelihatan pas lagi ngedit klip media juga, nggak perlu pindah
   // tab). Dirender sebagai kumpulan KLIP terpisah (bukan satu blok
@@ -4229,17 +4242,18 @@ export default function Editor({
   // null kalau slot audio ini belum ada isinya.
 
   return (
-    <div className="relative flex h-[100dvh] w-screen flex-col overflow-hidden bg-editor-bg font-sans">
+    <div className="fx-fade relative flex h-[100dvh] w-screen flex-col overflow-hidden bg-editor-bg font-sans">
       {/* Top bar — restyle ala mockup "iPhone Music Player V4": grid 3 kolom
           (kiri: back + divider + judul, tengah: spacer, kanan: tombol
           Export solid), bukan lagi judul absolute-center kayak sebelumnya.
           Di-hide total pas fullscreen. */}
       {!isFullscreen && (
-      <header className="grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5">
+      <header className="fx-drop grid shrink-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5" style={fxDelay(150)}>
         <div className="flex min-w-0 items-center gap-3">
           <button
             onClick={onBack}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-paper/80 transition hover:text-paper active:scale-90"
+            data-ripple
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-paper/80 transition hover:-translate-x-0.5 hover:text-paper active:scale-90"
             title="Kembali ke daftar template"
           >
             <ArrowLeft size={20} />
@@ -4268,6 +4282,7 @@ export default function Editor({
               <button
                 onClick={() => setShowExportMenu((v) => !v)}
                 disabled={isExporting}
+                data-ripple
                 className="flex items-center gap-2 rounded-xl bg-editor-accent px-3 py-[6px] text-[13px] font-semibold text-paper transition active:scale-90 disabled:opacity-60"
                 title={isExporting ? "Merender…" : "Ekspor"}
                 aria-label="Ekspor"
@@ -4280,14 +4295,18 @@ export default function Editor({
                 Export
               </button>
 
-              {showExportMenu && (
+              {exportMenuP.mounted && (
                 <>
                   {/* Backdrop transparan buat nutup menu kalau tap di luar */}
                   <div
-                    className="fixed inset-0 z-40"
+                    className={`fixed inset-0 z-40 ${exportMenuP.closing ? "pointer-events-none" : ""}`}
                     onClick={() => setShowExportMenu(false)}
                   />
-                  <div className="absolute right-0 top-[calc(100%+6px)] z-50 w-48 overflow-hidden rounded-2xl border border-white/10 bg-editor-panel">
+                  <div
+                    className={`absolute right-0 top-[calc(100%+6px)] z-50 w-48 overflow-hidden rounded-2xl border border-white/10 bg-editor-panel ${
+                      exportMenuP.closing ? "fx-dd-out" : "fx-dd-in"
+                    }`}
+                  >
                     <button
                       onClick={() => {
                         setShowExportMenu(false);
@@ -4346,7 +4365,7 @@ export default function Editor({
             TextPresetLoopPreview) biar user langsung kebayang gimana
             animasinya sebelum di-tap. Tap kartu -> applyTextPreset. */}
         {isTextMode && !isFullscreen && !isExporting && (
-          <div className="absolute left-2 top-1/2 z-30 flex w-[92px] -translate-y-1/2 flex-col gap-2 sm:left-4 sm:w-[104px]">
+          <div className="fx-stagger absolute left-2 top-1/2 z-30 flex w-[92px] -translate-y-1/2 flex-col gap-2 sm:left-4 sm:w-[104px]">
             <span className="px-0.5 text-[9px] font-semibold uppercase tracking-wide text-mute">
               Preset teks
             </span>
@@ -4355,6 +4374,7 @@ export default function Editor({
                 key={preset.id}
                 onClick={() => applyTextPreset(preset)}
                 title={`Tambah teks gaya ${preset.name}`}
+                data-ripple
                 className="flex flex-col items-center gap-1 rounded-xl border border-white/10 bg-editor-panel/90 py-3 transition active:scale-95"
               >
                 <span className="flex h-9 w-full items-center justify-center overflow-hidden px-1 text-base font-bold">
@@ -4379,11 +4399,11 @@ export default function Editor({
           // boks + boxShadow warna-warni ngikut dominantColor foto
           // sampul — dihapus (diganti outline tipis polos) karena
           // kesannya norak/ganggu & bikin fokus teralih dari canvas.
-          className="relative mx-auto max-h-full max-w-full overflow-hidden rounded-sm bg-black outline outline-1 outline-white/15"
-          style={{
+          className="fx-scale-in relative mx-auto max-h-full max-w-full overflow-hidden rounded-sm bg-black outline outline-1 outline-white/15"
+          style={fxDelay(220, {
             width: previewBoxSize?.width ?? "100%",
             height: previewBoxSize?.height ?? "100%",
-          }}
+          })}
         >
           {template.baseAssetSrc || template.solidBackground ? (
             <canvas
@@ -4674,15 +4694,16 @@ export default function Editor({
 
       {/* Overlay crop foto sampul — muncul begitu user pilih file baru
           buat slot bertipe image (lihat handleFileChange). */}
-      {cropTarget && (
+      {cropP.item && (
         <ImageCropModal
           // key: mastiin instance-nya remount bersih tiap sesi crop baru
           // (mis. foto sample gagal -> user batal -> coba foto lain),
           // biar state cropError/pixelCrop/zoom lama nggak kebawa-bawa.
-          key={`${cropTarget.slotId}-${cropTarget.url}`}
-          imageUrl={cropTarget.url}
-          targetWidth={cropTarget.targetWidth}
-          targetHeight={cropTarget.targetHeight}
+          key={`${cropP.item.slotId}-${cropP.item.url}`}
+          closing={cropP.closing}
+          imageUrl={cropP.item.url}
+          targetWidth={cropP.item.targetWidth}
+          targetHeight={cropP.item.targetHeight}
           onConfirm={handleCropConfirm}
           onCancel={handleCropCancel}
         />
@@ -5573,7 +5594,7 @@ export default function Editor({
           !quickTextNavActions && (panelMode !== "default" || hasDefaultContent);
 
         return (
-          <div className="relative z-30 shrink-0">
+          <div className="fx-rise relative z-30 shrink-0" style={fxDelay(380)}>
             {showOverlay && (
               <div className="absolute inset-x-0 bottom-full">
                 <BottomNavCard
@@ -5585,7 +5606,10 @@ export default function Editor({
               </div>
             )}
 
-            <div className="flex items-center justify-between gap-1 border-t border-white/5 bg-editor-panel px-3 pb-3 pt-2">
+            <div
+              className="fx-stagger flex items-center justify-between gap-1 border-t border-white/5 bg-editor-panel px-3 pb-3 pt-2"
+              style={{ ["--base" as string]: "480ms" }}
+            >
               {quickTextNavActions ? (
                 quickTextNavActions
               ) : (
@@ -5650,9 +5674,17 @@ export default function Editor({
 
       {/* Modal Preset — simpan pengaturan sekarang jadi preset baru, atau
           muat/hapus preset yang sudah ada. */}
-      {showPresetPanel && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-6">
-          <div className="flex max-h-[85dvh] w-full max-w-sm flex-col rounded-t-2xl bg-panel sm:rounded-2xl">
+      {presetP.mounted && (
+        <div
+          className={`fixed inset-0 z-50 flex items-end justify-center bg-black/70 sm:items-center sm:p-6 ${
+            presetP.closing ? "fx-backdrop-out pointer-events-none" : "fx-backdrop-in"
+          }`}
+        >
+          <div
+            className={`flex max-h-[85dvh] w-full max-w-sm flex-col rounded-t-2xl bg-panel sm:rounded-2xl ${
+              presetP.closing ? "fx-modal-out" : "fx-modal-in"
+            }`}
+          >
             <div className="flex shrink-0 items-center justify-between border-b border-mute/10 px-4 py-3">
               <h2 className="text-sm font-semibold text-paper">Preset</h2>
               <button
@@ -5772,11 +5804,15 @@ export default function Editor({
           (editor-bg/editor-panel/editor-track + aksen ungu editor-accent),
           bukan lagi palet lama (panel/graphite/rec) biar nyambung visual
           sama layar editornya. */}
-      {(isExporting || exportResultUrl || exportError) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6">
-          <div className="relative w-full max-w-xs overflow-hidden rounded-3xl border border-white/10 bg-editor-panel p-5 text-center">
+      {exportP.mounted && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6 ${
+            exportP.closing ? "fx-backdrop-out pointer-events-none" : "fx-backdrop-in"
+          }`}
+        >
+          <div className="fx-pop-in relative w-full max-w-xs overflow-hidden rounded-3xl border border-white/10 bg-editor-panel p-5 text-center">
             {isExporting && (
-              <div className="relative">
+              <div className="fx-rise-sm relative">
                 {exportSnapshot ? (
                   <div className={`relative mx-auto mb-4 ${getRatioAspectClass(canvasRatio)} w-full overflow-hidden rounded-2xl border border-white/10 bg-black`}>
                     <img
@@ -5829,7 +5865,7 @@ export default function Editor({
             )}
 
             {!isExporting && exportError && (
-              <div className="relative">
+              <div className="fx-rise-sm relative">
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-rec/15">
                   <X size={20} className="text-rec" />
                 </div>
@@ -5847,7 +5883,7 @@ export default function Editor({
             )}
 
             {!isExporting && exportResultUrl && (
-              <div className="relative">
+              <div className="fx-rise-sm relative">
                 <div className="flex items-center justify-center gap-2">
                   <div className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500/15">
                     <Check size={16} className="text-emerald-400" />
@@ -5881,6 +5917,7 @@ export default function Editor({
                   <a
                     href={exportResultUrl}
                     download={`${template.id}.${exportKind === "image" ? "png" : "mp4"}`}
+                    data-ripple
                     className="flex-1 rounded-full bg-editor-accent px-3 py-2.5 text-xs font-semibold text-paper transition hover:brightness-110 active:scale-[0.98]"
                   >
                     Unduh

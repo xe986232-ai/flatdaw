@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./motion/motion.css";
 
 @theme {
   /* Track category palette — tetap dipakai sebagai warna aksen clip di atas

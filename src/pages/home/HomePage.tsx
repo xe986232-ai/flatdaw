@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { tokens } from '../../designTokens'
 import SiteNav from './SiteNav'
+import Reveal from '../../motion/Reveal'
+import { fxDelay } from '../../motion/hooks'
 import iosMusicMockup from '../../assets/ios-music-mockup.webp'
 
 // Halaman utama (route "/"). Gaya & palet ngikut style-guide referensi yang
@@ -105,30 +107,32 @@ const HERO_ROWS: Array<Array<[number, number, string]>> = [
 
 function Eyebrow({ children, color }: { children: ReactNode; color: string }) {
   return (
-    <p className="text-xs font-bold uppercase tracking-widest sm:text-sm" style={{ color }}>
+    <Reveal as="p" className="text-xs font-bold uppercase tracking-widest sm:text-sm" style={{ color }}>
       {children}
-    </p>
+    </Reveal>
   )
 }
 
 function SectionHeading({ children, color }: { children: ReactNode; color: string }) {
   return (
-    <h2
+    <Reveal
+      as="h2"
+      delay={90}
       className="mt-3 max-w-3xl text-[34px] font-bold leading-[1.05] sm:text-[52px]"
       style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-1px', color }}
     >
       {children}
-    </h2>
+    </Reveal>
   )
 }
 
 const containerClass = 'mx-auto max-w-[1400px] px-6 sm:px-10'
 const sectionClass = 'scroll-mt-16 py-14 sm:py-20'
 const pillButton =
-  'inline-flex min-h-[44px] items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white transition-colors hover:bg-[#ffacff] hover:text-black'
+  'inline-flex min-h-[44px] items-center justify-center rounded-full bg-black px-6 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-[#ffacff] hover:text-black active:translate-y-0 active:scale-95'
 // Versi buat latar gelap.
 const pillLight =
-  'inline-flex min-h-[44px] items-center justify-center rounded-full bg-white px-6 text-sm font-medium text-black transition-colors hover:bg-[#ffacff]'
+  'inline-flex min-h-[44px] items-center justify-center rounded-full bg-white px-6 text-sm font-medium text-black transition duration-200 hover:-translate-y-0.5 hover:bg-[#ffacff] active:translate-y-0 active:scale-95'
 
 function HeroVisual() {
   return (
@@ -143,18 +147,20 @@ function HeroVisual() {
             {clips.map(([left, width, color], i) => (
               <span
                 key={i}
-                className={`absolute top-1 bottom-1 rounded-[3px] ${color}`}
-                style={{ left: `${left}%`, width: `${width}%` }}
+                className={`fx-clip absolute top-1 bottom-1 rounded-[3px] ${color}`}
+                style={fxDelay(200 + row * 110 + i * 70, { left: `${left}%`, width: `${width}%` })}
               />
             ))}
           </div>
         ))}
       </div>
       {/* Playhead */}
-      <span
-        className="absolute bottom-3 top-3 w-0.5"
-        style={{ left: '44%', backgroundColor: tokens.colors.accent }}
-      />
+      <div className="pointer-events-none absolute inset-0" style={{ containerType: 'inline-size' }}>
+        <span
+          className="fx-playhead absolute bottom-3 top-3 left-0 w-0.5"
+          style={{ backgroundColor: tokens.colors.accent }}
+        />
+      </div>
     </div>
   )
 }
@@ -162,7 +168,8 @@ function HeroVisual() {
 function CategoryRow({ c }: { c: Category }) {
   const dark = c.color.fg === '#ffffff'
   return (
-    <article
+    <Reveal
+      as="article"
       className="grid overflow-hidden rounded-lg md:grid-cols-2"
       style={{
         backgroundColor: c.color.bg,
@@ -172,31 +179,31 @@ function CategoryRow({ c }: { c: Category }) {
     >
       {/* KIRI: penjelasan template */}
       <div className="flex flex-col p-6 sm:p-10">
-        <div className="flex items-center justify-between gap-3">
+        <div className="fx-child flex items-center justify-between gap-3" style={fxDelay(180)}>
           <p className="text-xs font-bold uppercase tracking-widest sm:text-sm">{c.eyebrow}</p>
           <span className="rounded-full border px-3 py-1 text-xs font-medium" style={{ borderColor: c.color.fg }}>
             {c.tag}
           </span>
         </div>
         <h3
-          className="mt-4 text-[34px] font-bold leading-[1.05] sm:text-[44px]"
-          style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-1px' }}
+          className="fx-child mt-4 text-[34px] font-bold leading-[1.05] sm:text-[44px]"
+          style={fxDelay(260, { fontFamily: tokens.fonts.heading, letterSpacing: '-1px' })}
         >
           {c.name}
         </h3>
-        <p className="mt-3 max-w-md text-sm leading-relaxed sm:text-base" style={{ color: `${c.color.fg}cc` }}>
+        <p className="fx-child mt-3 max-w-md text-sm leading-relaxed sm:text-base" style={fxDelay(340, { color: `${c.color.fg}cc` })}>
           {c.text}
         </p>
         {c.note && (
-          <p className="mt-3 max-w-md text-xs leading-relaxed sm:text-sm" style={{ color: `${c.color.fg}b3` }}>
+          <p className="fx-child mt-3 max-w-md text-xs leading-relaxed sm:text-sm" style={fxDelay(400, { color: `${c.color.fg}b3` })}>
             {c.note}
           </p>
         )}
 
         {c.features.length > 0 && (
           <ul className="mt-5 flex flex-wrap gap-2">
-            {c.features.map((f) => (
-              <li key={f} className="rounded-full border px-3 py-1 text-xs font-medium sm:text-sm" style={{ borderColor: c.color.fg }}>
+            {c.features.map((f, i) => (
+              <li key={f} className="fx-child fx-child-pop rounded-full border px-3 py-1 text-xs font-medium sm:text-sm" style={fxDelay(460 + i * 90, { borderColor: c.color.fg })}>
                 {f}
               </li>
             ))}
@@ -204,14 +211,15 @@ function CategoryRow({ c }: { c: Category }) {
         )}
 
         {c.templates && (
-          <div className="mt-8">
+          <div className="fx-child mt-8" style={fxDelay(540)}>
             <p className="text-xs font-bold uppercase tracking-widest">Templates in this category</p>
             <div className="mt-3 flex flex-wrap gap-3">
               {c.templates.map((t) => (
                 <Link
                   key={t.id}
                   to={`/editor/${t.id}`}
-                  className="inline-flex min-h-[40px] items-center rounded-full border px-5 text-sm font-medium transition-opacity hover:opacity-70"
+                  data-ripple
+                  className="inline-flex min-h-[40px] items-center rounded-full border px-5 text-sm font-medium transition duration-200 hover:-translate-y-0.5 hover:opacity-70 active:scale-95"
                   style={{ borderColor: c.color.fg }}
                 >
                   {t.name} →
@@ -221,8 +229,8 @@ function CategoryRow({ c }: { c: Category }) {
           </div>
         )}
         {c.href && (
-          <div className="mt-5">
-            <Link to={c.href} className={dark ? pillLight : pillButton}>
+          <div className="fx-child mt-5" style={fxDelay(620)}>
+            <Link to={c.href} data-ripple className={dark ? pillLight : pillButton}>
               {c.hrefLabel ?? 'See all DAW templates →'}
             </Link>
           </div>
@@ -232,21 +240,23 @@ function CategoryRow({ c }: { c: Category }) {
       {/* KANAN: gambar mock-up */}
       <div className="flex items-center justify-center p-6 sm:p-10 md:py-12">
         {c.visual === 'daw' ? (
-          <div className="w-full max-w-[520px]">
+          <div className="fx-child fx-child-pop w-full max-w-[520px]" style={fxDelay(300)}>
             <HeroVisual />
           </div>
         ) : (
+          <div className="fx-child fx-child-slide" style={fxDelay(300)}>
           <img
             src={iosMusicMockup}
             alt="Phone showing an iOS-style music player, a preview of the iOS Music Player template"
             width={761}
             height={1200}
             loading="lazy"
-            className="h-[400px] w-auto drop-shadow-[0_18px_30px_rgba(0,0,0,0.3)] sm:h-[500px]"
+            className="fx-float h-[400px] w-auto drop-shadow-[0_18px_30px_rgba(0,0,0,0.3)] sm:h-[500px]"
           />
+          </div>
         )}
       </div>
-    </article>
+    </Reveal>
   )
 }
 
@@ -263,26 +273,35 @@ export default function HomePage() {
           style={{ backgroundColor: tokens.colors.pageBackground }}
         >
           <div className={`${containerClass} flex w-full flex-1 flex-col justify-center`}>
-            <Eyebrow color="#000000">(VISUAL TEMPLATES FOR MUSIC)</Eyebrow>
+            <p
+              className="fx-rise-sm text-xs font-bold uppercase tracking-widest sm:text-sm"
+              style={fxDelay(150, { color: '#000000' })}
+            >
+              (VISUAL TEMPLATES FOR MUSIC)
+            </p>
             <h1
               className="mt-3 text-[42px] font-bold leading-[1.05] text-black sm:text-[72px] lg:text-[96px]"
               style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-1.5px' }}
             >
-              MAKE VISUALS
-              <br />
-              FOR YOUR MUSIC.
+              <span className="fx-mask">
+                <span className="fx-mask-inner" style={fxDelay(260)}>MAKE VISUALS</span>
+              </span>
+              <span className="fx-mask">
+                <span className="fx-mask-inner" style={fxDelay(380)}>FOR YOUR MUSIC.</span>
+              </span>
             </h1>
-            <p className="mt-6 max-w-xl text-sm leading-relaxed text-black/70 sm:text-base">
+            <p className="fx-rise mt-6 max-w-xl text-sm leading-relaxed text-black/70 sm:text-base" style={fxDelay(560)}>
               Rizz. is a set of templates that turn your music into visuals, right in the browser. Start with an
               iOS-style music player. DAW mock-ups built from your own FL Studio Mobile project are on the way.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a href="#brands" className={pillButton}>
+            <div className="fx-stagger mt-8 flex flex-wrap gap-3" style={{ ['--base' as string]: '680ms' }}>
+              <a href="#brands" data-ripple className={pillButton}>
                 Browse templates →
               </a>
               <a
                 href="#what"
-                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-black px-6 text-sm font-medium text-black transition-colors hover:bg-black hover:text-white"
+                data-ripple
+                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-black px-6 text-sm font-medium text-black transition duration-200 hover:-translate-y-0.5 hover:bg-black hover:text-white active:translate-y-0 active:scale-95"
               >
                 How it works
               </a>
@@ -295,10 +314,10 @@ export default function HomePage() {
           <div className={containerClass}>
             <Eyebrow color={tokens.colors.accent}>(TEMPLATE CATEGORIES)</Eyebrow>
             <SectionHeading color="#ffffff">PICK A CATEGORY, THEN A TEMPLATE.</SectionHeading>
-            <p className="mt-5 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
+            <Reveal as="p" delay={180} className="mt-5 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
               Every template belongs to a category, and each category is a different kind of visual. Choose the one that
               fits how you want to show your music.
-            </p>
+            </Reveal>
             <div className="mt-10 flex flex-col gap-4">
               {CATEGORIES.map((c) => (
                 <CategoryRow key={c.id} c={c} />
@@ -313,19 +332,20 @@ export default function HomePage() {
             <Eyebrow color="#000000">(WHAT WE DO)</Eyebrow>
             <SectionHeading color="#000000">FROM YOUR MUSIC TO A SHAREABLE VISUAL</SectionHeading>
             <ol className="mt-10 grid gap-8 md:grid-cols-3">
-              {STEPS.map((s) => (
-                <li key={s.n} className="border-t-2 border-black pt-4">
+              {STEPS.map((s, i) => (
+                <Reveal as="li" key={s.n} delay={i * 140} className="relative pt-4">
+                  <span aria-hidden="true" className="fx-line absolute inset-x-0 top-0 h-0.5 bg-black" style={fxDelay(i * 140)} />
                   <span
-                    className="text-5xl font-bold text-black sm:text-6xl"
-                    style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-1px' }}
+                    className="fx-child fx-child-pop inline-block text-5xl font-bold text-black sm:text-6xl"
+                    style={fxDelay(i * 140 + 200, { fontFamily: tokens.fonts.heading, letterSpacing: '-1px' })}
                   >
                     {s.n}
                   </span>
-                  <h3 className="mt-3 text-xl font-bold text-black" style={{ fontFamily: tokens.fonts.heading }}>
+                  <h3 className="fx-child mt-3 text-xl font-bold text-black" style={fxDelay(i * 140 + 300, { fontFamily: tokens.fonts.heading })}>
                     {s.title}
                   </h3>
-                  <p className="mt-2 max-w-sm text-sm leading-relaxed text-black/75 sm:text-base">{s.text}</p>
-                </li>
+                  <p className="fx-child mt-2 max-w-sm text-sm leading-relaxed text-black/75 sm:text-base" style={fxDelay(i * 140 + 380)}>{s.text}</p>
+                </Reveal>
               ))}
             </ol>
           </div>
@@ -336,12 +356,12 @@ export default function HomePage() {
           <div className={containerClass}>
             <Eyebrow color={tokens.colors.accent}>(WHO WE ARE)</Eyebrow>
             <SectionHeading color="#ffffff">A PERSONAL PROJECT, BUILT IN THE OPEN.</SectionHeading>
-            <p className="mt-5 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
+            <Reveal as="p" delay={180} className="mt-5 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
               Rizz. is a personal project for making music visuals in the browser. It began as a mock-up of a DAW playlist
               and now includes an iOS-style music player. DAW mock-ups built from real FL Studio Mobile projects are coming
               to the site soon, with more template types to follow. It is made by one person, the code is public, and it
               keeps changing.
-            </p>
+            </Reveal>
           </div>
         </section>
 
@@ -351,15 +371,18 @@ export default function HomePage() {
             <Eyebrow color="#000000">(NEWSROOM)</Eyebrow>
             <SectionHeading color="#000000">LATEST UPDATES</SectionHeading>
             <ul className="mt-10 max-w-2xl">
-              {UPDATES.map((u) => (
-                <li
+              {UPDATES.map((u, i) => (
+                <Reveal
+                  as="li"
                   key={u.title}
-                  className="flex flex-col gap-1 border-t py-4 sm:flex-row sm:items-baseline sm:gap-6"
-                  style={{ borderColor: 'rgba(0,0,0,0.15)' }}
+                  variant="left"
+                  delay={i * 90}
+                  className="relative flex flex-col gap-1 py-4 sm:flex-row sm:items-baseline sm:gap-6"
                 >
+                  <span aria-hidden="true" className="fx-line absolute inset-x-0 top-0 h-px" style={fxDelay(i * 90, { backgroundColor: 'rgba(0,0,0,0.15)' })} />
                   <span className="w-24 shrink-0 text-xs font-bold uppercase tracking-widest text-black/50">{u.date}</span>
                   <span className="text-base font-medium text-black">{u.title}</span>
-                </li>
+                </Reveal>
               ))}
             </ul>
           </div>
@@ -370,33 +393,34 @@ export default function HomePage() {
           <div className={containerClass}>
             <Eyebrow color={tokens.colors.accent}>(WHERE TO FIND US)</Eyebrow>
             <SectionHeading color="#ffffff">FIND RIZZ. ONLINE</SectionHeading>
-            <p className="mt-5 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
+            <Reveal as="p" delay={180} className="mt-5 max-w-xl text-sm leading-relaxed text-white/70 sm:text-base">
               Try Rizz. in the browser, or follow along and get in touch through the repository.
-            </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <a href={LIVE_URL} className={pillLight}>
+            </Reveal>
+            <Reveal delay={260} className="mt-8 flex flex-wrap gap-3">
+              <a href={LIVE_URL} data-ripple className={pillLight}>
                 Open the live site
               </a>
               <a
                 href={GITHUB_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-white px-6 text-sm font-medium text-white transition-colors hover:bg-white hover:text-black"
+                data-ripple
+                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-white px-6 text-sm font-medium text-white transition duration-200 hover:-translate-y-0.5 hover:bg-white hover:text-black active:translate-y-0 active:scale-95"
               >
                 View on GitHub ↗
               </a>
-            </div>
+            </Reveal>
           </div>
         </section>
       </main>
 
       <footer className="border-t py-8" style={{ borderColor: tokens.colors.border }}>
-        <div className={`${containerClass} flex flex-col gap-2 text-xs text-white/50 sm:flex-row sm:justify-between sm:text-sm`}>
+        <Reveal variant="fade" className={`${containerClass} flex flex-col gap-2 text-xs text-white/50 sm:flex-row sm:justify-between sm:text-sm`}>
           <span style={{ fontFamily: tokens.fonts.heading }} className="font-bold text-white">
             Rizz.
           </span>
           <span>A personal project. © 2026</span>
-        </div>
+        </Reveal>
       </footer>
     </div>
   )

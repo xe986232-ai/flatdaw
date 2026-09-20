@@ -1,0 +1,203 @@
+/* =====================================================================
+   Sistem animasi Rizz. — SEMUA flat: cuma transform + opacity + clip-path
+   (tanpa shadow/glow/blur). Prefix kelas `fx-` (BUKAN `m-`, biar gak
+   ketuker sama utilitas margin Tailwind).
+   ===================================================================== */
+
+:root {
+  --fx-ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --fx-ease-in: cubic-bezier(0.55, 0, 1, 0.45);
+  --fx-ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --fx-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ---------- Keyframes ---------- */
+@keyframes fx-fade-in { from { opacity: 0; } }
+@keyframes fx-fade-out { to { opacity: 0; } }
+@keyframes fx-rise { from { opacity: 0; transform: translate3d(0, 28px, 0); } }
+@keyframes fx-rise-sm { from { opacity: 0; transform: translate3d(0, 12px, 0); } }
+@keyframes fx-drop { from { opacity: 0; transform: translate3d(0, -18px, 0); } }
+@keyframes fx-slide-from-right { from { opacity: 0; transform: translate3d(36px, 0, 0); } }
+@keyframes fx-slide-from-left { from { opacity: 0; transform: translate3d(-36px, 0, 0); } }
+@keyframes fx-scale-in { from { opacity: 0; transform: scale(0.92); } }
+@keyframes fx-pop { from { opacity: 0; transform: scale(0.8); } }
+@keyframes fx-pop-out { to { opacity: 0; transform: scale(0.94); } }
+@keyframes fx-sheet-up { from { transform: translate3d(0, 100%, 0); } }
+@keyframes fx-sheet-down { to { transform: translate3d(0, 100%, 0); } }
+@keyframes fx-mask-up { from { transform: translate3d(0, 112%, 0); } }
+@keyframes fx-wipe-x { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes fx-settle { from { transform: scale(1.14); } }
+@keyframes fx-float { 50% { transform: translate3d(0, -10px, 0); } }
+@keyframes fx-pulse-soft { 50% { transform: scale(1.1); } }
+@keyframes fx-playhead { from { transform: translate3d(6cqw, 0, 0); } to { transform: translate3d(94cqw, 0, 0); } }
+@keyframes fx-card-out { to { opacity: 0; transform: scale(0.86); } }
+@keyframes fx-ripple { from { transform: scale(0); opacity: 0.22; } to { transform: scale(1); opacity: 0; } }
+@keyframes fx-dd-in { from { opacity: 0; transform: translate3d(0, -8px, 0) scale(0.96); } }
+@keyframes fx-dd-out { to { opacity: 0; transform: translate3d(0, -6px, 0) scale(0.97); } }
+@keyframes fx-circle-in {
+  from { clip-path: circle(0px at var(--ox, 50%) var(--oy, 50%)); }
+  to { clip-path: circle(130vmax at var(--ox, 50%) var(--oy, 50%)); }
+}
+@keyframes fx-circle-out {
+  from { clip-path: circle(130vmax at var(--ox, 50%) var(--oy, 50%)); }
+  to { clip-path: circle(0px at var(--ox, 50%) var(--oy, 50%)); }
+}
+@keyframes fx-curtain-cover { from { transform: translate3d(0, 100%, 0); } to { transform: translate3d(0, 0, 0); } }
+@keyframes fx-curtain-reveal { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(0, -100%, 0); } }
+@keyframes fx-logo-in { from { opacity: 0; transform: translate3d(0, 24px, 0) scale(0.9); } }
+
+/* ---------- Entrance sekali jalan (pas mount). Delay lewat --d ---------- */
+.fx-fade { animation: fx-fade-in 0.6s var(--fx-ease-out) var(--d, 0ms) backwards; }
+.fx-rise { animation: fx-rise 0.8s var(--fx-ease-out) var(--d, 0ms) backwards; }
+.fx-rise-sm { animation: fx-rise-sm 0.5s var(--fx-ease-out) var(--d, 0ms) backwards; }
+.fx-drop { animation: fx-drop 0.6s var(--fx-ease-out) var(--d, 0ms) backwards; }
+.fx-slide-from-right { animation: fx-slide-from-right 0.5s var(--fx-ease-out) var(--d, 0ms) backwards; }
+.fx-slide-from-left { animation: fx-slide-from-left 0.5s var(--fx-ease-out) var(--d, 0ms) backwards; }
+.fx-scale-in { animation: fx-scale-in 0.6s var(--fx-ease-out) var(--d, 0ms) backwards; }
+.fx-pop { animation: fx-pop 0.5s var(--fx-ease-spring) var(--d, 0ms) backwards; }
+.fx-wipe-x { animation: fx-wipe-x 0.7s var(--fx-ease-in-out) var(--d, 0ms) backwards; }
+.fx-settle { animation: fx-settle 1.1s var(--fx-ease-out) backwards; }
+
+/* Kartu galeri masuk berurutan (stagger lewat --d) */
+.fx-card-in { animation: fx-rise 0.6s var(--fx-ease-out) var(--d, 0ms) backwards; }
+.fx-card-out { animation: fx-card-out 0.26s var(--fx-ease-in) forwards; }
+
+/* Judul per baris: naik dari balik "topeng" */
+.fx-mask { display: block; overflow: hidden; padding-bottom: 0.08em; margin-bottom: -0.08em; }
+.fx-mask-inner { display: block; animation: fx-mask-up 0.95s var(--fx-ease-out) var(--d, 0ms) backwards; }
+
+/* Loop halus */
+.fx-float { animation: fx-float 5.5s ease-in-out infinite; }
+.fx-pulse-soft { animation: fx-pulse-soft 2.4s ease-in-out infinite; }
+.fx-playhead { animation: fx-playhead 7s linear infinite alternate; }
+
+/* ---------- Keluar (pasangan presence) ---------- */
+.fx-fade-out { animation: fx-fade-out 0.2s var(--fx-ease-in) forwards; }
+.fx-backdrop-in { animation: fx-fade-in 0.25s linear backwards; }
+.fx-backdrop-out { animation: fx-fade-out 0.22s linear forwards; }
+
+/* Modal: sheet naik dari bawah di layar kecil, pop di layar lebar */
+.fx-modal-in { animation: fx-sheet-up 0.4s var(--fx-ease-out) backwards; }
+.fx-modal-out { animation: fx-sheet-down 0.26s var(--fx-ease-in) forwards; }
+@media (min-width: 640px) {
+  .fx-modal-in { animation: fx-pop 0.36s var(--fx-ease-spring) backwards; }
+  .fx-modal-out { animation: fx-pop-out 0.2s var(--fx-ease-in) forwards; }
+}
+.fx-pop-in { animation: fx-pop 0.36s var(--fx-ease-spring) backwards; }
+.fx-pop-out { animation: fx-pop-out 0.2s var(--fx-ease-in) forwards; }
+.fx-sheet-in { animation: fx-sheet-up 0.42s var(--fx-ease-out) backwards; }
+.fx-sheet-out { animation: fx-sheet-down 0.28s var(--fx-ease-in) forwards; }
+
+/* Dropdown / popover */
+.fx-dd-in { transform-origin: top right; animation: fx-dd-in 0.22s var(--fx-ease-out) backwards; }
+.fx-dd-out { transform-origin: top right; animation: fx-dd-out 0.16s var(--fx-ease-in) forwards; }
+
+/* Panel kontekstual editor: cuma animasi MASUK yang singkat (tinggi panel
+   tetap instan — sesuai catatan di BottomNavCard). */
+.fx-panel-in { animation: fx-rise-sm 0.2s var(--fx-ease-out) backwards; }
+
+/* Overlay preview template: membuka dari titik tap (lingkaran) */
+.fx-preview-in { animation: fx-circle-in 0.7s cubic-bezier(0.5, 0, 0.15, 1) backwards; }
+.fx-preview-out { animation: fx-circle-out 0.42s var(--fx-ease-in-out) forwards; }
+
+/* Menu mobile di SiteNav (di layar xl menu selalu tampil -> gak dianimasikan) */
+.fx-menu-in { animation: fx-drop 0.36s var(--fx-ease-out) backwards; }
+.fx-menu-out { animation: fx-fade-out 0.22s var(--fx-ease-in) forwards; }
+.fx-menu-in .fx-menu-item {
+  animation: fx-rise-sm 0.5s var(--fx-ease-out) calc(var(--i, 0) * 50ms + 90ms) backwards;
+}
+@media (min-width: 80rem) {
+  .fx-menu-in, .fx-menu-out, .fx-menu-in .fx-menu-item { animation: none; }
+}
+
+/* Anak-anak yang staggered otomatis (delay per anak lewat nth-child) */
+.fx-stagger > * { animation: fx-rise-sm 0.5s var(--fx-ease-out) calc(var(--base, 0ms) + var(--i, 0) * 55ms) backwards; }
+.fx-stagger > *:nth-child(1) { --i: 0; }
+.fx-stagger > *:nth-child(2) { --i: 1; }
+.fx-stagger > *:nth-child(3) { --i: 2; }
+.fx-stagger > *:nth-child(4) { --i: 3; }
+.fx-stagger > *:nth-child(5) { --i: 4; }
+.fx-stagger > *:nth-child(6) { --i: 5; }
+.fx-stagger > *:nth-child(7) { --i: 6; }
+.fx-stagger > *:nth-child(8) { --i: 7; }
+
+/* ---------- Reveal saat di-scroll (dipicu class .is-in dari <Reveal>) ---------- */
+.fx-reveal {
+  opacity: 0;
+  translate: 0 32px;
+  transition:
+    opacity 0.9s var(--fx-ease-out) var(--d, 0ms),
+    translate 0.9s var(--fx-ease-out) var(--d, 0ms),
+    scale 0.9s var(--fx-ease-out) var(--d, 0ms);
+}
+.fx-reveal-fade { translate: none; }
+.fx-reveal-scale { translate: none; scale: 0.93; }
+.fx-reveal-left { translate: -40px 0; }
+.fx-reveal-right { translate: 40px 0; }
+.fx-reveal.is-in { opacity: 1; translate: none; scale: none; }
+
+/* Anak dalam grup: muncul berurutan begitu grupnya kelihatan */
+.fx-child { opacity: 0; }
+.is-in .fx-child { opacity: 1; animation: fx-rise 0.8s var(--fx-ease-out) var(--d, 0ms) backwards; }
+.is-in .fx-child-pop { animation: fx-pop 0.6s var(--fx-ease-spring) var(--d, 0ms) backwards; }
+.is-in .fx-child-slide { animation: fx-slide-from-right 0.9s var(--fx-ease-out) var(--d, 0ms) backwards; }
+
+/* Klip mini playlist & garis pemisah "digambar" dari kiri */
+.fx-clip, .fx-line { transform-origin: left center; transform: scaleX(0); }
+.is-in .fx-clip { transform: scaleX(1); transition: transform 0.7s var(--fx-ease-out) var(--d, 0ms); }
+.is-in .fx-line { transform: scaleX(1); transition: transform 1.1s var(--fx-ease-out) var(--d, 0ms); }
+
+/* ---------- Link: garis bawah "menyapu" pas hover ---------- */
+.fx-link {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1.5px;
+  transition: background-size 0.35s var(--fx-ease-out);
+}
+.fx-link:hover, .fx-link:focus-visible { background-size: 100% 1.5px; }
+
+/* ---------- Klik: ripple flat (tanpa blur/glow) ---------- */
+@layer components {
+  [data-ripple] { position: relative; overflow: hidden; }
+}
+.fx-ripple {
+  position: absolute;
+  border-radius: 9999px;
+  background: currentColor;
+  pointer-events: none;
+  transform: scale(0);
+  animation: fx-ripple 0.65s var(--fx-ease-out) forwards;
+}
+
+/* ---------- Curtain: transisi antar halaman (3 panel flat palet) ---------- */
+.fx-curtain { position: fixed; inset: 0; z-index: 9999; overflow: hidden; pointer-events: all; }
+.fx-curtain-panel { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+.fx-curtain-a { background: #000000; }
+.fx-curtain-b { background: #8b93f0; }
+.fx-curtain-c { background: #ffacff; }
+.fx-curtain[data-phase="cover"] .fx-curtain-a { animation: fx-curtain-cover 0.34s var(--fx-ease-in-out) 0ms both; }
+.fx-curtain[data-phase="cover"] .fx-curtain-b { animation: fx-curtain-cover 0.34s var(--fx-ease-in-out) 60ms both; }
+.fx-curtain[data-phase="cover"] .fx-curtain-c { animation: fx-curtain-cover 0.34s var(--fx-ease-in-out) 120ms both; }
+.fx-curtain[data-phase="reveal"] .fx-curtain-c { animation: fx-curtain-reveal 0.36s var(--fx-ease-in-out) 0ms both; }
+.fx-curtain[data-phase="reveal"] .fx-curtain-b { animation: fx-curtain-reveal 0.36s var(--fx-ease-in-out) 60ms both; }
+.fx-curtain[data-phase="reveal"] .fx-curtain-a { animation: fx-curtain-reveal 0.36s var(--fx-ease-in-out) 120ms both; }
+.fx-curtain-logo {
+  font-family: "Rubik", Arial, Helvetica, sans-serif;
+  font-size: 44px;
+  font-weight: 700;
+  letter-spacing: -1.5px;
+  color: #000000;
+}
+.fx-curtain[data-phase="cover"] .fx-curtain-logo { animation: fx-logo-in 0.5s var(--fx-ease-spring) 300ms backwards; }
+
+/* ---------- Hormati preferensi "kurangi gerakan" ---------- */
+@media (prefers-reduced-motion: reduce) {
+  [class*="fx-"], [class*="fx-"] * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .fx-reveal, .fx-child { opacity: 1; translate: none; scale: none; }
+  .fx-clip, .fx-line { transform: none; }
+  .fx-curtain { display: none; }
+}
