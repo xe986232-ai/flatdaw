@@ -8,7 +8,7 @@ type Phase = 'idle' | 'cover' | 'reveal'
 const COVER_MS = 680
 const REVEAL_MS = 820
 
-/** Panel flat 3 warna (hitam -> coral -> periwinkle di paling atas) yang menyapu layar dari
+/** Panel flat 3 warna (hitam -> pink -> periwinkle di paling atas) yang menyapu layar dari
  *  bawah, nutupin pergantian halaman, lalu terangkat ke atas. */
 export function Curtain({ phase }: { phase: Phase }) {
   if (phase === 'idle') return null

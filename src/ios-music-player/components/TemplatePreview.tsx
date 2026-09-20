@@ -13,7 +13,7 @@ export type PreviewOrigin = { x: number; y: number };
  *  (TemplateGallery). Preview template-nya FULL SATU HALAMAN (edge to
  *  edge), dan semua elemen lain (tombol kembali, judul, nama template,
  *  info, tombol "Gunakan template") jadi OVERLAY yang nempel di atasnya.
- *  Flat: blok warna solid dari palet (coral/hitam/periwinkle) + outline
+ *  Flat: blok warna solid dari palet (pink/hitam/periwinkle) + outline
  *  hitam tipis, tanpa shadow/blur/gradient. Isi preview-nya (`preview`)
  *  dikirim dari galeri biar komponen ini nggak perlu tahu soal thumbnail
  *  kolase. */
@@ -89,7 +89,7 @@ export default function TemplatePreview({
         <h2
           className="fx-wipe-x max-w-full truncate rounded-lg border border-black px-2.5 py-1 text-sm font-bold leading-tight text-black"
           style={fxDelay(420, {
-            backgroundColor: tokens.colors.templateAccent,
+            backgroundColor: tokens.colors.accent,
             fontFamily: tokens.fonts.heading,
             letterSpacing: "-0.25px",
           })}
@@ -114,7 +114,7 @@ export default function TemplatePreview({
           {badge && (
             <span
               className="rounded-full bg-black px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide"
-              style={{ color: tokens.colors.templateAccent }}
+              style={{ color: tokens.colors.accent }}
             >
               {badge}
             </span>
@@ -126,7 +126,7 @@ export default function TemplatePreview({
           data-ripple
           className="fx-rise mt-1 flex h-11 w-full items-center justify-center rounded-xl border border-black text-sm font-bold text-black transition duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98]"
           style={fxDelay(620, {
-            backgroundColor: tokens.colors.templateAccent,
+            backgroundColor: tokens.colors.accent,
             fontFamily: tokens.fonts.heading,
           })}
         >

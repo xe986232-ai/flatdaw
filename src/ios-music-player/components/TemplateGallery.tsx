@@ -138,11 +138,11 @@ function CollageThumbnail({
         style={{ clipPath: bottomClip }}
       />
 
-      {/* pita pemisah miring, warna aksen coral template — flat, tanpa
+      {/* pita pemisah miring, warna aksen pink homepage — flat, tanpa
           glow/blur */}
       <div
         className="absolute inset-0"
-        style={{ clipPath: bandClip, backgroundColor: tokens.colors.templateAccent }}
+        style={{ clipPath: bandClip, backgroundColor: tokens.colors.accent }}
       />
 
       {/* badge bulat pas di tengah sambungan — flat, putih polos */}
@@ -212,7 +212,7 @@ function DraftCard({
         removing ? "fx-card-out" : "fx-card-in"
       }`}
       style={fxDelay(Math.min(index, 8) * 60 + 80, {
-        backgroundColor: tokens.colors.templateAccent,
+        backgroundColor: tokens.colors.accent,
       })}
     >
       <button
@@ -233,7 +233,7 @@ function DraftCard({
           )}
           <span
             className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-[8.5px] font-semibold uppercase tracking-wide text-black"
-            style={{ backgroundColor: tokens.colors.templateAccent }}
+            style={{ backgroundColor: tokens.colors.accent }}
           >
             <FolderClock size={9} strokeWidth={2.5} />
             Draft
@@ -331,7 +331,7 @@ function TemplateCard({
       data-ripple
       className="fx-card-in group relative flex w-full flex-col overflow-hidden rounded-3xl border border-black text-left transition-transform duration-300 hover:-translate-y-1 active:scale-[0.97]"
       style={fxDelay(Math.min(index, 8) * 60 + 80, {
-        backgroundColor: tokens.colors.templateAccent,
+        backgroundColor: tokens.colors.accent,
       })}
     >
       <div className="relative flex h-full flex-col overflow-hidden">
@@ -354,7 +354,7 @@ function TemplateCard({
           {isCollageStyle && (
             <span
               className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-full px-2 py-0.5 text-[8.5px] font-semibold uppercase tracking-wide text-black"
-              style={{ backgroundColor: tokens.colors.templateAccent }}
+              style={{ backgroundColor: tokens.colors.accent }}
             >
               <Sparkles size={9} strokeWidth={2.5} />
               2 Gaya Progress
@@ -610,7 +610,7 @@ export default function TemplateGallery({
                   <span className="block">
                     <span
                       className="fx-wipe-x inline-block px-2 text-black"
-                      style={fxDelay(200, { backgroundColor: tokens.colors.templateAccent })}
+                      style={fxDelay(200, { backgroundColor: tokens.colors.accent })}
                     >
                       KARYAMU.
                     </span>
@@ -626,7 +626,7 @@ export default function TemplateGallery({
                   <span className="block">
                     <span
                       className="fx-wipe-x inline-block bg-black px-2"
-                      style={fxDelay(200, { color: tokens.colors.templateAccent })}
+                      style={fxDelay(200, { color: tokens.colors.accent })}
                     >
                       TEMPLATE.
                     </span>
@@ -766,7 +766,7 @@ export default function TemplateGallery({
 
       {/* Tab bar bawah — Draft (kiri) & Template (kanan), nempel di bawah
           layar, satu warna sama header (periwinkle), garis tipis hitam,
-          tanpa blur. Tab aktif ditandai pill coral (aksen template) yang
+          tanpa blur. Tab aktif ditandai pill pink (aksen homepage) yang
           MELUNCUR antar tab, bukan ganti warna instan. */}
       <div
         className="fx-rise relative z-30 shrink-0 border-t border-black p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
@@ -777,7 +777,7 @@ export default function TemplateGallery({
             aria-hidden="true"
             className="pointer-events-none absolute inset-y-0 left-0 w-[calc(50%-4px)] rounded-full border border-black transition-transform duration-500"
             style={{
-              backgroundColor: tokens.colors.templateAccent,
+              backgroundColor: tokens.colors.accent,
               transitionTimingFunction: "cubic-bezier(0.34, 1.3, 0.64, 1)",
               transform:
                 activeTab === "template" ? "translateX(calc(100% + 8px))" : "translateX(0)",
