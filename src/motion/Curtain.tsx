@@ -3,12 +3,12 @@ import { usePrefersReducedMotion } from './hooks'
 
 type Phase = 'idle' | 'cover' | 'reveal'
 
-// Harus sinkron sama durasi di motion.css (.fx-curtain-*): cover 340ms +
-// stagger 120ms, reveal 360ms + stagger 120ms.
-const COVER_MS = 500
-const REVEAL_MS = 500
+// Harus sinkron sama durasi di motion.css (.fx-curtain-*): cover 500ms +
+// stagger 140ms (+ margin), reveal 650ms + stagger 140ms (+ margin).
+const COVER_MS = 680
+const REVEAL_MS = 820
 
-/** Panel flat 3 warna (hitam -> periwinkle -> pink) yang menyapu layar dari
+/** Panel flat 3 warna (hitam -> pink -> periwinkle di paling atas) yang menyapu layar dari
  *  bawah, nutupin pergantian halaman, lalu terangkat ke atas. */
 export function Curtain({ phase }: { phase: Phase }) {
   if (phase === 'idle') return null

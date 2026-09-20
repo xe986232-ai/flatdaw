@@ -170,18 +170,23 @@
   animation: fx-ripple 0.65s var(--fx-ease-out) forwards;
 }
 
-/* ---------- Curtain: transisi antar halaman (3 panel flat palet) ---------- */
-.fx-curtain { position: fixed; inset: 0; z-index: 9999; overflow: hidden; pointer-events: all; }
+/* ---------- Curtain: transisi antar halaman (3 panel flat palet) ----------
+   Urutan tumpukan (bawah -> atas): hitam, pink, periwinkle.
+   Periwinkle di paling atas, jadi itu warna yang kelihatan pas layar tertutup penuh.
+   Kurva: cepat di awal, melambat halus di akhir (expo ease-out).
+   Durasi harus sinkron sama COVER_MS / REVEAL_MS di Curtain.tsx:
+   cover 500ms + 2 x 70ms stagger, reveal 650ms + 2 x 70ms stagger. */
+.fx-curtain { --fx-ease-curtain: cubic-bezier(0.16, 1, 0.3, 1); position: fixed; inset: 0; z-index: 9999; overflow: hidden; pointer-events: all; }
 .fx-curtain-panel { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
 .fx-curtain-a { background: #000000; }
-.fx-curtain-b { background: #8b93f0; }
-.fx-curtain-c { background: #ffacff; }
-.fx-curtain[data-phase="cover"] .fx-curtain-a { animation: fx-curtain-cover 0.34s var(--fx-ease-in-out) 0ms both; }
-.fx-curtain[data-phase="cover"] .fx-curtain-b { animation: fx-curtain-cover 0.34s var(--fx-ease-in-out) 60ms both; }
-.fx-curtain[data-phase="cover"] .fx-curtain-c { animation: fx-curtain-cover 0.34s var(--fx-ease-in-out) 120ms both; }
-.fx-curtain[data-phase="reveal"] .fx-curtain-c { animation: fx-curtain-reveal 0.36s var(--fx-ease-in-out) 0ms both; }
-.fx-curtain[data-phase="reveal"] .fx-curtain-b { animation: fx-curtain-reveal 0.36s var(--fx-ease-in-out) 60ms both; }
-.fx-curtain[data-phase="reveal"] .fx-curtain-a { animation: fx-curtain-reveal 0.36s var(--fx-ease-in-out) 120ms both; }
+.fx-curtain-b { background: #ffacff; }
+.fx-curtain-c { background: #8b93f0; }
+.fx-curtain[data-phase="cover"] .fx-curtain-a { animation: fx-curtain-cover 0.5s var(--fx-ease-curtain) 0ms both; }
+.fx-curtain[data-phase="cover"] .fx-curtain-b { animation: fx-curtain-cover 0.5s var(--fx-ease-curtain) 70ms both; }
+.fx-curtain[data-phase="cover"] .fx-curtain-c { animation: fx-curtain-cover 0.5s var(--fx-ease-curtain) 140ms both; }
+.fx-curtain[data-phase="reveal"] .fx-curtain-c { animation: fx-curtain-reveal 0.65s var(--fx-ease-curtain) 0ms both; }
+.fx-curtain[data-phase="reveal"] .fx-curtain-b { animation: fx-curtain-reveal 0.65s var(--fx-ease-curtain) 70ms both; }
+.fx-curtain[data-phase="reveal"] .fx-curtain-a { animation: fx-curtain-reveal 0.65s var(--fx-ease-curtain) 140ms both; }
 .fx-curtain-logo {
   font-family: "Rubik", Arial, Helvetica, sans-serif;
   font-size: 44px;
@@ -189,7 +194,7 @@
   letter-spacing: -1.5px;
   color: #000000;
 }
-.fx-curtain[data-phase="cover"] .fx-curtain-logo { animation: fx-logo-in 0.5s var(--fx-ease-spring) 300ms backwards; }
+.fx-curtain[data-phase="cover"] .fx-curtain-logo { animation: fx-logo-in 0.55s var(--fx-ease-spring) 320ms backwards; }
 
 /* ---------- Hormati preferensi "kurangi gerakan" ---------- */
 @media (prefers-reduced-motion: reduce) {
