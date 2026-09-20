@@ -2,6 +2,7 @@ import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
 import HomePage from './pages/home/HomePage'
 import DawMockupPage from './pages/template/DawMockupPage'
 import EditorPage from './pages/editor/EditorPage'
+import SmoothScroll from './SmoothScroll'
 import { useFlmProject } from './useFlmProject'
 
 export default function App() {
@@ -16,7 +17,10 @@ export default function App() {
   const flmProject = useFlmProject()
 
   return (
-    <Routes>
+    <>
+      {/* Lenis nyala di semua halaman kecuali /editor/* (lihat SmoothScroll.tsx). */}
+      <SmoothScroll />
+      <Routes>
       {/* Halaman utama (Rizz.). Hub template tetep di /template/daw-mockup. */}
       <Route path="/" element={<HomePage />} />
 
@@ -28,6 +32,7 @@ export default function App() {
       <Route path="/editor/:themeId" element={<EditorPage {...flmProject} />} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
-    </Routes>
+      </Routes>
+    </>
   )
 }

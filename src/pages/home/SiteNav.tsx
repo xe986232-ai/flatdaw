@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { tokens } from '../../designTokens'
+import { getLenis } from '../../lenisInstance'
 
 // Nav halaman utama. Struktur & label menunya diikutin dari markup nav
 // referensi (Believe.com) yang ditempel user -- cuma nama brand diganti jadi
@@ -108,8 +109,13 @@ export default function SiteNav() {
     if (!menuOpen) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
+    // Lenis gak ngeliat overflow:hidden di body -- stop manual biar halaman
+    // di belakang panel menu gak ikut ke-scroll.
+    const lenis = getLenis()
+    lenis?.stop()
     return () => {
       document.body.style.overflow = prev
+      lenis?.start()
     }
   }, [menuOpen])
 
@@ -162,6 +168,7 @@ export default function SiteNav() {
         <nav
           id="nav"
           role="navigation"
+          data-lenis-prevent
           className={`fixed inset-x-0 bottom-0 top-16 overflow-y-auto px-6 pb-10 pt-4 xl:static xl:ml-10 xl:flex xl:flex-1 xl:overflow-visible xl:p-0 ${
             menuOpen ? 'block' : 'hidden'
           }`}
@@ -255,18 +262,15 @@ export default function SiteNav() {
                 >
                   <li>
                     {/* Placeholder: versi bahasa lain belum ada. */}
-                    <a
-                      href="#"
+                    <button
+                      type="button"
                       lang="fr"
                       data-language="fr"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        closeAll()
-                      }}
-                      className="block rounded py-2 pl-4 text-[15px] font-medium text-black hover:underline xl:px-3 xl:pl-3 xl:text-white xl:no-underline xl:hover:bg-white/10 xl:hover:text-[#ffacff] xl:hover:no-underline"
+                      onClick={closeAll}
+                      className="block w-full rounded py-2 pl-4 text-left text-[15px] font-medium text-black hover:underline xl:px-3 xl:pl-3 xl:text-white xl:no-underline xl:hover:bg-white/10 xl:hover:text-[#ffacff] xl:hover:no-underline"
                     >
                       fr
-                    </a>
+                    </button>
                   </li>
                 </ul>
               </div>
