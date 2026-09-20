@@ -1,4 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   BAR_W,
   BROWSER_ITEMS,
@@ -275,7 +276,24 @@ function BrowserPanel({ items }: { items: { name: string; color: string; active?
 // clip asli (track.clips[].startBar/lengthBars, dinormalisasi ke originBar),
 // jadi minimap ini beneran nunjukin di mana isi lagu numpuk, termasuk buat
 // hasil import .flm yang panjangnya variatif.
-function Overview({ tracks, songBars, originBar, viewStartBar, viewBars }: { tracks: MockTrack[]; songBars: number; originBar: number; viewStartBar: number; viewBars: number }) {
+function Overview({
+  tracks,
+  songBars,
+  originBar,
+  viewStartBar,
+  viewBars,
+  onSeekBar,
+}: {
+  tracks: MockTrack[]
+  songBars: number
+  originBar: number
+  viewStartBar: number
+  viewBars: number
+  // Klik/drag di minimap buat lompat langsung ke posisi bar itu di playlist
+  // utama (lihat handleOverviewSeek di PlaylistFrame) -- opsional biar
+  // Overview tetap kepake tanpa ini kalau ada pemanggil lain yang gak butuh.
+  onSeekBar?: (bar: number) => void
+}) {
   const overviewTracks = tracks.filter((t) => t.clips.length > 0)
   const rows = Math.max(1, overviewTracks.length)
   const blocks: ReactNode[] = []
@@ -297,8 +315,32 @@ function Overview({ tracks, songBars, originBar, viewStartBar, viewBars }: { tra
     })
   })
 
+  // Klik (atau drag) di dalam minimap -> hitung bar yang diklik dari posisi
+  // x relatif terhadap lebar minimap, lalu lompat ke sana (posisi klik jadi
+  // TENGAH viewport, bukan tepi kiri, biar kerasa natural).
+  const seekFromEvent = (e: { clientX: number; currentTarget: HTMLElement }) => {
+    if (!onSeekBar) return
+    const rect = e.currentTarget.getBoundingClientRect()
+    const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
+    onSeekBar(originBar + frac * songBars - viewBars / 2)
+  }
+
   return (
-    <div className="relative shrink-0" style={{ height: OVERVIEW_H, background: C.overview, borderBottom: `1px solid ${C.edge}` }}>
+    <div
+      className="relative shrink-0"
+      style={{ height: OVERVIEW_H, background: C.overview, borderBottom: `1px solid ${C.edge}`, cursor: onSeekBar ? 'pointer' : undefined }}
+      onMouseDown={(e) => {
+        if (!onSeekBar) return
+        seekFromEvent(e)
+        const onMove = (ev: MouseEvent) => seekFromEvent({ clientX: ev.clientX, currentTarget: e.currentTarget })
+        const onUp = () => {
+          window.removeEventListener('mousemove', onMove)
+          window.removeEventListener('mouseup', onUp)
+        }
+        window.addEventListener('mousemove', onMove)
+        window.addEventListener('mouseup', onUp)
+      }}
+    >
       <svg
         className="absolute"
         style={{ left: 8, right: 8, top: 5, bottom: 5, width: 'calc(100% - 16px)', height: OVERVIEW_H - 10 }}
@@ -327,8 +369,14 @@ function Overview({ tracks, songBars, originBar, viewStartBar, viewBars }: { tra
 
 /* ---------- Ruler ---------- */
 
-function RulerRow({ viewStartBar, originBar, playheadX }: { viewStartBar: number; originBar: number; playheadX: number }) {
-  const bars = Array.from({ length: VIEW_BARS }, (_, i) => viewStartBar + i)
+// Ruler ini sendiri gak bisa di-scroll langsung -- dia cuma "dituntun" oleh
+// scrollX (pixel) dari grid track di bawahnya (satu-satunya elemen yang
+// beneran overflow-auto, lihat TrackRows), lewat CSS transform. Ini yang
+// bikin ruler ikut geser mulus pas user scroll grid pakai wheel/trackpad/
+// drag/touch, tanpa perlu nyalain scrollbar sendiri di sini.
+function RulerRow({ songBars, originBar, scrollX, playheadX }: { songBars: number; originBar: number; scrollX: number; playheadX: number }) {
+  const barCount = Math.ceil(songBars) + 1
+  const bars = Array.from({ length: barCount }, (_, i) => originBar + i)
   return (
     <div className="flex shrink-0" style={{ height: RULER_H, borderBottom: `1px solid ${C.edge}` }}>
       <div
@@ -339,25 +387,30 @@ function RulerRow({ viewStartBar, originBar, playheadX }: { viewStartBar: number
         <span className="text-[14px] leading-none">×</span>
       </div>
       <div className="relative shrink-0 overflow-hidden" style={{ width: GRID_W, background: C.ruler }}>
-        {bars.map((b, i) => {
-          const strong = (b - originBar) % 4 === 0
-          return (
-            <div key={b} className="absolute top-0 bottom-0" style={{ left: i * BAR_W, width: BAR_W }}>
-              <span
-                className="absolute left-[5px] top-[3px] text-[11px] leading-none tabular-nums"
-                style={{ color: strong ? '#e4eaee' : '#8797a1', fontWeight: strong ? 700 : 500 }}
-              >
-                {b}
-              </span>
-              <span className="absolute bottom-0 left-0" style={{ width: 1, height: 9, background: '#6f7f8a' }} />
-              {[1, 2, 3].map((q) => (
-                <span key={q} className="absolute bottom-0" style={{ left: q * (BAR_W / 4), width: 1, height: 4, background: '#55646e' }} />
-              ))}
-            </div>
-          )
-        })}
-        {/* Penanda playhead di ruler */}
-        <svg className="absolute top-0" style={{ left: playheadX - 7 }} width="14" height="12" viewBox="0 0 14 12" aria-hidden="true">
+        <div style={{ transform: `translateX(${-scrollX}px)` }}>
+          {bars.map((b) => {
+            const strong = (b - originBar) % 4 === 0
+            return (
+              <div key={b} className="absolute top-0 bottom-0" style={{ left: (b - originBar) * BAR_W, width: BAR_W }}>
+                <span
+                  className="absolute left-[5px] top-[3px] text-[11px] leading-none tabular-nums"
+                  style={{ color: strong ? '#e4eaee' : '#8797a1', fontWeight: strong ? 700 : 500 }}
+                >
+                  {b}
+                </span>
+                <span className="absolute bottom-0 left-0" style={{ width: 1, height: 9, background: '#6f7f8a' }} />
+                {[1, 2, 3].map((q) => (
+                  <span key={q} className="absolute bottom-0" style={{ left: q * (BAR_W / 4), width: 1, height: 4, background: '#55646e' }} />
+                ))}
+              </div>
+            )
+          })}
+        </div>
+        {/* Penanda playhead di ruler -- overlay TETAP, di luar div yang
+            ke-translate di atas, biar posisinya konsisten sama garis
+            playhead di grid track (playheadX udah dihitung relatif ke
+            viewport, bukan ke konten penuh). */}
+        <svg className="pointer-events-none absolute top-0" style={{ left: playheadX - 7 }} width="14" height="12" viewBox="0 0 14 12" aria-hidden="true">
           <path d="M1 1h12L7 11z" fill={LIME} stroke="#3f6a0f" strokeWidth="1" strokeLinejoin="round" />
         </svg>
       </div>
@@ -412,36 +465,103 @@ function TrackHeader({ track }: { track: MockTrack }) {
 
 /* ---------- Baris track + playhead ---------- */
 
-function TrackRows({ tracks, playheadX, viewStartBar }: { tracks: MockTrack[]; playheadX: number; viewStartBar: number }) {
+// Kolom header track (kiri) -- gak punya scrollbar sendiri, cuma "dituntun"
+// (translateY) sama scrollY dari grid di sebelah kanannya, biar nama track
+// selalu nempel sejajar sama baris clip-nya pas di-scroll vertikal.
+function TrackHeaderColumn({ tracks, scrollY }: { tracks: MockTrack[]; scrollY: number }) {
   return (
-    <div className="relative min-h-0 flex-1 overflow-hidden" style={{ background: C.toolbar }}>
-      {/* Latar grid yang juga nutup area kosong di bawah track terakhir */}
-      <div className="absolute inset-y-0" style={{ left: HEADER_W, width: GRID_W, ...gridBackground }} />
-
-      <div className="relative">
+    <div className="relative shrink-0 overflow-hidden" style={{ width: HEADER_W }}>
+      <div style={{ transform: `translateY(${-scrollY}px)` }}>
         {tracks.map((track) => (
-          <div key={track.id} className="box-border flex" style={{ height: track.height, borderBottom: `1px solid ${C.rowLine}` }}>
-            <TrackHeader track={track} />
-            <div
-              className="relative shrink-0 overflow-hidden"
-              style={{ width: GRID_W, background: track.selected ? 'rgba(255,255,255,0.035)' : undefined }}
-            >
-              {track.clips.map((clip) => (
-                <ClipMock
-                  key={clip.id}
-                  clip={clip}
-                  color={track.color}
-                  trackHeight={track.height - 1}
-                  collapsed={track.collapsed}
-                  viewStartBar={viewStartBar}
-                />
-              ))}
-            </div>
+          <TrackHeader key={track.id} track={track} />
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Grid track: SATU-SATUNYA elemen yang beneran overflow-auto (native scroll
+// dua arah -- wheel, trackpad, drag scrollbar, swipe touch semua kepake
+// langsung dari browser, gak perlu logic custom). Kontennya digambar penuh
+// selebar songBars & setinggi total semua track (bukan cuma jendela
+// VIEW_BARS/viewport kayak sebelumnya), jadi scroll beneran punya sesuatu
+// buat digeser. onScroll di sini yang jadi sumber scrollX/scrollY buat
+// nuntun Ruler & TrackHeaderColumn di atas/samping (lihat PlaylistFrame).
+function TrackGrid({
+  tracks,
+  fullW,
+  originBar,
+  onScroll,
+  gridRef,
+}: {
+  tracks: MockTrack[]
+  fullW: number
+  originBar: number
+  onScroll: (scrollLeft: number, scrollTop: number) => void
+  gridRef: React.RefObject<HTMLDivElement | null>
+}) {
+  return (
+    <div
+      ref={gridRef}
+      className="relative shrink-0 overflow-auto overscroll-contain"
+      style={{ width: GRID_W, background: C.toolbar }}
+      onScroll={(e) => onScroll(e.currentTarget.scrollLeft, e.currentTarget.scrollTop)}
+    >
+      <div className="relative" style={{ width: fullW, minHeight: '100%', ...gridBackground }}>
+        {tracks.map((track) => (
+          <div
+            key={track.id}
+            className="relative box-border"
+            style={{
+              height: track.height,
+              borderBottom: `1px solid ${C.rowLine}`,
+              background: track.selected ? 'rgba(255,255,255,0.035)' : undefined,
+            }}
+          >
+            {track.clips.map((clip) => (
+              <ClipMock
+                key={clip.id}
+                clip={clip}
+                color={track.color}
+                trackHeight={track.height - 1}
+                collapsed={track.collapsed}
+                viewStartBar={originBar}
+              />
+            ))}
           </div>
         ))}
       </div>
+    </div>
+  )
+}
 
-      {/* Playhead: garis lime tebal dengan glow */}
+function TrackRows({
+  tracks,
+  fullW,
+  originBar,
+  playheadX,
+  scrollY,
+  onScroll,
+  gridRef,
+}: {
+  tracks: MockTrack[]
+  fullW: number
+  originBar: number
+  playheadX: number
+  scrollY: number
+  onScroll: (scrollLeft: number, scrollTop: number) => void
+  gridRef: React.RefObject<HTMLDivElement | null>
+}) {
+  return (
+    <div className="relative min-h-0 flex-1 overflow-hidden" style={{ background: C.toolbar }}>
+      <div className="flex h-full">
+        <TrackHeaderColumn tracks={tracks} scrollY={scrollY} />
+        <TrackGrid tracks={tracks} fullW={fullW} originBar={originBar} onScroll={onScroll} gridRef={gridRef} />
+      </div>
+
+      {/* Playhead: garis lime tebal dengan glow -- overlay di atas grid,
+          posisinya udah relatif ke viewport (bukan ke konten penuh) jadi
+          gak perlu ikut scroll. */}
       <div className="pointer-events-none absolute inset-y-0" style={{ left: HEADER_W + playheadX - 26, width: 26, background: `linear-gradient(to right, transparent, ${rgba(LIME, 0.13)})` }} />
       <div
         className="pointer-events-none absolute inset-y-0"
@@ -470,11 +590,49 @@ export function PlaylistFrame({
   tracks = MOCK_TRACKS,
   browserItems = BROWSER_ITEMS,
   originBar = 1,
-  viewStartBar = VIEW_START_BAR,
+  viewStartBar: initialViewStartBar = VIEW_START_BAR,
   viewBars = VIEW_BARS,
   songBars = SONG_BARS,
   playheadBar = PLAYHEAD_BAR,
 }: PlaylistFrameProps) {
+  const gridRef = useRef<HTMLDivElement>(null)
+  // scrollX/scrollY (px) = satu-satunya sumber kebenaran posisi scroll,
+  // dibaca langsung dari onScroll TrackGrid (lihat TrackRows) -- semua yang
+  // butuh tau "lagi liat bar berapa" (Ruler, Overview, playhead) diturunkan
+  // dari sini, bukan nyimpen viewStartBar terpisah yang bisa out-of-sync.
+  const [scrollX, setScrollX] = useState(0)
+  const [scrollY, setScrollY] = useState(0)
+
+  const fullW = Math.max(GRID_W, songBars * BAR_W)
+  const viewStartBar = originBar + scrollX / BAR_W
+
+  // Posisi awal scroll: mulai dari bar pertama yang beneran ada isinya
+  // (dihitung fromTracks.ts). Kepicu ulang kalau project baru di-import
+  // (originBar/initialViewStartBar berubah), gak tiap render biasa --
+  // makanya user tetep bisa scroll manual tanpa ke-reset paksa.
+  useEffect(() => {
+    const el = gridRef.current
+    if (!el) return
+    const left = Math.max(0, (initialViewStartBar - originBar) * BAR_W)
+    el.scrollTo({ left, top: 0 })
+    setScrollX(left)
+    setScrollY(0)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialViewStartBar, originBar])
+
+  const handleGridScroll = (left: number, top: number) => {
+    setScrollX(left)
+    setScrollY(top)
+  }
+
+  // Overview di-klik/drag -> lompat ke bar itu (jadi tengah viewport).
+  const handleOverviewSeek = (bar: number) => {
+    const el = gridRef.current
+    if (!el) return
+    const left = Math.max(0, (bar - originBar) * BAR_W)
+    el.scrollTo({ left, top: el.scrollTop, behavior: 'smooth' })
+  }
+
   const playheadX = (playheadBar - viewStartBar) * BAR_W
   return (
     <div
@@ -493,9 +651,24 @@ export function PlaylistFrame({
       <div className="flex min-h-0 flex-1">
         <BrowserPanel items={browserItems} />
         <div className="flex min-w-0 flex-1 flex-col">
-          <Overview tracks={tracks} songBars={songBars} originBar={originBar} viewStartBar={viewStartBar} viewBars={viewBars} />
-          <RulerRow viewStartBar={viewStartBar} originBar={originBar} playheadX={playheadX} />
-          <TrackRows tracks={tracks} playheadX={playheadX} viewStartBar={viewStartBar} />
+          <Overview
+            tracks={tracks}
+            songBars={songBars}
+            originBar={originBar}
+            viewStartBar={viewStartBar}
+            viewBars={viewBars}
+            onSeekBar={handleOverviewSeek}
+          />
+          <RulerRow songBars={songBars} originBar={originBar} scrollX={scrollX} playheadX={playheadX} />
+          <TrackRows
+            tracks={tracks}
+            fullW={fullW}
+            originBar={originBar}
+            playheadX={playheadX}
+            scrollY={scrollY}
+            onScroll={handleGridScroll}
+            gridRef={gridRef}
+          />
         </div>
       </div>
     </div>
