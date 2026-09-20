@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { tokens, SECTION_PALETTE } from '../../designTokens'
 import SiteNav from './SiteNav'
+import iosMusicMockup from '../../assets/ios-music-mockup.webp'
 
 // Halaman utama (route "/"). Gaya & palet ngikut style-guide referensi yang
 // udah dipakai di halaman template hub (Rubik + Noto Sans, blok warna
@@ -13,7 +14,7 @@ import SiteNav from './SiteNav'
 // "iOS Music Playlist" masih coming soon. Nambah kategori/template baru
 // cukup edit CATEGORIES di bawah.
 
-const [CORAL, , ORANGE, TAN] = SECTION_PALETTE
+const [CORAL, PERIWINKLE, ORANGE, TAN] = SECTION_PALETTE
 
 const GITHUB_URL = 'https://github.com/xe986232-ai/flatdaw'
 const LIVE_URL = 'https://flatdaw.vercel.app'
@@ -27,6 +28,8 @@ type Category = {
   note: string
   features: string[]
   status: 'available' | 'soon'
+  // Gambar mock-up di kolom kanan: 'daw' = playlist mock (CSS), 'ios' = foto HP.
+  visual: 'daw' | 'ios'
   color: { bg: string; fg: string }
   // Cuma dipakai kategori yang udah available.
   href?: string
@@ -43,6 +46,7 @@ const CATEGORIES: Category[] = [
     note: 'Export is available in Classic DAW.',
     features: ['Import .flm & .zip', '2 templates', 'PNG & MP4 export'],
     status: 'available',
+    visual: 'daw',
     color: CORAL,
     href: '/template/daw-mockup',
     templates: [
@@ -56,10 +60,11 @@ const CATEGORIES: Category[] = [
     name: 'iOS MUSIC PLAYLIST',
     tag: 'Coming soon',
     text: 'Playlist visuals styled after the iOS Music app, for showing a track list the way people are used to seeing it on their phone.',
-    note: 'This category is still being built. Follow the Newsroom for updates.',
+    note: 'Still being built. The phone shown is a preview of the look. Follow the Newsroom for updates.',
     features: [],
     status: 'soon',
-    color: { bg: '#161616', fg: '#ffffff' },
+    visual: 'ios',
+    color: { bg: PERIWINKLE.bg, fg: '#000000' },
   },
 ]
 
@@ -150,54 +155,45 @@ function HeroVisual() {
   )
 }
 
-function CategoryCard({ c }: { c: Category }) {
-  const soon = c.status === 'soon'
+function CategoryRow({ c }: { c: Category }) {
   return (
     <article
-      className="flex flex-col rounded-lg p-6 sm:p-8"
-      style={{
-        backgroundColor: c.color.bg,
-        color: c.color.fg,
-        border: soon ? `1px dashed ${tokens.colors.border}` : undefined,
-      }}
+      className="grid overflow-hidden rounded-lg md:grid-cols-2"
+      style={{ backgroundColor: c.color.bg, color: c.color.fg }}
     >
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-bold uppercase tracking-widest sm:text-sm" style={{ opacity: soon ? 0.6 : 1 }}>
-          {c.eyebrow}
-        </p>
-        <span
-          className="rounded-full border px-3 py-1 text-xs font-medium"
-          style={{ borderColor: soon ? tokens.colors.accent : c.color.fg, color: soon ? tokens.colors.accent : c.color.fg }}
+      {/* KIRI: penjelasan template */}
+      <div className="flex flex-col p-6 sm:p-10">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-bold uppercase tracking-widest sm:text-sm">{c.eyebrow}</p>
+          <span className="rounded-full border px-3 py-1 text-xs font-medium" style={{ borderColor: c.color.fg }}>
+            {c.tag}
+          </span>
+        </div>
+        <h3
+          className="mt-4 text-[34px] font-bold leading-[1.05] sm:text-[44px]"
+          style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-1px' }}
         >
-          {c.tag}
-        </span>
-      </div>
-      <h3
-        className="mt-4 text-[34px] font-bold leading-[1.05] sm:text-[44px]"
-        style={{ fontFamily: tokens.fonts.heading, letterSpacing: '-1px' }}
-      >
-        {c.name}
-      </h3>
-      <p className="mt-3 max-w-md text-sm leading-relaxed sm:text-base" style={{ color: `${c.color.fg}${soon ? 'b3' : 'cc'}` }}>
-        {c.text}
-      </p>
-      <p className="mt-3 max-w-md text-xs leading-relaxed sm:text-sm" style={{ color: `${c.color.fg}${soon ? '80' : 'b3'}` }}>
-        {c.note}
-      </p>
+          {c.name}
+        </h3>
+        <p className="mt-3 max-w-md text-sm leading-relaxed sm:text-base" style={{ color: `${c.color.fg}cc` }}>
+          {c.text}
+        </p>
+        <p className="mt-3 max-w-md text-xs leading-relaxed sm:text-sm" style={{ color: `${c.color.fg}b3` }}>
+          {c.note}
+        </p>
 
-      {c.features.length > 0 && (
-        <ul className="mt-5 flex flex-wrap gap-2">
-          {c.features.map((f) => (
-            <li key={f} className="rounded-full border px-3 py-1 text-xs font-medium sm:text-sm" style={{ borderColor: c.color.fg }}>
-              {f}
-            </li>
-          ))}
-        </ul>
-      )}
+        {c.features.length > 0 && (
+          <ul className="mt-5 flex flex-wrap gap-2">
+            {c.features.map((f) => (
+              <li key={f} className="rounded-full border px-3 py-1 text-xs font-medium sm:text-sm" style={{ borderColor: c.color.fg }}>
+                {f}
+              </li>
+            ))}
+          </ul>
+        )}
 
-      <div className="mt-auto pt-8">
         {c.templates && (
-          <div className="mb-5">
+          <div className="mt-8">
             <p className="text-xs font-bold uppercase tracking-widest">Templates in this category</p>
             <div className="mt-3 flex flex-wrap gap-3">
               {c.templates.map((t) => (
@@ -213,9 +209,29 @@ function CategoryCard({ c }: { c: Category }) {
           </div>
         )}
         {c.href && (
-          <Link to={c.href} className={pillButton}>
-            See all DAW templates →
-          </Link>
+          <div className="mt-5">
+            <Link to={c.href} className={pillButton}>
+              See all DAW templates →
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {/* KANAN: gambar mock-up */}
+      <div className="flex items-center justify-center p-6 sm:p-10 md:py-12">
+        {c.visual === 'daw' ? (
+          <div className="w-full max-w-[520px]">
+            <HeroVisual />
+          </div>
+        ) : (
+          <img
+            src={iosMusicMockup}
+            alt="iPhone showing an iOS-style music player, a preview of the iOS Music Playlist template"
+            width={553}
+            height={1100}
+            loading="lazy"
+            className="h-[440px] w-auto drop-shadow-[0_18px_30px_rgba(0,0,0,0.25)] sm:h-[520px]"
+          />
         )}
       </div>
     </article>
@@ -272,9 +288,9 @@ export default function HomePage() {
               Every template belongs to a category, and each category is a different kind of visual. Choose the one that
               fits how you want to show your music.
             </p>
-            <div className="mt-10 grid gap-4 md:grid-cols-2">
+            <div className="mt-10 flex flex-col gap-4">
               {CATEGORIES.map((c) => (
-                <CategoryCard key={c.id} c={c} />
+                <CategoryRow key={c.id} c={c} />
               ))}
             </div>
           </div>
