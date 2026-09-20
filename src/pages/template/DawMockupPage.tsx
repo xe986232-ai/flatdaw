@@ -1,6 +1,6 @@
-import { tokens, SECTION_PALETTE } from '../designTokens'
+import { tokens, SECTION_PALETTE } from '../../designTokens'
 
-type TemplatePageProps = {
+type DawMockupPageProps = {
   onSelectTheme: (themeId: string) => void
 }
 
@@ -37,7 +37,7 @@ const THEMES: ThemeDef[] = [
   },
 ]
 
-export default function TemplatePage({ onSelectTheme }: TemplatePageProps) {
+export default function DawMockupPage({ onSelectTheme }: DawMockupPageProps) {
   return (
     <div style={{ fontFamily: tokens.fonts.body, backgroundColor: tokens.colors.background, color: tokens.colors.text }}>
       {/* HERO */}

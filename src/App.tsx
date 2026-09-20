@@ -1,28 +1,34 @@
-import { useState } from 'react'
-import TemplatePage from './pages/TemplatePage'
-import EditorTheme1 from './pages/EditorTheme1'
-import EditorTheme2 from './pages/EditorTheme2'
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom'
+import DawMockupPage from './pages/template/DawMockupPage'
+import EditorPage from './pages/editor/EditorPage'
 import { useFlmProject } from './useFlmProject'
 
-type Page = { name: 'template' } | { name: 'editor'; theme: string }
-
 export default function App() {
-  const [page, setPage] = useState<Page>({ name: 'template' })
+  const navigate = useNavigate()
 
-  // Satu-satunya state project + logic import .flm/.zip, hidup di sini biar
-  // dipakai bareng sama Template 01 dan Template 02 — pindah template gak
-  // ngilangin/nge-reset project yang lagi kebuka, dan import-nya cuma satu
-  // implementasi (lihat useFlmProject.ts), bukan digandain per-template.
+  // Satu-satunya state project + logic import .flm/.zip, hidup di sini (di
+  // atas <Routes>, jadi gak ikut unmount pas pindah URL) biar dipakai bareng
+  // semua template -- pindah dari /template ke /editor/... (atau antar
+  // themeId) gak ngilangin/nge-reset project yang lagi kebuka, dan
+  // import-nya cuma satu implementasi (lihat useFlmProject.ts), bukan
+  // digandain per-template.
   const flmProject = useFlmProject()
 
-  if (page.name === 'template') {
-    return <TemplatePage onSelectTheme={(themeId) => setPage({ name: 'editor', theme: themeId })} />
-  }
+  return (
+    <Routes>
+      {/* Belum ada halaman utama beneran -- sementara diarahin ke hub
+          template. Begini bikin gampang: pas halaman utama udah ada, tinggal
+          ganti elemen di path "/" ini, route lain gak kesenggol. */}
+      <Route path="/" element={<Navigate to="/template/daw-mockup" replace />} />
 
-  // Tiap template beda TAMPILAN doang — data & logic project-nya (trackList,
-  // trackColors, projectBpm, import .flm) sama-sama ditarik dari flmProject.
-  if (page.theme === 'theme2') {
-    return <EditorTheme2 onBackToTemplates={() => setPage({ name: 'template' })} {...flmProject} />
-  }
-  return <EditorTheme1 onBackToTemplates={() => setPage({ name: 'template' })} {...flmProject} />
+      <Route
+        path="/template/daw-mockup"
+        element={<DawMockupPage onSelectTheme={(themeId) => navigate(`/editor/${themeId}`)} />}
+      />
+
+      <Route path="/editor/:themeId" element={<EditorPage {...flmProject} />} />
+
+      <Route path="*" element={<Navigate to="/template/daw-mockup" replace />} />
+    </Routes>
+  )
 }

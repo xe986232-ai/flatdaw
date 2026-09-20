@@ -1,8 +1,8 @@
 import { useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { PlaylistFrame } from '../theme2/PlaylistFrame'
-import { DESIGN_H, DESIGN_W } from '../theme2/mockData'
-import { tracksToTheme2 } from '../theme2/fromTracks'
-import type { FlmProject } from '../useFlmProject'
+import { PlaylistFrame } from '../../theme2/PlaylistFrame'
+import { DESIGN_H, DESIGN_W } from '../../theme2/mockData'
+import { tracksToTheme2 } from '../../theme2/fromTracks'
+import type { FlmProject } from '../../useFlmProject'
 
 // Template 02 — tampilan playlist ala FL Studio. Cuma beda TAMPILAN dari
 // Template 01: data project (trackList) dan logic import .flm/.zip-nya sama
