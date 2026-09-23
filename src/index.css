@@ -55,6 +55,16 @@
   --color-dark-track: #2c2c2e;
   --color-dark-text: #ffffff;
   --color-dark-muted: #9a9aa2;
+
+  /* Token buat komponen "marketing" yang lagi dimigrasi dari rizwoow
+     (ProductCard, dst). Nilai di-copy dari globals.css rizwoow biar
+     komponen yang di-port gak perlu diubah class-nya. Tambahin token
+     baru di sini kalau ada komponen marketing lain yang butuh. */
+  --color-accent: #ca1248;
+  --color-surface: #171a1f;
+  --color-foreground: #fbfbfc;
+  --color-muted: #99a3b4;
+  --spacing-md: 24px;
 }
 
 body {
